@@ -42,7 +42,7 @@ class HuggingFaceConditionExtractor:
         include_few_shots: bool = True,
         load_in_4bit: bool = True,
         device: str = "auto",
-        max_new_tokens: int = 512,
+        max_new_tokens: int = 2048,
     ) -> None:
         """모델·tokenizer를 로드하고 필요하면 4-bit 양자화와 LoRA를 적용한다."""
 
@@ -115,6 +115,9 @@ class HuggingFaceConditionExtractor:
         )
         encoded = encoded.to(getattr(self.model, "device", self.device))
         prompt_length = encoded["input_ids"].shape[-1]
+        context_limit = getattr(self.model.config, "max_position_embeddings", None)
+        if context_limit and prompt_length + self.max_new_tokens > context_limit:
+            raise ValueError("모델 문맥 한도를 초과했습니다. 입력을 줄여 주세요. 원문은 자동으로 자르지 않습니다.")
         with torch.inference_mode():
             output_ids = self.model.generate(
                 **encoded,

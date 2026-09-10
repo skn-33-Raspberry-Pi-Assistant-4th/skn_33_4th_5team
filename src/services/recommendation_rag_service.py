@@ -8,6 +8,7 @@ from typing import Literal, Mapping, Protocol, Sequence
 
 from src.condition_extraction.schema import SurveyAnswer, SurveyResponse
 from src.condition_extraction.ui_input import RecommendationFormInput
+from src.contracts.input_limits import validate_input_text
 from src.contracts import ChatResponse, ConditionPayload
 from src.lang import (
     AnswerSafetyError,
@@ -263,6 +264,15 @@ class RecommendationRagService:
     ) -> ChatResponse:
         """자유 입력을 조건 추출부터 인용 포함 제품 추천까지 처리한다."""
 
+        try:
+            question = validate_input_text(question)
+        except ValueError as exc:
+            return self._response(
+                request_id=request_id,
+                status="needs_clarification",
+                answer=f"추천 요청 길이를 확인해 주세요. {exc}",
+                warnings=["input_length_invalid"],
+            )
         request_decision = evaluate_request(question)
         if not request_decision.allowed:
             return self._response(
