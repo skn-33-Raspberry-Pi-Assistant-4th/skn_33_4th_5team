@@ -15,6 +15,7 @@ import streamlit as st
 
 from src.condition_extraction.ui_input import RecommendationFormInput
 from src.contracts import ChatResponse, MediaItem
+from src.contracts.input_limits import MAX_INPUT_CHARS, INPUT_LENGTH_HINT
 from src.presentation import CitationPresenter, load_citation_presenter
 from src.rag import RagSettings
 from streamlit_app.runtime import (
@@ -204,6 +205,10 @@ def product_card(product) -> str:
         """
 
 
+def optional_boolean_label(value: bool | None) -> str:
+    return "선택 안 함" if value is None else "예" if value else "아니요"
+
+
 def render_recommendation_page() -> None:
     """Render the product form and the real recommendation service response."""
 
@@ -214,31 +219,33 @@ def render_recommendation_page() -> None:
     )
 
     with st.form("recommendation_form"):
-        purpose = st.text_input(
+        purpose = st.text_area(
             "어디에 사용하실 건가요?",
+            max_chars=MAX_INPUT_CHARS, height=160, help=INPUT_LENGTH_HINT,
             value=st.session_state.get("purpose", "모니터 없이 홈 서버로 사용하고 싶어요."),
             placeholder="예: 모니터 없이 홈 서버로 사용하고 싶어요.",
         )
-        st.caption("사용 목적과 환경을 자유롭게 적어주세요.")
-        st.markdown("**추가 조건**")
-        c1, c2, c3, c4, c5, c6 = st.columns([1.15, 1.15, .8, .8, .8, .8])
+        st.caption(f"{INPUT_LENGTH_HINT} · 사용 목적과 환경을 자유롭게 적어주세요.")
+        st.markdown("**추가 조건 (선택)**")
+        st.caption("선택하지 않아도 추천할 수 있어요. 직접 선택한 항목만 입력한 글보다 우선합니다.")
+        c1, c2, c3, c4, c5, c6 = st.columns([1, 1, 1, 1, 1, 1])
         with c1:
-            user_level = st.selectbox("사용자 수준", ["입문자", "중급자", "고급자"])
+            user_level = st.selectbox("사용자 수준", ["선택 안 함", "입문자", "중급자", "고급자"])
         with c2:
-            performance = st.selectbox("성능 우선순위", ["낮음", "보통", "높음"], index=1)
+            performance = st.selectbox("성능 우선순위", ["선택 안 함", "낮음", "보통", "높음"])
         with c3:
-            wifi = st.toggle("Wi-Fi 필요", value=True)
+            wifi = st.selectbox("Wi-Fi 필요", [None, True, False], format_func=optional_boolean_label)
         with c4:
-            camera = st.toggle("카메라 사용", value=False)
+            camera = st.selectbox("카메라 사용", [None, True, False], format_func=optional_boolean_label)
         with c5:
-            gpio = st.toggle("GPIO 사용", value=False)
+            gpio = st.selectbox("GPIO 사용", [None, True, False], format_func=optional_boolean_label)
         with c6:
-            monitor_absent = st.toggle("모니터 없음", value=True)
+            monitor_absent = st.selectbox("모니터 없음", [None, True, False], format_func=optional_boolean_label)
         submitted = st.form_submit_button("추천 결과 보기  ✨", use_container_width=True)
 
     if submitted:
-        if not purpose.strip():
-            st.error("사용 목적을 한 문장 이상 입력해 주세요.")
+        if not 1 <= len(purpose.strip()) <= MAX_INPUT_CHARS:
+            st.error(INPUT_LENGTH_HINT)
             return
         form = RecommendationFormInput.from_widget_values(
             request_id=str(uuid.uuid4()),
@@ -439,18 +446,20 @@ def render_qa_page() -> None:
     with st.form("qa_form", clear_on_submit=False):
         c1, c2 = st.columns([8, 1.2])
         with c1:
-            question = st.text_input(
+            question = st.text_area(
                 "질문",
+                max_chars=MAX_INPUT_CHARS, help=INPUT_LENGTH_HINT,
                 placeholder="질문을 입력하세요",
                 label_visibility="collapsed",
                 key="qa_input",
             )
         with c2:
             sent = st.form_submit_button("✈ 보내기", use_container_width=True)
+        st.caption(INPUT_LENGTH_HINT)
         st.caption("🛡 입력한 내용은 명령으로 실행되지 않습니다. 검색 근거가 없으면 답변을 보류합니다.")
     if sent:
-        if not question.strip():
-            st.warning("질문을 입력해 주세요.")
+        if not 1 <= len(question.strip()) <= MAX_INPUT_CHARS:
+            st.warning(INPUT_LENGTH_HINT)
         else:
             try:
                 with st.status("공식 근거를 확인하고 있습니다…", expanded=True) as progress:

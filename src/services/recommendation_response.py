@@ -44,9 +44,9 @@ def condition_evidence_fields(conditions: ConditionPayload) -> tuple[str, ...]:
     """
 
     fields = ["identity"]
-    if conditions.use_case is not None:
+    if conditions.use_case is not None or conditions.additional_use_cases:
         fields.append("recommended_use_cases")
-    if conditions.task is not None:
+    if conditions.task is not None or conditions.additional_tasks:
         fields.append("recommended_tasks")
     if conditions.performance_priority is not None:
         fields.append("performance_tier")
@@ -54,12 +54,14 @@ def condition_evidence_fields(conditions: ConditionPayload) -> tuple[str, ...]:
         fields.append("beginner_friendly")
     if conditions.wireless_required is True:
         fields.append("wireless")
-    if conditions.camera_required is True:
+    if conditions.camera_required is True or conditions.min_camera_connectors is not None:
         fields.append("camera_connector_count")
     if conditions.gpio_required is True:
         fields.append("gpio_header")
-    if conditions.monitor_available is True:
+    if conditions.monitor_available is True or conditions.min_display_outputs is not None:
         fields.append("display_output_count")
+    if conditions.ethernet_required is True:
+        fields.append("ethernet")
     if conditions.remote_access_required is True:
         fields.extend(("wireless", "ethernet"))
     return tuple(dict.fromkeys(fields))

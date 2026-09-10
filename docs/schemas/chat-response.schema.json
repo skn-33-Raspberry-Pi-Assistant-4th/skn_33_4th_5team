@@ -332,6 +332,93 @@
           ],
           "title": "User Level"
         },
+        "additional_use_cases": {
+          "items": {
+            "enum": [
+              "education_coding",
+              "desktop_computing",
+              "home_server",
+              "camera_monitoring",
+              "smart_farm_monitoring",
+              "headless_remote_management",
+              "gpio_iot"
+            ],
+            "type": "string"
+          },
+          "maxItems": 7,
+          "title": "Additional Use Cases",
+          "type": "array"
+        },
+        "additional_tasks": {
+          "items": {
+            "enum": [
+              "desktop_programming",
+              "os_installation",
+              "system_configuration",
+              "remote_access",
+              "camera_setup",
+              "gpio_setup",
+              "sensor_monitoring",
+              "server_operation",
+              "troubleshooting",
+              "support_recall"
+            ],
+            "type": "string"
+          },
+          "maxItems": 10,
+          "title": "Additional Tasks",
+          "type": "array"
+        },
+        "ethernet_required": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ethernet Required"
+        },
+        "min_camera_connectors": {
+          "anyOf": [
+            {
+              "maximum": 8,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Camera Connectors"
+        },
+        "min_display_outputs": {
+          "anyOf": [
+            {
+              "maximum": 8,
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min Display Outputs"
+        },
+        "unverified_requirements": {
+          "items": {
+            "maxLength": 500,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Unverified Requirements",
+          "type": "array"
+        },
         "needs_clarification": {
           "title": "Needs Clarification",
           "type": "boolean"
