@@ -45,7 +45,7 @@ LEGACY_EVIDENCE_MARKERS = {
     "ssh learner@raspberrypi.local": "ssh <username>@<ip address>",
     "ssh-copy-id learner@raspberrypi.local": "ssh-copy-id <username>@<ip address>",
 }
-TOKEN = re.compile(r'''"[^"]*"|'[^']*'|\S+''')
+TOKEN = re.compile(r'''(?:<[^<>]+>|"[^"]*"|'[^']*'|[^\s<>"'])+''')
 UNSUPPORTED = re.compile(r"(?:&&|\||;|&|\$\(|`)")
 DESTRUCTIVE = re.compile(r"(?:^|\s)(?:rm|dd|mkfs|shutdown|halt|poweroff)(?:\s|$)|apt\s+(?:remove|purge)")
 
@@ -120,6 +120,17 @@ def candidate_topic(document_id: str, command: str) -> str | None:
 
 def command_summary(command: str, topic: str) -> str:
     root = root_command(command)
+    explanations = {
+        "sudo raspi-config": "Raspberry Pi 설정 도구를 엽니다. SSH 활성화는 메뉴에서 별도로 선택합니다.",
+        "sudo touch /boot/firmware/ssh": "부팅 파티션에 빈 ssh 파일을 만들어 다음 부팅 시 SSH 활성화를 준비합니다.",
+        "sudo reboot": "Raspberry Pi를 재부팅합니다. 접속 중인 SSH 연결은 끊어집니다.",
+        "ls ~/.ssh": "현재 사용자 홈의 .ssh 디렉터리 항목을 나열합니다. 파일 내용을 읽지는 않습니다.",
+        "openssl passwd -6": "SHA-512 방식의 비밀번호 해시를 생성합니다. 실제 비밀번호를 실험실에 입력하지 마세요.",
+        "ssh-keygen": "SSH 인증에 사용할 공개 키와 개인 키 쌍을 생성합니다. 기존 키 경로를 선택할 때 덮어쓰기에 주의합니다.",
+        "ssh-copy-id learner@raspberrypi.local": "SSH 접속 대상에 공개 키를 복사해 키 기반 인증을 준비합니다.",
+    }
+    if command in explanations:
+        return explanations[command]
     if root == "ssh":
         return "SSH를 사용해 Raspberry Pi에 원격 접속을 시도하는 명령입니다."
     if root in {"ssh-keygen", "ssh-add", "ssh-copy-id", "scp"}:
@@ -152,9 +163,27 @@ def parts_for(command: str) -> tuple[list[dict[str, object]], list[dict[str, obj
     parts: list[dict[str, object]] = []
     fields: list[dict[str, object]] = []
     for index, value in enumerate(TOKEN.findall(command)):
-        editable = "<" in value and ">" in value
+        editable = ("<" in value and ">" in value) or (
+            command in LEGACY_SEEDS and value == "learner@raspberrypi.local"
+        )
         kind = "option" if value.startswith("-") else "command" if index == 0 or (index == 1 and parts[0]["value"] == "sudo") else "argument"
         part_id = f"part-{index + 1:02d}"
+        descriptions = {
+            "sudo": "뒤따르는 명령을 관리자 권한으로 요청합니다.",
+            "raspi-config": "Raspberry Pi 설정 메뉴를 엽니다.",
+            "touch": "파일이 없으면 빈 파일을 만들고, 있으면 타임스탬프를 갱신합니다.",
+            "/boot/firmware/ssh": "SSH 활성화를 요청하는 부팅 파티션의 빈 파일 경로입니다.",
+            "reboot": "운영체제를 재부팅합니다. 원격 접속이 종료될 수 있습니다.",
+            "ssh": "암호화된 원격 로그인 연결을 시작합니다.",
+            "learner@raspberrypi.local": "접속할 사용자명과 호스트입니다. 실제 장치 계정과 주소로 바꿉니다.",
+            "ls": "디렉터리 항목 이름을 나열합니다.",
+            "~/.ssh": "현재 사용자 홈 디렉터리 아래 SSH 설정과 키 저장 위치입니다.",
+            "ssh-keygen": "SSH 인증 키 쌍 생성 도구입니다.",
+            "ssh-copy-id": "접속 대상 계정에 로컬 공개 키를 등록하는 도구입니다.",
+            "openssl": "암호화 도구 모음입니다.",
+            "passwd": "비밀번호 해시 생성 하위 명령입니다.",
+            "-6": "SHA-512 비밀번호 해시 방식을 선택합니다.",
+        }
         parts.append(
             {
                 "part_id": part_id,
@@ -162,7 +191,7 @@ def parts_for(command: str) -> tuple[list[dict[str, object]], list[dict[str, obj
                 "value": value,
                 "prefix": "" if index == 0 else " ",
                 "label_ko": "입력값" if editable else ("옵션" if kind == "option" else "명령 구성 요소"),
-                "description_ko": "사용 환경에 맞게 바꿀 수 있는 예시 입력값입니다." if editable else "명령 구조를 이루는 고정 요소입니다.",
+                "description_ko": descriptions.get(value, "사용 환경에 맞게 바꿀 수 있는 예시 입력값입니다." if editable else "명령 구조를 이루는 고정 요소입니다."),
                 "editable": editable,
             }
         )
@@ -201,6 +230,12 @@ def build_catalog(manifest_path: Path, catalog_path: Path) -> dict[str, object]:
                     "checksum": chunk["chunk_checksum"],
                 }
     for command, topic in LEGACY_SEEDS.items():
+        if command == "sudo raspi-config":
+            matching = next(chunk for chunk in manifest["chunks"]
+                            if chunk["document_id"] == "rpi-doc-remote-access-ssh"
+                            and "`sudo raspi-config`" in chunk["content"])
+            by_command[command] = {"command": command, "topic": topic,
+                                  "chunk_id": matching["chunk_id"], "checksum": matching["chunk_checksum"]}
         if command in by_command:
             by_command[command]["topic"] = topic
             continue
@@ -260,7 +295,7 @@ def build_catalog(manifest_path: Path, catalog_path: Path) -> dict[str, object]:
             )
     return {
         "schema_version": "2.0.0",
-        "catalog_version": "2026-09-10-command-lab-v2",
+        "catalog_version": "2026-09-11-command-lab-v2.1",
         "source_manifest": "document_pipeline/data/manifest_v3.json",
         "execution_policy": "display_only",
         "generated_at": datetime.now(UTC).isoformat(),
