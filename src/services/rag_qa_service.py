@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Literal, Protocol, Sequence
 
+from src.contracts.input_limits import validate_input_text
 from src.contracts import ChatCitation, ChatResponse, MediaItem
 from src.lang import (
     AnswerSafetyError,
@@ -138,6 +139,15 @@ class RagQaService:
     ) -> ChatResponse:
         """질문 하나를 근거가 검증된 QA 응답으로 변환한다."""
 
+        try:
+            question = validate_input_text(question)
+        except ValueError as exc:
+            return self._status_response(
+                request_id=request_id,
+                status="needs_clarification",
+                answer=f"질문 길이를 확인해 주세요. {exc}",
+                warnings=["input_length_invalid"],
+            )
         request_decision = evaluate_request(question)
         if not request_decision.allowed:
             return self._status_response(

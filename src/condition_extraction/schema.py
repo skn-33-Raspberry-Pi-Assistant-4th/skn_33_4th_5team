@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from src.contracts import ConditionPayload
+from src.contracts.input_limits import MAX_INPUT_CHARS, validate_input_text
 from src.contracts.models import StrictContract
 
 
@@ -13,7 +14,12 @@ class SurveyAnswer(StrictContract):
 
     question_id: str = Field(min_length=1, max_length=80, pattern=r"^[a-z0-9_-]+$")
     question: str = Field(min_length=1, max_length=500)
-    answer: str = Field(min_length=1, max_length=2_000)
+    answer: str = Field(min_length=1, max_length=MAX_INPUT_CHARS)
+
+    @field_validator("answer", mode="before")
+    @classmethod
+    def validate_text(cls, value):
+        return validate_input_text(value) if isinstance(value, str) else value
 
 
 class SurveyResponse(StrictContract):

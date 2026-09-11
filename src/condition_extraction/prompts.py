@@ -18,6 +18,19 @@ product_models와 os_versions는 값이 있으면 배열, 없으면 null입니�
 답변이 충돌하거나 핵심 목적이 모호하면 needs_clarification을 true로 하고 최대 3개의 짧은 한국어 확인 질문을 작성하세요.
 JSON 객체 하나만 출력하고 Markdown 코드 블록이나 설명을 덧붙이지 마세요.
 
+짧은 추천 입력 처리:
+- 제품 추천 설문에서는 “홈 서버를 만들고 싶어요”처럼 목적만 있어도 product_recommendation입니다.
+- Wi-Fi·카메라·GPIO·성능·수준을 말하지 않아도 목적을 알면 추천할 수 있습니다. 누락된 선택 조건을 확인 질문으로 요구하지 마세요.
+- 목적 자체가 없거나 모호할 때만 목적을 확인하세요.
+
+긴 입력 처리:
+- 처음부터 끝까지 읽고 주 목적은 use_case, 부 목적들은 additional_use_cases에, 부 작업들은 additional_tasks에 담으세요.
+- 목적이 여러 개라는 이유만으로 확인 질문을 하지 마세요. 기존 enum에 해당하지 않는 요구는 unverified_requirements에 짧게 보존하세요.
+- 예산, 크기, 소음, 전력, 메모리 등 스키마로 검증하지 못하는 요구도 unverified_requirements에 보존하세요. 충족한다고 추측하지 마세요.
+- ethernet_required는 유선 LAN 필수 여부, min_camera_connectors와 min_display_outputs는 명시된 최소 커넥터/출력 수입니다.
+- 보유 제품이나 단순 예시로 언급한 제품은 product_models에 넣지 마세요. 추천 대상을 그 제품으로 제한하거나 비교해 달라고 한 경우에만 넣으세요.
+- 희망 사항과 필수 조건을 구분하고, 나중에 명시적으로 정정한 조건을 적용하세요. 해결되지 않은 필수 조건 충돌만 확인하세요.
+
 필드 경계:
 - intent는 사용자가 요청하는 응답의 종류입니다. 제품이나 모델을 골라 달라는 요청만 product_recommendation이고,
   이미 보유하거나 지정한 제품의 설치·연결·설정 절차를 묻는 요청은 how_to입니다.

@@ -140,6 +140,12 @@ class ProductRecommender:
             and conditions.use_case not in product.recommendation_profile.recommended_use_cases
         ):
             failures.append("reviewed use case")
+        if conditions.ethernet_required is True and not caps.ethernet:
+            failures.append("ethernet")
+        if conditions.min_camera_connectors is not None and caps.camera_connector_count < conditions.min_camera_connectors:
+            failures.append("camera connector count")
+        if conditions.min_display_outputs is not None and caps.display_output_count < conditions.min_display_outputs:
+            failures.append("display output count")
         if conditions.wireless_required is True and not caps.wireless:
             failures.append("wireless")
         if conditions.camera_required is True and caps.camera_connector_count == 0:
@@ -235,7 +241,22 @@ class ProductRecommender:
         if conditions.monitor_available is False:
             matched.append("모니터 없는 환경")
 
+        for use_case in sorted(set(conditions.additional_use_cases) - {conditions.use_case}):
+            label = USE_CASE_LABELS.get(use_case, use_case)
+            if use_case in profile.recommended_use_cases:
+                score += 10
+                matched.append(f"추가 사용 목적: {label}")
+        for task in sorted(set(conditions.additional_tasks) - {conditions.task}):
+            if task in profile.recommended_tasks:
+                score += 5
+                matched.append(f"추가 작업: {TASK_LABELS.get(task, task)}")
+        if conditions.ethernet_required is True:
+            matched.append("유선 LAN")
         tradeoffs = list(product.caveats)
+        tradeoffs.extend(f"충족 여부 확인 필요: {item}" for item in conditions.unverified_requirements)
+        for use_case in sorted(set(conditions.additional_use_cases) - {conditions.use_case}):
+            if use_case not in profile.recommended_use_cases:
+                tradeoffs.append(f"추가 용도 검토 필요: {USE_CASE_LABELS.get(use_case, use_case)}")
         if (
             conditions.gpio_required is True
             and product.capabilities.gpio_header is GpioHeader.UNPOPULATED

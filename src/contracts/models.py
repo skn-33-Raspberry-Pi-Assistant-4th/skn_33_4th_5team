@@ -96,6 +96,14 @@ class ConditionPayload(StrictContract):
     monitor_available: bool | None
     remote_access_required: bool | None
     user_level: Literal["beginner", "intermediate", "advanced"] | None
+    additional_use_cases: list[UseCase] = Field(default_factory=list, max_length=7)
+    additional_tasks: list[Task] = Field(default_factory=list, max_length=10)
+    ethernet_required: bool | None = None
+    min_camera_connectors: int | None = Field(default=None, ge=1, le=8)
+    min_display_outputs: int | None = Field(default=None, ge=1, le=8)
+    unverified_requirements: list[Annotated[str, Field(min_length=1, max_length=500)]] = Field(
+        default_factory=list, max_length=20
+    )
     needs_clarification: bool
     clarification_questions: list[NonEmptyText]
 
