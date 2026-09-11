@@ -67,7 +67,7 @@ def current_page() -> str:
     """Return a supported top-level page from the URL query string."""
 
     page = st.query_params.get("page", "about")
-    page = page if page in {"about", "recommend", "qa"} else "about"
+    page = page if page in {"about", "recommend", "qa", "lab"} else "about"
     previous_page = st.session_state.get("active_page")
     if previous_page is not None and previous_page != page:
         for key in (
@@ -88,6 +88,7 @@ def render_header(page: str) -> str:
         "about": "서비스 소개",
         "recommend": "제품 추천",
         "qa": "질의응답",
+        "lab": "명령어 실험실",
     }
     with st.container(key="topbar"):
         brand, navigation_area, _ = st.columns([1, 1.5, 1], vertical_alignment="center")
@@ -95,7 +96,7 @@ def render_header(page: str) -> str:
             st.markdown('<div class="picare-brand">🍓PiCare</div>', unsafe_allow_html=True)
         with navigation_area:
             with st.container(key="top_navigation"):
-                navigation = st.columns(3, gap="small", vertical_alignment="center")
+                navigation = st.columns(len(page_labels), gap="small", vertical_alignment="center")
                 for column, (target, label) in zip(navigation, page_labels.items(), strict=True):
                     with column:
                         if st.button(
@@ -443,6 +444,8 @@ def render_qa_page() -> None:
     st.markdown("---")
     if st.session_state.pop("clear_qa_input", False):
         st.session_state.qa_input = ""
+    if "lab_qa_prefill" in st.session_state:
+        st.session_state.qa_input = st.session_state.pop("lab_qa_prefill")
     with st.form("qa_form", clear_on_submit=False):
         c1, c2 = st.columns([8, 1.2])
         with c1:
@@ -545,5 +548,8 @@ if page == "recommend":
     render_recommendation_page()
 elif page == "qa":
     render_qa_page()
+elif page == "lab":
+    from streamlit_app.command_lab import render_command_lab_page
+    render_command_lab_page()
 else:
     render_about_page()
