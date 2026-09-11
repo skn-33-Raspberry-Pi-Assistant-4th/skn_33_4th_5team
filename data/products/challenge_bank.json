@@ -1,0 +1,264 @@
+{
+  "schema_version": "1.0.0",
+  "bank_version": "2026-09-10-v1",
+  "source_manifest": "document_pipeline/data/manifest_v3.json",
+  "policy": {
+    "questions_per_topic": 5,
+    "choices_per_question": 4,
+    "difficulty": "beginner",
+    "active_review_status": "approved",
+    "notes": "최초 출제 응답에는 correct_choice_id, rationale_ko, choice_feedback를 포함하지 않는다."
+  },
+  "questions": [
+    {
+      "question_id": "os-install-01",
+      "topic": "os_installation",
+      "prompt": "Raspberry Pi Imager에서 기본 설치 대상을 고르는 순서로 맞는 것은 무엇인가요?",
+      "choices": [
+        {"choice_id": "A", "text": "장치 → 운영체제 → 저장장치"},
+        {"choice_id": "B", "text": "저장장치 → 장치 → 운영체제"},
+        {"choice_id": "C", "text": "운영체제 → 저장장치 → 장치"},
+        {"choice_id": "D", "text": "저장장치만 선택하면 된다"}
+      ],
+      "correct_choice_id": "A",
+      "rationale_ko": "Imager는 Device 탭에서 보드를 선택하고 OS 탭에서 운영체제를 고른 다음 Storage 탭에서 기록할 저장장치를 선택하도록 안내합니다.",
+      "choice_feedback": {
+        "A": "맞습니다. Device, OS, Storage 순서로 선택합니다.",
+        "B": "저장장치는 보드와 운영체제를 선택한 뒤 지정합니다.",
+        "C": "먼저 사용할 Raspberry Pi 장치를 선택해야 합니다.",
+        "D": "보드와 운영체제 선택도 필요합니다."
+      },
+      "evidence_ids": ["rpi-doc-getting-started-install-005"],
+      "evidence_checksums": ["sha256:aae13630761ab7472d4165bd924b3f1e8bb88c2fa9255a2909594c31755ad0b8"],
+      "difficulty": "beginner",
+      "review_status": "approved",
+      "reviewed_by": "A",
+      "reviewed_at": "2026-09-10"
+    },
+    {
+      "question_id": "os-install-02",
+      "topic": "os_installation",
+      "prompt": "Raspberry Pi Imager의 Customisation에서 미리 설정할 수 있는 항목은 무엇인가요?",
+      "choices": [
+        {"choice_id": "A", "text": "CPU의 물리 코어 수"},
+        {"choice_id": "B", "text": "호스트명, 사용자 계정, Wi-Fi와 원격 접속"},
+        {"choice_id": "C", "text": "microSD 카드의 실제 수명"},
+        {"choice_id": "D", "text": "카메라 렌즈의 초점 거리"}
+      ],
+      "correct_choice_id": "B",
+      "rationale_ko": "Customisation에서는 호스트명, 시간대, 사용자명과 비밀번호, Wi-Fi, 원격 접속과 Raspberry Pi Connect 등을 미리 설정할 수 있습니다.",
+      "choice_feedback": {
+        "A": "CPU의 물리 사양을 변경하는 기능이 아닙니다.",
+        "B": "맞습니다. 첫 부팅 전에 계정·네트워크·원격 접속 등을 구성할 수 있습니다.",
+        "C": "저장장치 수명은 Customisation에서 설정하거나 확인하지 않습니다.",
+        "D": "카메라 렌즈 설정은 Imager의 OS Customisation 범위가 아닙니다."
+      },
+      "evidence_ids": ["rpi-doc-getting-started-install-007"],
+      "evidence_checksums": ["sha256:19d52e86f422ce2b22ab771ca91ba2ff064280aac694a4ca6f81277bd3a37463"],
+      "difficulty": "beginner",
+      "review_status": "approved",
+      "reviewed_by": "A",
+      "reviewed_at": "2026-09-10"
+    },
+    {
+      "question_id": "os-install-03",
+      "topic": "os_installation",
+      "prompt": "Imager가 OS 이미지를 저장장치에 쓴 다음 권장하는 작업은 무엇인가요?",
+      "choices": [
+        {"choice_id": "A", "text": "즉시 저장장치를 분리한다"},
+        {"choice_id": "B", "text": "저장장치를 다시 포맷한다"},
+        {"choice_id": "C", "text": "이미지가 올바르게 기록됐는지 검증한다"},
+        {"choice_id": "D", "text": "다른 운영체제를 한 번 더 기록한다"}
+      ],
+      "correct_choice_id": "C",
+      "rationale_ko": "Imager는 이미지 기록을 마치면 올바르게 기록됐는지 검증하며, 공식 문서는 이 검증 단계를 완료하도록 권장합니다.",
+      "choice_feedback": {
+        "A": "검증이 끝나기 전에 저장장치를 분리하면 안 됩니다.",
+        "B": "포맷하면 방금 기록한 OS 이미지가 사라질 수 있습니다.",
+        "C": "맞습니다. 기록 후 검증을 완료하는 것이 권장됩니다.",
+        "D": "같은 저장장치에 다른 OS를 다시 기록할 필요는 없습니다."
+      },
+      "evidence_ids": ["rpi-doc-getting-started-install-016"],
+      "evidence_checksums": ["sha256:57199c8d9f6c00dac4d40a9ce4df42a05fa6802aa477c2a9b9491a87fa1f7b66"],
+      "difficulty": "beginner",
+      "review_status": "approved",
+      "reviewed_by": "A",
+      "reviewed_at": "2026-09-10"
+    },
+    {
+      "question_id": "os-install-04",
+      "topic": "os_installation",
+      "prompt": "부팅 미디어에 OS 설치를 마친 다음 해야 할 작업은 무엇인가요?",
+      "choices": [
+        {"choice_id": "A", "text": "부팅 미디어를 Raspberry Pi에 연결한다"},
+        {"choice_id": "B", "text": "부팅 미디어를 계속 일반 PC에만 연결해 둔다"},
+        {"choice_id": "C", "text": "Raspberry Pi의 CPU를 교체한다"},
+        {"choice_id": "D", "text": "부팅 미디어의 모든 파일을 삭제한다"}
+      ],
+      "correct_choice_id": "A",
+      "rationale_ko": "OS를 기록한 부팅 미디어를 Raspberry Pi에 연결해야 합니다. 최신 보드에서는 일반적으로 microSD 카드를 보드 아래쪽 슬롯에 넣습니다.",
+      "choice_feedback": {
+        "A": "맞습니다. OS가 기록된 부팅 미디어를 Raspberry Pi에 연결합니다.",
+        "B": "일반 PC는 OS 기록에 사용하며, 완료된 미디어는 Raspberry Pi로 옮깁니다.",
+        "C": "OS 설치 과정에서 CPU를 교체하지 않습니다.",
+        "D": "파일을 삭제하면 부팅에 필요한 OS 데이터가 사라집니다."
+      },
+      "evidence_ids": ["rpi-doc-getting-started-setting-up-022"],
+      "evidence_checksums": ["sha256:7f04cdb6331ca226e3eb8cf6e4972bb21473abae20fb98c753a827d449bf0dbc"],
+      "difficulty": "beginner",
+      "review_status": "approved",
+      "reviewed_by": "A",
+      "reviewed_at": "2026-09-10"
+    },
+    {
+      "question_id": "os-install-05",
+      "topic": "os_installation",
+      "prompt": "모니터 없이 Raspberry Pi를 처음 사용할 때 Imager에서 미리 준비해야 하는 것은 무엇인가요?",
+      "choices": [
+        {"choice_id": "A", "text": "네트워크, 사용자 계정과 SSH 또는 Raspberry Pi Connect"},
+        {"choice_id": "B", "text": "그래픽 카드 드라이버만 설정"},
+        {"choice_id": "C", "text": "모니터 해상도만 설정"},
+        {"choice_id": "D", "text": "카메라 촬영 간격만 설정"}
+      ],
+      "correct_choice_id": "A",
+      "rationale_ko": "헤드리스 환경은 첫 부팅부터 네트워크로 접속해야 하므로 Imager에서 네트워크, 사용자 계정과 SSH 또는 Raspberry Pi Connect를 준비해야 합니다.",
+      "choice_feedback": {
+        "A": "맞습니다. 네트워크와 계정, 원격 접속 방법을 첫 부팅 전에 준비합니다.",
+        "B": "헤드리스 첫 접속에 필요한 핵심 설정이 아닙니다.",
+        "C": "헤드리스 환경은 모니터 없이 사용하므로 원격 접속 설정이 필요합니다.",
+        "D": "카메라 설정보다 네트워크와 원격 접속 구성이 먼저 필요합니다."
+      },
+      "evidence_ids": ["rpi-doc-getting-started-setting-up-029", "rpi-doc-getting-started-install-012"],
+      "evidence_checksums": ["sha256:43c96b380013b5c0544a35339327b89eef5020b96829e1a6e6ec10197199f638", "sha256:892688cf5002bcbf916f48f3d6cbe5625e671e34211f8b84bfc86efa91a4c5ff"],
+      "difficulty": "beginner",
+      "review_status": "approved",
+      "reviewed_by": "A",
+      "reviewed_at": "2026-09-10"
+    },
+    {
+      "question_id": "ssh-01",
+      "topic": "remote_access",
+      "prompt": "Raspberry Pi OS에서 SSH 서버의 기본 상태는 무엇인가요?",
+      "choices": [
+        {"choice_id": "A", "text": "항상 자동으로 활성화된다"},
+        {"choice_id": "B", "text": "기본적으로 비활성화되어 있다"},
+        {"choice_id": "C", "text": "카메라를 연결하면 활성화된다"},
+        {"choice_id": "D", "text": "microSD 용량에 따라 자동 결정된다"}
+      ],
+      "correct_choice_id": "B",
+      "rationale_ko": "Raspberry Pi OS는 SSH 서버를 기본적으로 비활성화하며, Imager·데스크톱 설정·raspi-config 등의 방법으로 사용자가 활성화해야 합니다.",
+      "choice_feedback": {
+        "A": "기본 설치에서 SSH 서버는 자동 활성화되지 않습니다.",
+        "B": "맞습니다. 보안을 위해 기본적으로 비활성화되어 있습니다.",
+        "C": "카메라 연결 여부와 SSH 활성화는 관계가 없습니다.",
+        "D": "저장장치 용량으로 SSH 상태를 결정하지 않습니다."
+      },
+      "evidence_ids": ["rpi-doc-remote-access-ssh-001"],
+      "evidence_checksums": ["sha256:43fd0fe65ce4b90f4a927a600ecacb0e572ef1e7bd75784aa92660d4e6486cca"],
+      "difficulty": "beginner",
+      "review_status": "approved",
+      "reviewed_by": "A",
+      "reviewed_at": "2026-09-10"
+    },
+    {
+      "question_id": "ssh-02",
+      "topic": "remote_access",
+      "prompt": "새 OS를 기록할 때 Raspberry Pi Imager에서 SSH를 준비하는 방법은 무엇인가요?",
+      "choices": [
+        {"choice_id": "A", "text": "Remote Access에서 Enable SSH를 켜고 인증 방식을 선택한다"},
+        {"choice_id": "B", "text": "Storage에서 저장장치를 두 번 선택한다"},
+        {"choice_id": "C", "text": "카메라 설정에서 SSH 렌즈를 선택한다"},
+        {"choice_id": "D", "text": "OS 설치가 끝날 때까지 아무 설정도 할 수 없다"}
+      ],
+      "correct_choice_id": "A",
+      "rationale_ko": "Imager의 Customisation > Remote Access에서 Enable SSH를 켜고 비밀번호 또는 공개 키 인증을 선택할 수 있습니다.",
+      "choice_feedback": {
+        "A": "맞습니다. Remote Access에서 SSH와 인증 방식을 설정합니다.",
+        "B": "저장장치 선택은 SSH 설정과 관계가 없습니다.",
+        "C": "카메라 설정에는 SSH 활성화 기능이 없습니다.",
+        "D": "Imager에서 OS 기록 전에 원격 접속을 미리 설정할 수 있습니다."
+      },
+      "evidence_ids": ["rpi-doc-getting-started-install-012", "rpi-doc-remote-access-ssh-001"],
+      "evidence_checksums": ["sha256:892688cf5002bcbf916f48f3d6cbe5625e671e34211f8b84bfc86efa91a4c5ff", "sha256:43fd0fe65ce4b90f4a927a600ecacb0e572ef1e7bd75784aa92660d4e6486cca"],
+      "difficulty": "beginner",
+      "review_status": "approved",
+      "reviewed_by": "A",
+      "reviewed_at": "2026-09-10"
+    },
+    {
+      "question_id": "ssh-03",
+      "topic": "remote_access",
+      "prompt": "사용자명이 learner이고 호스트명이 raspberrypi.local일 때 올바른 SSH 접속 명령은 무엇인가요?",
+      "choices": [
+        {"choice_id": "A", "text": "ssh raspberrypi.local learner"},
+        {"choice_id": "B", "text": "ssh learner@raspberrypi.local"},
+        {"choice_id": "C", "text": "learner ssh raspberrypi.local"},
+        {"choice_id": "D", "text": "connect learner:raspberrypi.local"}
+      ],
+      "correct_choice_id": "B",
+      "rationale_ko": "SSH 기본 접속 형식은 ssh 다음에 사용자명과 대상 주소를 username@host 형태로 적습니다.",
+      "choice_feedback": {
+        "A": "사용자명과 호스트명 사이에는 @를 사용합니다.",
+        "B": "맞습니다. ssh username@host 형식입니다.",
+        "C": "ssh 명령이 가장 먼저 오고 그 뒤에 접속 대상을 적어야 합니다.",
+        "D": "기본 SSH 접속에는 connect 명령과 콜론 형식을 사용하지 않습니다."
+      },
+      "evidence_ids": ["rpi-doc-remote-access-ssh-002"],
+      "evidence_checksums": ["sha256:94eb3c689e8db3625c5d7f1717d9b96e06a67411274d419c2e44bd2dfd9ab5b8"],
+      "difficulty": "beginner",
+      "review_status": "approved",
+      "reviewed_by": "A",
+      "reviewed_at": "2026-09-10"
+    },
+    {
+      "question_id": "ssh-04",
+      "topic": "remote_access",
+      "prompt": "처음 SSH 연결에 성공했을 때 나타나는 보안 확인에 대한 설명으로 맞는 것은 무엇인가요?",
+      "choices": [
+        {"choice_id": "A", "text": "처음 연결할 때 보안 경고가 나타날 수 있으며 yes를 입력해 계속한다"},
+        {"choice_id": "B", "text": "경고가 나타나면 저장장치를 즉시 포맷한다"},
+        {"choice_id": "C", "text": "경고는 카메라 오류를 의미한다"},
+        {"choice_id": "D", "text": "보안 확인은 사용자명 없이 자동 통과한다"}
+      ],
+      "correct_choice_id": "A",
+      "rationale_ko": "공식 문서는 첫 연결에서 보안 경고가 표시되며 yes를 입력해 계속한다고 안내합니다. 이 경고는 처음 연결할 때만 표시됩니다.",
+      "choice_feedback": {
+        "A": "맞습니다. 처음 연결하는 호스트인지 확인하는 단계입니다.",
+        "B": "SSH 보안 확인 때문에 저장장치를 포맷하지 않습니다.",
+        "C": "SSH 보안 경고는 카메라 상태와 관계가 없습니다.",
+        "D": "사용자가 접속을 계속할지 확인해야 합니다."
+      },
+      "evidence_ids": ["rpi-doc-remote-access-ssh-002"],
+      "evidence_checksums": ["sha256:94eb3c689e8db3625c5d7f1717d9b96e06a67411274d419c2e44bd2dfd9ab5b8"],
+      "difficulty": "beginner",
+      "review_status": "approved",
+      "reviewed_by": "A",
+      "reviewed_at": "2026-09-10"
+    },
+    {
+      "question_id": "ssh-05",
+      "topic": "remote_access",
+      "prompt": "SSH 키 파일의 역할에 대한 설명으로 맞는 것은 무엇인가요?",
+      "choices": [
+        {"choice_id": "A", "text": "개인 키는 접속을 시작하는 PC에 안전하게 보관하고 공개 키를 Raspberry Pi와 공유한다"},
+        {"choice_id": "B", "text": "개인 키와 공개 키를 모두 인터넷에 공개한다"},
+        {"choice_id": "C", "text": "공개 키는 절대 Raspberry Pi에 등록하지 않는다"},
+        {"choice_id": "D", "text": "개인 키를 Raspberry Pi 제품 번호로 사용한다"}
+      ],
+      "correct_choice_id": "A",
+      "rationale_ko": "개인 키는 접속에 사용하는 컴퓨터에 안전하게 보관하고 공개 키는 Raspberry Pi에 공유해 원격 사용자의 신원을 확인하는 데 사용합니다.",
+      "choice_feedback": {
+        "A": "맞습니다. 개인 키는 보호하고 공개 키만 대상 Raspberry Pi에 등록합니다.",
+        "B": "개인 키는 공개하거나 다른 장치에 무분별하게 공유하면 안 됩니다.",
+        "C": "공개 키는 키 기반 인증을 위해 Raspberry Pi에 등록할 수 있습니다.",
+        "D": "개인 키는 인증 정보이며 제품 번호가 아닙니다."
+      },
+      "evidence_ids": ["rpi-doc-remote-access-ssh-008", "rpi-doc-remote-access-ssh-010"],
+      "evidence_checksums": ["sha256:db7af8ca7aa05362dd33341fbf8add69c99ad8bc2afa9d2ddb8b461fc0fea46d", "sha256:a5e898ebb12a8354a0a8fb4316d19fca19c21febd571731194304cf179bc7edd"],
+      "difficulty": "beginner",
+      "review_status": "approved",
+      "reviewed_by": "A",
+      "reviewed_at": "2026-09-10"
+    }
+  ]
+}

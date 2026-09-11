@@ -69,15 +69,14 @@ class CitationPresenter:
         section_labels = self.labels.get("section_labels", {})
         section_leaf_labels = self.labels.get("section_leaf_labels", {})
         document_label = self._label(document_labels, citation.document_id, citation.title)
-        section_label = self._label(
-            section_labels,
-            citation.section,
-            self._label(
-                section_leaf_labels,
-                self._section_fallback(citation.section),
-                self._section_fallback(citation.section),
-            ),
-        )
+        section_leaf = self._section_fallback(citation.section)
+        section_label = self._label(section_labels, citation.section, "")
+        if not section_label:
+            section_label = self._label(section_leaf_labels, section_leaf, "")
+        if not section_label:
+            # 새 공식 문서의 세부 heading은 사전이 갱신되기 전에도 영문을 그대로
+            # 노출하지 않고, 이미 검수된 문서 한국어 제목으로 안전하게 축약한다.
+            section_label = document_label if citation.document_id in document_labels else section_leaf
 
         tags: list[str] = []
         product_models = self._strings(chunk.get("product_models"))

@@ -65,9 +65,31 @@ def test_labels_cover_current_v3_documents_and_filter_enums() -> None:
     assert {value for item in chunks for value in item["categories"]} <= set(labels["category_labels"])
     assert {value for item in chunks for value in item["use_cases"]} <= set(labels["use_case_labels"])
     assert {value for item in chunks for value in item["tasks"]} <= set(labels["task_labels"])
-    assert {
-        item["section"].rsplit(" > ", maxsplit=1)[-1] for item in chunks
-    } <= set(labels["section_leaf_labels"])
+
+
+def test_known_document_uses_document_label_for_unmapped_section() -> None:
+    presenter = CitationPresenter(
+        labels={"document_labels": {"known-doc": "검수된 문서 제목"}},
+        chunks_by_id={},
+    )
+    citation = ChatCitation(
+        citation_id="C8",
+        document_id="known-doc",
+        chunk_id="known-doc-001",
+        title="Official title",
+        publisher="Raspberry Pi Ltd",
+        section="Parent > Newly added heading",
+        source_url="https://www.raspberrypi.com/documentation/",
+        source_anchor=None,
+        document_version=None,
+        published_at=None,
+        updated_at=None,
+        collected_at="2026-09-10",
+        license="CC-BY-SA-4.0",
+        quote="Official content.",
+    )
+
+    assert presenter.present(citation).section_label == "검수된 문서 제목"
 
 
 def test_unknown_metadata_falls_back_without_exposing_canonical_id() -> None:
