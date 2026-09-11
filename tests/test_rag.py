@@ -153,7 +153,8 @@ def test_settings_reads_dotenv_and_resolves_project_relative_paths(tmp_path, mon
         ),
         encoding="utf-8",
     )
-    for name in ("DOCUMENT_MANIFEST", "CHROMA_PATH", "CHROMA_COLLECTION_NAME", "E5_MODEL_NAME", "TOP_K"):
+    for name in ("DOCUMENT_MANIFEST", "CHROMA_PATH", "CHROMA_COLLECTION_NAME", "E5_MODEL_NAME", "TOP_K",
+                 "MEDIA_MANIFEST", "MEDIA_CHUNK_MAP", "DENSE_MAX_DISTANCE"):
         monkeypatch.delenv(name, raising=False)
 
     settings = RagSettings.from_env(tmp_path)
