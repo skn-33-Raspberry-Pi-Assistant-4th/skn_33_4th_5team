@@ -27,6 +27,15 @@ Key, token, corpus 원문은 Git과 프로젝트 `.env.example`에 넣지 않는
 Pod의 프로젝트 최상위 `.env`에는 RAG 경로와 아래 생성기 설정을 둔다.
 
 ```env
+# Django: SSH 터널 사용 시 아래 호스트 설정 그대로 사용한다.
+# RunPod HTTP 프록시 사용 시 실제 프록시 호스트를 DJANGO_ALLOWED_HOSTS에 추가한다.
+DJANGO_DEBUG=false
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+
+# Hugging Face 모델 캐시를 RunPod 영속 volume에 보관한다.
+HF_HOME=/workspace/.cache/huggingface
+
+# Q&A 답변 생성기: RunPod GPU에서 실제 Qwen을 사용한다.
 ANSWER_GENERATOR=huggingface
 ANSWER_MODEL_ID=Qwen/Qwen3-4B-Instruct-2507
 ANSWER_MODEL_REVISION=main
@@ -34,11 +43,22 @@ ANSWER_LOAD_IN_4BIT=true
 ANSWER_MAX_NEW_TOKENS=512
 INFERENCE_DEVICE=cuda
 
-# v3 공식 corpus와 팀 내부 catalog/LoRA adapter 위치
+# v3 공식 corpus·검색 색인·제품 데이터
 DOCUMENT_MANIFEST=document_pipeline/data/manifest_v3.json
 CHROMA_PATH=data/indexed/chroma_official_v3
 CHROMA_COLLECTION_NAME=rpi_official
 PRODUCT_CATALOG=data/products/catalog.json
+MEDIA_MANIFEST=document_pipeline/data/media_manifest_v3.json
+MEDIA_CHUNK_MAP=document_pipeline/data/media_chunk_map_v3.json
+E5_MODEL_NAME=intfloat/multilingual-e5-base
+DENSE_MAX_DISTANCE=0.48
+TOP_K=5
+
+# Django 명령어 실험실·미니 챌린지 데이터 경로
+COMMAND_CATALOG=data/products/command_catalog.json
+CHALLENGE_BANK=data/products/challenge_bank.json
+
+# 제품 추천 조건 추출기: 학습 완료 QLoRA adapter를 사용한다.
 CONDITION_EXTRACTOR=lora
 CONDITION_MODEL_ID=Qwen/Qwen3-4B-Instruct-2507
 LORA_ADAPTER_PATH=/workspace/models/picare-qwen3-4b-qlora

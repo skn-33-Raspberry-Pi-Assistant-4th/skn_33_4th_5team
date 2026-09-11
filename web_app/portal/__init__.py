@@ -1,0 +1,1 @@
+"""PiCare public presentation app."""

@@ -1,0 +1,15 @@
+{% extends 'portal/base.html' %}
+{% block title %}PiCare | Raspberry Pi 공식 문서 기반 도우미{% endblock %}
+{% block content %}
+<section class="hero text-center mx-auto">
+  <p class="eyebrow">OFFICIAL RASPBERRY PI GUIDE</p>
+  <h1>Raspberry Pi 시작을 위한<br><em>실용 가이드</em></h1>
+  <p class="hero-copy">제품 선택부터 설치와 문제 해결까지, 공식 문서를 바탕으로 필요한 정보를 안내합니다.</p>
+</section>
+<section class="row g-4 justify-content-center mt-2">
+  <article class="col-md-6"><div class="feature-card h-100"><div class="feature-icon">🧩</div><h2>맞춤형 제품 추천</h2><p>사용 목적과 환경에 맞는 제품·준비 항목을 공식 사양으로 안내합니다.</p><a class="btn btn-picare w-100" href="{% url 'recommend' %}">제품 추천 시작하기 <span>→</span></a></div></article>
+  <article class="col-md-6"><div class="feature-card h-100"><div class="feature-icon">🔎</div><h2>사용법·문제 해결 Q&amp;A</h2><p>설치와 원격 접속, 문제 해결을 공식 문서 근거와 함께 확인합니다.</p><a class="btn btn-picare w-100" href="{% url 'qa' %}">질문 바로 하기 <span>→</span></a></div></article>
+</section>
+<section class="notice-card mt-4"><span>🛡️</span><div><strong>확인할 수 없으면 보류</strong><p>근거가 부족한 내용은 추측하지 않고, 추가로 확인할 정보를 안내합니다.</p></div></section>
+{% if not runtime_ready %}<div class="alert alert-warning mt-4 mb-0"><strong>실행 환경 준비 필요</strong><br>{{ runtime_message }}</div>{% endif %}
+{% endblock %}

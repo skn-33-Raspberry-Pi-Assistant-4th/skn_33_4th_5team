@@ -2,11 +2,13 @@
 #
 #   pip install -r requirements.txt
 #
-# Streamlit 화면, Hybrid RAG 검색, 문서 파이프라인, 테스트가 모두 동작한다.
+# Django·Streamlit 화면, Hybrid RAG 검색, 문서 파이프라인, 테스트가 모두 동작한다.
 # GPU에서 Qwen 답변 생성이나 LoRA 조건 추출을 실행하려면 requirements-gpu.txt를,
 # QLoRA 학습까지 하려면 requirements-training.txt를 이어서 설치한다.
 
 # --- 화면·계약·설정 ---
+# Django는 현재 기본 사용자 UI이며, Streamlit은 기존 화면 호환용으로 유지한다.
+Django>=5.1,<6
 # st.container(key=...)와 st-key-* CSS 선택자는 Streamlit 1.41부터 지원한다.
 streamlit>=1.41,<2
 pydantic>=2.8,<3

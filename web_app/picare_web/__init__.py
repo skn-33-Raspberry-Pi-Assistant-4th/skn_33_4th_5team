@@ -1,0 +1,1 @@
+"""PiCare Django project configuration."""
