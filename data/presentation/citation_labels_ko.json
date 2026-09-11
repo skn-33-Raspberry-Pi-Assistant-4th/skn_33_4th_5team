@@ -18,7 +18,12 @@
     "rpi-doc-interfaces": "원격 접속 인터페이스",
     "rpi-doc-camera-multicam": "다중 카메라 설정",
     "rpi-doc-frequency-management": "주파수 관리와 냉각",
-    "rpi-doc-getting-started-setting-up": "Raspberry Pi 초기 설정"
+    "rpi-doc-getting-started-setting-up": "Raspberry Pi 초기 설정",
+    "rpi-doc-config-raspi-config": "raspi-config 시스템 설정",
+    "rpi-doc-config-boot-behaviour": "부팅 동작 설정",
+    "rpi-doc-camera-rpicam-options": "rpicam 공통 명령 옵션",
+    "rpi-doc-camera-streaming": "rpicam 영상 스트리밍",
+    "rpi-doc-camera-rpicam-building": "rpicam-apps 설치 및 빌드"
   },
   "section_labels": {
     "Use multiple cameras": "다중 카메라 사용",
@@ -106,6 +111,8 @@
     "Wireless input devices": "무선 입력 장치", "Zero series": "Zero 시리즈", "`libcamera`": "libcamera", "`rpicam-apps`": "rpicam-apps"
   },
   "category_labels": {
+    "boot": "부팅", "build": "빌드", "kernel": "커널", "streaming": "스트리밍",
+    "rpicam": "rpicam", "configuration": "설정", "raspi_config": "raspi-config",
     "accessories": "주변기기", "camera": "카메라", "camera_software": "카메라 소프트웨어",
     "connect": "Connect", "cooling": "냉각", "getting_started": "시작하기", "gpio": "GPIO",
     "hardware": "하드웨어", "hardware_safety": "하드웨어 안전", "hardware_setup": "하드웨어 설정",

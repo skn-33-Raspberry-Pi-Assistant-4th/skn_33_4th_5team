@@ -185,17 +185,22 @@ def test_recommendation_mvp_v2_registry_has_15_approved_official_documents() -> 
     assert sources["rpi-doc-raspberry-pi-connect"].official_verified is True
 
 
-def test_catalog_to_rag_v3_registry_keeps_v2_and_adds_product_evidence_documents() -> None:
+def test_catalog_to_rag_v3_registry_keeps_v2_and_adds_command_lab_documents() -> None:
     total, included, reference_only = validate_source_registry(V3_REGISTRY_PATH)
     v2_sources = {source.source_id: source for source in included_sources(V2_REGISTRY_PATH)}
     v3_sources = {source.source_id: source for source in included_sources(V3_REGISTRY_PATH)}
 
-    assert (total, included, reference_only) == (26, 18, 8)
+    assert (total, included, reference_only) == (31, 23, 8)
     assert set(v2_sources).issubset(v3_sources)
     assert {
         "rpi-doc-camera-multicam",
         "rpi-doc-frequency-management",
         "rpi-doc-getting-started-setting-up",
+        "rpi-doc-config-raspi-config",
+        "rpi-doc-config-boot-behaviour",
+        "rpi-doc-camera-rpicam-options",
+        "rpi-doc-camera-streaming",
+        "rpi-doc-camera-rpicam-building",
     }.issubset(v3_sources)
     assert v3_sources["rpi-doc-camera-multicam"].product_models == ["Raspberry Pi 5"]
 
