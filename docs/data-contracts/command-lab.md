@@ -1,9 +1,9 @@
 # B 명령어 실험실 및 E·D 연결 계약
 
-`fix/dev-labatory`는 `origin/fix/dev`의 `17c0f53`에서 시작했다.
-현재 저장소의 실행 화면은 Streamlit이고 Django 프로젝트는 아직 없다.
-B 로직은 `src/services/command_lab_service.py`에 있어 E의 Django view에서도
-Streamlit 의존성 없이 호출할 수 있다. 회원 인증·DB·권한은 E, 공통 Django 화면은 D의 영역이다.
+명령어 실험실 로직은 `src/services/command_lab_service.py`에 있으며, Django 기본 UI와
+기존 Streamlit 화면이 같은 검수 카탈로그를 사용한다. Django는 명령을 실행하지 않는
+표시 계층이고, B 서비스는 Streamlit·Django 어느 쪽에도 의존하지 않는다. 회원 인증·DB·권한은
+현재 범위 밖이며, 공통 Django 화면은 `web_app/portal`이 담당한다.
 
 ## 실행
 
@@ -12,10 +12,11 @@ Streamlit 의존성 없이 호출할 수 있다. 회원 인증·DB·권한은 E,
 ```bash
 python -m src.services.command_lab_cli --audit
 python -m src.services.command_lab_cli --command "ssh pi@192.168.0.12"
-streamlit run streamlit_app/app.py --server.port 8511
+python web_app/manage.py runserver
 ```
 
-브라우저에서 `http://127.0.0.1:8511/?page=lab`을 연다.
+브라우저에서 `http://127.0.0.1:8000/lab/`을 연다. 기존 Streamlit 검증 화면은
+`streamlit run streamlit_app/app.py --server.port 8511`로 계속 사용할 수 있다.
 실험실 자체에는 GPU·LoRA·Chroma가 필요하지 않지만 A의 공식 manifest는 필요하다.
 Q&A 이동 후 질문 제출은 기존 QA 서비스를 호출하며, 제품 추천 이동은 기존 추천 화면을 사용한다.
 
@@ -51,9 +52,10 @@ analyzed = lab.analyze("ssh pi@192.168.0.12")
 명령 실행 함수는 없다. 알려진 템플릿에 일치하지 않으면 `CommandLabError`로 안내한다.
 ID는 A의 `cmd-{topic}-{번호}` 형식을 그대로 유지한다. 92개 draft는 목록·직접 ID 접근 모두 차단한다.
 
-HTTP API로 연결할 때 E는 `CommandLabError`를 입력 오류 응답으로 변환하면 된다.
-권장 경로는 목록 `GET /api/lab/templates`, 분석 `POST /api/lab/analyze`,
-재조합 `POST /api/lab/compose`다. 이 경로는 E에 제안하는 연결 규격이며 현재 배포된 Django URL은 아니다.
+HTTP API에서 E는 `CommandLabError`를 입력 오류 응답으로 변환한다. Django의 현재 경로는
+목록 `GET /api/lab/templates`, 분석 `POST /api/lab/analyze`, 재조합 `POST /api/lab/compose`다.
+POST API는 Django CSRF 보호를 받으며 JSON 요청 본문을 사용한다. 브라우저 응답에는 출처 제목·섹션·URL만
+포함하고 manifest checksum은 반환하지 않는다.
 
 ## 서랍 및 제품 연결
 

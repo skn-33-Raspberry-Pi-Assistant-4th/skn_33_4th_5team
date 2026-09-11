@@ -37,9 +37,44 @@ def response(*, status: str = "answered"):
 class DjangoPortalTests(SimpleTestCase):
     @patch("portal.views.get_runtime_readiness", return_value=SimpleNamespace(ready=True, message="ready"))
     def test_public_pages_are_available(self, _readiness):
-        for path in ("/", "/recommend/", "/qa/", "/health/"):
+        for path in ("/", "/recommend/", "/qa/", "/lab/", "/challenge/", "/health/"):
             result = self.client.get(path)
             self.assertEqual(result.status_code, 200)
+
+    @patch("portal.views.get_runtime_readiness", return_value=SimpleNamespace(ready=True, message="ready"))
+    def test_command_lab_api_exposes_only_approved_browser_payload(self, _readiness):
+        templates = self.client.get("/api/lab/templates").json()["templates"]
+        self.assertEqual(len(templates), 8)
+        self.assertNotIn("review_status", templates[0])
+        self.assertNotIn("evidence_checksums", templates[0])
+
+        result = self.client.post(
+            "/api/lab/analyze",
+            data='{"command": "ssh pi@192.168.0.12"}',
+            content_type="application/json",
+        )
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.json()["command"], "ssh pi@192.168.0.12")
+        self.assertNotIn("chunk_checksum", result.content.decode())
+
+    @patch("portal.views.get_runtime_readiness", return_value=SimpleNamespace(ready=True, message="ready"))
+    def test_challenge_keeps_answers_out_of_the_session_until_submission(self, _readiness):
+        started = self.client.post("/challenge/", {"action": "start", "topic": "remote_access"})
+        self.assertEqual(started.status_code, 200)
+        self.assertNotIn("correct_choice_id", started.content.decode())
+        state = self.client.session["picare_challenge"]
+        self.assertNotIn("correct_choice_id", state)
+        self.assertNotIn("rationale_ko", state)
+
+        question = self.client.get("/challenge/")
+        self.assertEqual(question.status_code, 200)
+        question_id = state["question_ids"][state["current_index"]]
+        choice_id = state["choice_orders"][question_id][0]
+        submitted = self.client.post(
+            "/challenge/", {"action": "submit", "question_id": question_id, "choice_id": choice_id}
+        )
+        self.assertEqual(submitted.status_code, 200)
+        self.assertIn("공식 문서 해설", submitted.content.decode())
 
     @patch("portal.views.get_runtime_readiness", return_value=SimpleNamespace(ready=True, message="ready"))
     @patch("portal.views.get_citation_presenter", return_value=None)

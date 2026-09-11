@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+# services.py → portal → web_app → repository root
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -67,3 +68,21 @@ def get_citation_presenter() -> "CitationPresenter | None":
         return load_citation_presenter(RagSettings.from_env(PROJECT_ROOT).manifest_path)
     except Exception:
         return None
+
+
+@lru_cache(maxsize=1)
+def get_command_lab_service() -> Any:
+    """Keep the display-only command catalog verified once per worker."""
+
+    from src.services.command_lab_service import CommandLabService
+
+    return CommandLabService(PROJECT_ROOT)
+
+
+@lru_cache(maxsize=1)
+def get_challenge_service() -> Any:
+    """Keep the reviewed challenge bank verified once per worker."""
+
+    from src.services.challenge_service import ChallengeService
+
+    return ChallengeService(PROJECT_ROOT)

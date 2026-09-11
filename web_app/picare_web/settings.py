@@ -18,12 +18,14 @@ ALLOWED_HOSTS = [host.strip() for host in os.getenv("DJANGO_ALLOWED_HOSTS", "loc
 
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
+    "django.contrib.sessions",
     "django.contrib.staticfiles",
     "portal",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",

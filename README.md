@@ -72,13 +72,17 @@
 
 ## 주요 화면
 
-### 4차 B 명령어 실험실
+### Django 기본 UI · 명령어 실험실 · 미니 챌린지
 
-`streamlit run streamlit_app/app.py` 실행 후 **명령어 실험실** 메뉴에서 검수된 8개 명령을
-분석하고 입력값을 바꿔 재조합할 수 있습니다. 공식 근거·주의사항·제품 연결·임시 서랍·Q&A 이동을
-지원합니다. 나머지 92개 draft는 검수 후 제공하며, 명령을 실제로 실행하지 않습니다.
-실행 방법과 Django 백엔드 인수인계 계약은 [명령어 실험실](docs/data-contracts/command-lab.md),
-재색인 및 테스트 결과는 [B 검증 기록](docs/validation/2026-09-11-command-lab.md)을 참고하세요.
+기본 사용자 화면은 `python web_app/manage.py runserver`로 실행하는 Django입니다. `/lab/`에서는
+검수된 8개 명령만 분석하고 입력값을 바꿔 재조합할 수 있으며, 실제 명령을 실행하지 않습니다.
+`/challenge/`에서는 OS 설치 또는 원격 접속 주제의 무작위 3문항을 서버에서 채점합니다. 시작 화면과
+브라우저 세션에는 정답·해설이 포함되지 않으며, 제출 뒤에만 공식 근거와 함께 보여 줍니다. 나머지 92개
+draft 명령은 노출하지 않습니다. 기존 Streamlit은 호환·검증용으로 유지합니다.
+
+실행 방법과 Django 연결 계약은 [명령어 실험실](docs/data-contracts/command-lab.md),
+RunPod 실행은 [Django RunPod 가이드](docs/runpod-django-setup.md), 재색인 및 테스트 결과는
+[B 검증 기록](docs/validation/2026-09-11-command-lab.md)을 참고하세요.
 
 | 화면 | 주요 기능 |
 |---|---|

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 
 from django.http import JsonResponse
@@ -11,13 +12,18 @@ from django.views.decorators.http import require_http_methods
 from src.condition_extraction.ui_input import RecommendationFormInput
 from src.contracts import ChatResponse
 
-from .forms import QuestionForm, RecommendationForm
+from .forms import CommandInputForm, QuestionForm, RecommendationForm
 from .services import (
+    get_challenge_service,
     get_citation_presenter,
+    get_command_lab_service,
     get_qa_service,
     get_recommendation_service,
     get_runtime_readiness,
 )
+
+
+CHALLENGE_SESSION_KEY = "picare_challenge"
 
 
 STATUS_LABELS = {
@@ -72,6 +78,66 @@ def _base_context(*, active_page: str) -> dict:
     return {"active_page": active_page, "runtime_ready": readiness.ready, "runtime_message": readiness.message}
 
 
+def _lab_evidence_cards(evidence: list[dict]) -> list[dict[str, str]]:
+    """Expose human-readable source information, never manifest checksums."""
+
+    return [
+        {
+            "chunk_id": item["chunk_id"],
+            "title": item["title"],
+            "section": item["section"],
+            "url": item["source_url"],
+        }
+        for item in evidence
+    ]
+
+
+def _lab_payload(result: dict) -> dict:
+    """A browser/API-safe view of a CommandLabService result."""
+
+    return {
+        "template_id": result["template_id"],
+        "execution_policy": result["execution_policy"],
+        "command": result["command"],
+        "parts": result["parts"],
+        "effect_ko": result["effect_ko"],
+        "execution_context": result["execution_context"],
+        "risk_level": result["risk_level"],
+        "risk_notice_ko": result["risk_notice_ko"],
+        "limitations_ko": result["limitations_ko"],
+        "evidence": _lab_evidence_cards(result["evidence"]),
+        "product": result["product"],
+        "values": result["values"],
+    }
+
+
+def _lab_template_payload(template: dict) -> dict:
+    return {
+        "template_id": template["template_id"],
+        "topic": template["topic"],
+        "canonical_command": template["canonical_command"],
+        "parts": template["parts"],
+        "editable_fields": template["editable_fields"],
+        "execution_context": template["execution_context"],
+        "effect_ko": template["effect_ko"],
+        "risk_level": template["risk_level"],
+        "risk_notice_ko": template["risk_notice_ko"],
+        "limitations_ko": template["limitations_ko"],
+    }
+
+
+def _lab_context() -> dict:
+    service = get_command_lab_service()
+    templates = service.list_templates()
+    return {
+        "lab_templates": templates,
+        "lab_products": [
+            {"product_id": product["product_id"], "name": product["name"]}
+            for product in service.products.values()
+        ],
+    }
+
+
 @require_http_methods(["GET"])
 def about(request):
     return render(request, "portal/about.html", _base_context(active_page="about"))
@@ -118,6 +184,131 @@ def qa(request):
         except Exception as exc:
             context["service_error"] = f"QA 런타임을 준비하지 못했습니다: {exc}"
     return render(request, "portal/qa.html", context)
+
+
+@require_http_methods(["GET", "POST"])
+def lab(request):
+    """Present the catalog-backed command lab; no submitted command is executed."""
+
+    context = _base_context(active_page="lab")
+    context["analysis_form"] = CommandInputForm(request.POST or None)
+    try:
+        context.update(_lab_context())
+    except Exception:
+        context["lab_error"] = "명령어 실험실 데이터를 준비하지 못했습니다. 잠시 후 다시 시도해 주세요."
+        return render(request, "portal/lab.html", context)
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        try:
+            service = get_command_lab_service()
+            if action == "analyze" and context["analysis_form"].is_valid():
+                context["lab_result"] = _lab_payload(service.analyze(context["analysis_form"].cleaned_data["command"]))
+            elif action == "compose":
+                template_id = request.POST.get("template_id", "")
+                item = service._item(template_id)
+                values = {
+                    field["part_id"]: request.POST.get(f"value_{field['part_id']}", "")
+                    for field in item["editable_fields"]
+                }
+                product_id = request.POST.get("product_id") or None
+                context["lab_result"] = _lab_payload(service.compose(template_id, values, product_id=product_id))
+                context["analysis_form"] = CommandInputForm(initial={"command": context["lab_result"]["command"]})
+            elif action not in {"analyze", "compose"}:
+                context["lab_error"] = "요청을 확인하지 못했습니다."
+        except ValueError as exc:
+            context["lab_error"] = str(exc)
+        except Exception:
+            context["lab_error"] = "명령어 실험실을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요."
+    return render(request, "portal/lab.html", context)
+
+
+@require_http_methods(["GET", "POST"])
+def challenge(request):
+    """Run a three-question challenge with answer data kept on the server."""
+
+    context = _base_context(active_page="challenge")
+    try:
+        service = get_challenge_service()
+        context["challenge_topics"] = service.topics()
+        state = request.session.get(CHALLENGE_SESSION_KEY)
+        if request.method == "POST":
+            action = request.POST.get("action")
+            if action == "start":
+                started = service.start(request.POST.get("topic", ""))
+                request.session[CHALLENGE_SESSION_KEY] = started["state"]
+                context["challenge_question"] = started["question"]
+            elif action == "submit":
+                outcome = service.submit(
+                    state,
+                    question_id=request.POST.get("question_id", ""),
+                    choice_id=request.POST.get("choice_id", ""),
+                )
+                context["challenge_result"] = outcome
+                if outcome["completed"]:
+                    request.session.pop(CHALLENGE_SESSION_KEY, None)
+                else:
+                    request.session[CHALLENGE_SESSION_KEY] = outcome["state"]
+            elif action == "continue":
+                context["challenge_question"] = service.current_question(state)
+            elif action == "reset":
+                request.session.pop(CHALLENGE_SESSION_KEY, None)
+            else:
+                context["challenge_error"] = "요청을 확인하지 못했습니다."
+        elif state:
+            context["challenge_question"] = service.current_question(state)
+    except ValueError as exc:
+        context["challenge_error"] = str(exc)
+    except Exception:
+        context["challenge_error"] = "미니 챌린지를 준비하지 못했습니다. 잠시 후 다시 시도해 주세요."
+    return render(request, "portal/challenge.html", context)
+
+
+def _json_body(request) -> dict:
+    try:
+        value = json.loads(request.body)
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise ValueError("JSON 요청 본문을 확인해 주세요.") from exc
+    if not isinstance(value, dict):
+        raise ValueError("JSON 객체를 보내 주세요.")
+    return value
+
+
+@require_http_methods(["GET"])
+def lab_templates_api(request):
+    try:
+        templates = [_lab_template_payload(item) for item in get_command_lab_service().list_templates()]
+        return JsonResponse({"templates": templates})
+    except Exception:
+        return JsonResponse({"error": "명령어 실험실 데이터를 준비하지 못했습니다."}, status=503)
+
+
+@require_http_methods(["POST"])
+def lab_analyze_api(request):
+    try:
+        body = _json_body(request)
+        return JsonResponse(_lab_payload(get_command_lab_service().analyze(body.get("command"))))
+    except ValueError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+    except Exception:
+        return JsonResponse({"error": "명령어 실험실을 처리하지 못했습니다."}, status=503)
+
+
+@require_http_methods(["POST"])
+def lab_compose_api(request):
+    try:
+        body = _json_body(request)
+        return JsonResponse(
+            _lab_payload(
+                get_command_lab_service().compose(
+                    body.get("template_id"), body.get("values"), product_id=body.get("product_id")
+                )
+            )
+        )
+    except ValueError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+    except Exception:
+        return JsonResponse({"error": "명령어 실험실을 처리하지 못했습니다."}, status=503)
 
 
 @require_http_methods(["GET"])

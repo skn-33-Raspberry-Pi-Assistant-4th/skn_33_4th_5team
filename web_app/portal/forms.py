@@ -62,3 +62,18 @@ class QuestionForm(forms.Form):
             return validate_input_text(self.cleaned_data["question"])
         except ValueError as exc:
             raise forms.ValidationError(str(exc)) from exc
+
+
+class CommandInputForm(forms.Form):
+    command = forms.CharField(
+        label="한 줄 명령어",
+        max_length=2000,
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control font-monospace",
+                "rows": 2,
+                "placeholder": "예: ssh learner@raspberrypi.local",
+            }
+        ),
+        help_text="검수 완료된 예시와 일치하는 명령어만 분석합니다. 실제 실행은 하지 않습니다.",
+    )
