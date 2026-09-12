@@ -76,6 +76,41 @@ class QuizEvidence(StrictContract):
     content: NonEmptyText
 
 
+class QuizGenerationRequest(StrictContract):
+    """Input passed to QuizGenerator after a grounded Q&A response is complete."""
+
+    request_id: str
+    answer: str
+    evidence: list[QuizEvidence]
+    max_questions: int = Field(ge=1, le=3)
+
+
+class QuizChoice(StrictContract):
+    """One generated answer choice; detailed choice validation is service-owned."""
+
+    id: Literal["A", "B", "C", "D"]
+    text: str
+
+
+class QuizQuestion(StrictContract):
+    """A generated quiz question before deterministic service validation."""
+
+    question_id: str
+    question: str
+    choices: list[QuizChoice]
+    correct_choice_id: Literal["A", "B", "C", "D"]
+    explanation: str
+    evidence_ids: list[str]
+    supporting_quotes: list[str]
+
+
+class QuizResponse(StrictContract):
+    """Structured result returned by QuizGenerator."""
+
+    status: Literal["available", "insufficient_content", "generation_failed"]
+    questions: list[QuizQuestion]
+
+
 class ConditionPayload(StrictContract):
     """Complete sLLM condition output; unmentioned user constraints are null."""
 
