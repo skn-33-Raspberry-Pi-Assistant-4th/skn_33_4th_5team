@@ -67,6 +67,15 @@ class StrictContract(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class QuizEvidence(StrictContract):
+    """One final Q&A citation reused as the source body for a quiz question."""
+
+    citation_id: Annotated[str, Field(pattern=r"^C[1-9][0-9]*$")]
+    document_id: NonEmptyText
+    chunk_id: NonEmptyText
+    content: NonEmptyText
+
+
 class ConditionPayload(StrictContract):
     """Complete sLLM condition output; unmentioned user constraints are null."""
 
