@@ -5,8 +5,9 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Protocol
 
-from src.contracts import QuizGenerationRequest, QuizResponse
+from src.contracts import ChatResponse, QuizGenerationRequest, QuizResponse
 from src.lang import build_quiz_generation_messages
+from src.services.quiz_adapters import chat_response_to_quiz_request
 from src.services.quiz_parser import QuizOutputError, parse_quiz_response
 from src.services.quiz_validation import (
     finalize_questions,
@@ -49,6 +50,19 @@ class QuizGenerator:
             and not validate_question_evidence(question, evidence_by_id)
         ]
         return finalize_questions(valid_questions, max_questions=request.max_questions)
+
+    def generate_from_chat_response(
+        self,
+        response: ChatResponse,
+        *,
+        max_questions: int = 3,
+    ) -> QuizResponse:
+        """Generate a challenge from final Q&A citations without retrieval."""
+
+        request = chat_response_to_quiz_request(response, max_questions=max_questions)
+        if request is None:
+            return QuizResponse(status="insufficient_content", questions=[])
+        return self.generate(request)
 
 
 __all__ = ["QuizGenerator", "QuizTextGenerator"]

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping, Sequence
+from datetime import date
 
-from src.contracts import QuizEvidence, QuizGenerationRequest
+from src.contracts import ChatCitation, ChatResponse, QuizEvidence, QuizGenerationRequest
 from src.services.quiz_generator import QuizGenerator
 
 
@@ -52,6 +53,41 @@ def question_payload(number: int, *, evidence_id: str = "C1") -> dict[str, objec
 
 def model_output(questions: list[dict[str, object]]) -> str:
     return json.dumps({"status": "available", "questions": questions}, ensure_ascii=False)
+
+
+def chat_citation() -> ChatCitation:
+    return ChatCitation(
+        citation_id="C1",
+        document_id="computers-remote-access-ssh",
+        chunk_id="computers-remote-access-ssh-001",
+        title="Raspberry Pi documentation",
+        publisher="Raspberry Pi Ltd",
+        section="Remote access",
+        source_url="https://www.raspberrypi.com/documentation/",
+        source_anchor=None,
+        document_version="commit-abc",
+        published_at=None,
+        updated_at=None,
+        collected_at=date(2026, 9, 12),
+        license="CC BY-SA 4.0",
+        quote="Raspberry Pi OS disables SSH by default.",
+    )
+
+
+def chat_response(status: str, *, citations: list[ChatCitation]) -> ChatResponse:
+    return ChatResponse.model_construct(
+        schema_version="1.2.0",
+        request_id="qa-request-001",
+        status=status,
+        language="ko",
+        answer="SSH는 기본적으로 비활성화되어 있습니다. [C1]",
+        conditions=None,
+        citations=citations,
+        products=[],
+        media=[],
+        clarification_questions=[],
+        warnings=[],
+    )
 
 
 def test_quiz_generator_returns_available_for_valid_model_output() -> None:
@@ -114,3 +150,50 @@ def test_quiz_generator_returns_insufficient_content_when_all_questions_are_inva
 
     assert response.status == "insufficient_content"
     assert response.questions == []
+
+
+def test_quiz_generator_generates_from_answered_chat_response() -> None:
+    fake = FakeQuizTextGenerator(model_output([question_payload(1)]))
+
+    response = QuizGenerator(fake).generate_from_chat_response(
+        chat_response("answered", citations=[chat_citation()])
+    )
+
+    assert response.status == "available"
+    assert len(fake.calls) == 1
+
+
+def test_quiz_generator_skips_insufficient_evidence_chat_response_without_model_call() -> None:
+    fake = FakeQuizTextGenerator(model_output([question_payload(1)]))
+
+    response = QuizGenerator(fake).generate_from_chat_response(
+        chat_response("insufficient_evidence", citations=[])
+    )
+
+    assert response.status == "insufficient_content"
+    assert response.questions == []
+    assert len(fake.calls) == 0
+
+
+def test_quiz_generator_skips_error_chat_response_without_model_call() -> None:
+    fake = FakeQuizTextGenerator(model_output([question_payload(1)]))
+
+    response = QuizGenerator(fake).generate_from_chat_response(
+        chat_response("error", citations=[])
+    )
+
+    assert response.status == "insufficient_content"
+    assert response.questions == []
+    assert len(fake.calls) == 0
+
+
+def test_quiz_generator_skips_answered_chat_response_without_citations() -> None:
+    fake = FakeQuizTextGenerator(model_output([question_payload(1)]))
+
+    response = QuizGenerator(fake).generate_from_chat_response(
+        chat_response("answered", citations=[])
+    )
+
+    assert response.status == "insufficient_content"
+    assert response.questions == []
+    assert len(fake.calls) == 0
