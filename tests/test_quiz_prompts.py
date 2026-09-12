@@ -87,18 +87,20 @@ def test_quiz_prompt_escapes_html_special_characters_in_answer_and_evidence() ->
 def test_quiz_system_prompt_requires_answer_evidence_intersection_and_single_evidence() -> None:
     assert "<answer>에 명시적으로 있는 사실만 확인" in QUIZ_GENERATION_SYSTEM_PROMPT
     assert "evidence에만 있거나 answer에만 있는 사실은 출제하지 마세요" in QUIZ_GENERATION_SYSTEM_PROMPT
-    assert "evidence_ids에 허용된 evidence ID 하나만" in QUIZ_GENERATION_SYSTEM_PROMPT
-    assert "supporting_quotes에는 그 evidence 원문에서 연속된 문자열" in QUIZ_GENERATION_SYSTEM_PROMPT
+    assert "evidence_ids에는 허용된 evidence ID 하나만" in QUIZ_GENERATION_SYSTEM_PROMPT
+    assert "supporting_quote_id에는" in QUIZ_GENERATION_SYSTEM_PROMPT
+    assert "supporting_quotes 필드를 출력하지 마세요" in QUIZ_GENERATION_SYSTEM_PROMPT
+    assert '"supporting_quote_id": "C1-Q1"' in QUIZ_GENERATION_SYSTEM_PROMPT
 
 
 def test_quiz_system_prompt_requires_grounded_explanation_and_single_answer_choices() -> None:
-    assert "정답과 explanation을 직접 뒷받침" in QUIZ_GENERATION_SYSTEM_PROMPT
-    assert "explanation은 그 범위를 넘어서면 안 됩니다" in QUIZ_GENERATION_SYSTEM_PROMPT
+    assert "explanation은 선택한 quote 후보와 answer의 범위를 넘어서면 안 됩니다" in QUIZ_GENERATION_SYSTEM_PROMPT
     assert "선택지 4개" in QUIZ_GENERATION_SYSTEM_PROMPT
     assert '"옳지 않은 것은", "틀린 것은", "모두 고르시오"' in QUIZ_GENERATION_SYSTEM_PROMPT
 
 
 def test_quiz_system_prompt_forbids_external_knowledge_and_duplicate_questions() -> None:
     assert "모델의 사전 지식, 추측, 일반 정보는 사용하지 마세요" in QUIZ_GENERATION_SYSTEM_PROMPT
-    assert "같은 핵심 사실을 표현만 바꿔 여러 문항으로 반복하지 마세요" in QUIZ_GENERATION_SYSTEM_PROMPT
+    assert "기본적으로 1문항을 만들고" in QUIZ_GENERATION_SYSTEM_PROMPT
+    assert "문항 수를 채우려고 같은 사실을 표현만 바꿔 반복하지 마세요" in QUIZ_GENERATION_SYSTEM_PROMPT
     assert "제공된 자료만으로 오답임을 판단할 수 있어야 하며" in QUIZ_GENERATION_SYSTEM_PROMPT

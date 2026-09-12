@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from src.contracts import ChatResponse, QuizEvidence, QuizGenerationRequest
 from src.lang import extract_citation_ids
+from src.services.quiz_quote_candidates import extract_quote_candidates
 
 
 def chat_response_to_quiz_request(
@@ -39,6 +40,7 @@ def chat_response_to_quiz_request(
         request_id=response.request_id,
         answer=response.answer,
         evidence=evidence,
+        quote_candidates=extract_quote_candidates(evidence),
         max_questions=max_questions,
     )
 

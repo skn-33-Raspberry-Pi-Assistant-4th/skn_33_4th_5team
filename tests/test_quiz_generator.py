@@ -47,7 +47,7 @@ def question_payload(number: int, *, evidence_id: str = "C1") -> dict[str, objec
         "correct_choice_id": "A",
         "explanation": "공식 문서는 SSH가 기본적으로 비활성화된다고 설명합니다.",
         "evidence_ids": [evidence_id],
-        "supporting_quotes": ["Raspberry Pi OS disables SSH by default."],
+        "supporting_quote_id": "C1-Q1",
     }
 
 

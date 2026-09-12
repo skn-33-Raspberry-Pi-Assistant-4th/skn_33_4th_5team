@@ -83,12 +83,28 @@ class QuizEvidence(StrictContract):
         return value
 
 
+class QuizQuoteCandidate(StrictContract):
+    """An exact, quote-safe substring selected from one quiz evidence body."""
+
+    quote_id: Annotated[str, Field(pattern=r"^C[1-9][0-9]*-Q[1-9][0-9]*$")]
+    evidence_id: Annotated[str, Field(pattern=r"^C[1-9][0-9]*$")]
+    content: NonEmptyText
+
+    @field_validator("content")
+    @classmethod
+    def validate_non_blank_content(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("quiz quote candidate content must not be blank")
+        return value
+
+
 class QuizGenerationRequest(StrictContract):
     """Input passed to QuizGenerator after a grounded Q&A response is complete."""
 
     request_id: str
     answer: str
     evidence: list[QuizEvidence]
+    quote_candidates: list[QuizQuoteCandidate] = Field(default_factory=list)
     max_questions: int = Field(ge=1, le=3)
 
 
@@ -109,6 +125,33 @@ class QuizQuestion(StrictContract):
     explanation: str
     evidence_ids: list[str]
     supporting_quotes: list[str]
+
+
+class QuizDraftQuestion(StrictContract):
+    """LLM-only quiz shape; the server materializes the exact quote by ID."""
+
+    question_id: str
+    question: str
+    choices: list[QuizChoice]
+    correct_choice_id: Literal["A", "B", "C", "D"]
+    explanation: str
+    evidence_ids: list[str]
+    supporting_quote_id: str
+
+
+class QuizDraftResponse(StrictContract):
+    """Raw model response before an exact quote candidate is materialized."""
+
+    status: Literal["available", "insufficient_content", "generation_failed"]
+    questions: list[QuizDraftQuestion]
+
+    @model_validator(mode="after")
+    def validate_status_questions(self) -> "QuizDraftResponse":
+        if self.status == "available" and not self.questions:
+            raise ValueError("available quiz responses must contain at least one question")
+        if self.status != "available" and self.questions:
+            raise ValueError("non-available quiz responses must not contain questions")
+        return self
 
 
 class QuizResponse(StrictContract):

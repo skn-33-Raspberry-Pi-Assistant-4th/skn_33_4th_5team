@@ -142,13 +142,22 @@ def test_huggingface_generator_structured_path_returns_raw_json_once(monkeypatch
     assert load_calls == 1
     assert model.generate_kwargs["max_new_tokens"] == 16
 
+    generator.generate_structured(_messages(), max_new_tokens=1024)
+    assert load_calls == 1
+    assert model.generate_kwargs["max_new_tokens"] == 1024
 
-@pytest.mark.parametrize("max_new_tokens", [0, 513])
+
+@pytest.mark.parametrize("max_new_tokens", [0, 1025])
 def test_huggingface_generator_structured_path_rejects_unsafe_token_limit(max_new_tokens: int) -> None:
     generator = HuggingFaceAnswerGenerator(model_id="Qwen/test")
 
     with pytest.raises(ValueError, match="max_new_tokens"):
         generator.generate_structured(_messages(), max_new_tokens=max_new_tokens)
+
+
+def test_huggingface_generator_keeps_qa_token_limit_at_512() -> None:
+    with pytest.raises(ValueError, match="max_new_tokens"):
+        HuggingFaceAnswerGenerator(model_id="Qwen/test", max_new_tokens=513)
 
 
 def test_invalid_generation_retries_once_with_original_evidence_not_failed_claim(monkeypatch):

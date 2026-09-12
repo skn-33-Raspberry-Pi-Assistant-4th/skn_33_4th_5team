@@ -14,6 +14,7 @@ from .answer_generator import (
     HuggingFaceAnswerGenerator,
 )
 from .factory import build_answer_generator
+from .quiz_text_generator import HuggingFaceQuizTextGenerator
 from .settings import AnswerGeneratorSettings, AnswerGeneratorSettingsError
 
 __all__ = [
@@ -24,5 +25,6 @@ __all__ = [
     "EvidenceTemplateGenerator",
     "GenerationResult",
     "HuggingFaceAnswerGenerator",
+    "HuggingFaceQuizTextGenerator",
     "build_answer_generator",
 ]

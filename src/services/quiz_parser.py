@@ -7,7 +7,7 @@ import re
 
 from pydantic import ValidationError
 
-from src.contracts import QuizResponse
+from src.contracts import QuizDraftResponse, QuizResponse
 
 
 _FULL_CODE_FENCE = re.compile(
@@ -55,4 +55,23 @@ def parse_quiz_response(raw_output: str) -> QuizResponse:
     return response
 
 
-__all__ = ["QuizOutputError", "parse_quiz_response"]
+def parse_quiz_draft_response(raw_output: str) -> QuizDraftResponse:
+    """Parse the LLM-only shape that selects an exact quote candidate by ID."""
+
+    text = _remove_full_code_fence(raw_output).strip()
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise QuizOutputError("퀴즈 모델 출력이 유효한 JSON이 아닙니다.", raw_output) from exc
+
+    try:
+        response = QuizDraftResponse.model_validate(payload, strict=True)
+    except ValidationError as exc:
+        raise QuizOutputError("퀴즈 모델 출력이 응답 계약과 일치하지 않습니다.", raw_output) from exc
+
+    if response.status == "generation_failed":
+        raise QuizOutputError("모델 출력은 generation_failed 상태를 사용할 수 없습니다.", raw_output)
+    return response
+
+
+__all__ = ["QuizOutputError", "parse_quiz_draft_response", "parse_quiz_response"]
