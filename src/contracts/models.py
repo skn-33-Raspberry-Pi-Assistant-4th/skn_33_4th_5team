@@ -5,7 +5,7 @@ import re
 from datetime import date, datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
 
 CONTRACT_VERSION = "1.1.0"
@@ -65,6 +65,57 @@ class StrictContract(BaseModel):
     """Reject undeclared fields so independently developed modules cannot drift."""
 
     model_config = ConfigDict(extra="forbid")
+
+
+class QuizEvidence(StrictContract):
+    """One final Q&A citation reused as the source body for a quiz question."""
+
+    citation_id: Annotated[str, Field(pattern=r"^C[1-9][0-9]*$")]
+    document_id: NonEmptyText
+    chunk_id: NonEmptyText
+    content: NonEmptyText
+
+    @field_validator("document_id", "chunk_id", "content")
+    @classmethod
+    def validate_non_blank_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("quiz evidence text must not be blank")
+        return value
+
+
+class QuizGenerationRequest(StrictContract):
+    """Input passed to QuizGenerator after a grounded Q&A response is complete."""
+
+    request_id: str
+    answer: str
+    evidence: list[QuizEvidence]
+    max_questions: int = Field(ge=1, le=3)
+
+
+class QuizChoice(StrictContract):
+    """One generated answer choice; detailed choice validation is service-owned."""
+
+    id: Literal["A", "B", "C", "D"]
+    text: str
+
+
+class QuizQuestion(StrictContract):
+    """A generated quiz question before deterministic service validation."""
+
+    question_id: str
+    question: str
+    choices: list[QuizChoice]
+    correct_choice_id: Literal["A", "B", "C", "D"]
+    explanation: str
+    evidence_ids: list[str]
+    supporting_quotes: list[str]
+
+
+class QuizResponse(StrictContract):
+    """Structured result returned by QuizGenerator."""
+
+    status: Literal["available", "insufficient_content", "generation_failed"]
+    questions: list[QuizQuestion]
 
 
 class ConditionPayload(StrictContract):
