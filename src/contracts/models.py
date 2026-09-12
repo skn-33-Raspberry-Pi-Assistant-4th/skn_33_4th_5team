@@ -117,6 +117,14 @@ class QuizResponse(StrictContract):
     status: Literal["available", "insufficient_content", "generation_failed"]
     questions: list[QuizQuestion]
 
+    @model_validator(mode="after")
+    def validate_status_questions(self) -> "QuizResponse":
+        if self.status == "available" and not self.questions:
+            raise ValueError("available quiz responses must contain at least one question")
+        if self.status != "available" and self.questions:
+            raise ValueError("non-available quiz responses must not contain questions")
+        return self
+
 
 class ConditionPayload(StrictContract):
     """Complete sLLM condition output; unmentioned user constraints are null."""

@@ -212,6 +212,13 @@ def test_supporting_quote_matches_when_only_whitespace_differs() -> None:
     )
 
 
+def test_supporting_quote_matches_html_escaped_text_from_the_prompt() -> None:
+    assert supporting_quote_matches(
+        "ssh &lt;username&gt;@raspberrypi.local",
+        "Connect with ssh <username>@raspberrypi.local.",
+    )
+
+
 def test_supporting_quote_rejects_text_outside_evidence() -> None:
     assert not supporting_quote_matches(
         "Raspberry Pi OS enables SSH by default.",

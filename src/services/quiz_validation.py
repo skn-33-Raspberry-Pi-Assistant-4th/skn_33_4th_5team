@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from html import unescape
 
 from src.contracts import QuizEvidence, QuizQuestion, QuizResponse
 
@@ -25,9 +26,15 @@ def _normalized_dedup_text(value: str) -> str:
 
 
 def supporting_quote_matches(quote: str, evidence_content: str) -> bool:
-    """Return whether a length-valid quote occurs in the normalized evidence."""
+    """Match a generated quote against raw evidence after one HTML unescape.
 
-    normalized_quote = _normalize_whitespace(quote)
+    Quiz evidence is HTML-escaped only while embedded in the model prompt. A
+    model may copy that escaped form (for example ``&lt;username&gt;``), while
+    the contract retains the original raw chunk. Unescaping the model output
+    once preserves prompt-injection protection and compares both forms fairly.
+    """
+
+    normalized_quote = _normalize_whitespace(unescape(quote))
     quote_length = len(normalized_quote)
     if not _MIN_SUPPORTING_QUOTE_CHARS <= quote_length <= _MAX_SUPPORTING_QUOTE_CHARS:
         return False

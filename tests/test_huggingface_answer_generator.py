@@ -34,6 +34,7 @@ class FakeTokenizer:
     def __init__(self) -> None:
         self.messages = None
         self.options = None
+        self.response = "SSH는 Raspberry Pi Imager에서 활성화할 수 있습니다. [C1]"
 
     def apply_chat_template(self, messages, **kwargs):
         self.messages = messages
@@ -43,7 +44,7 @@ class FakeTokenizer:
     def decode(self, token_ids, *, skip_special_tokens):
         assert token_ids == [7, 8]
         assert skip_special_tokens is True
-        return "SSH는 Raspberry Pi Imager에서 활성화할 수 있습니다. [C1]"
+        return self.response
 
 
 class FakeModel:
@@ -105,6 +106,49 @@ def test_huggingface_generator_is_lazy_and_decodes_only_new_tokens(monkeypatch) 
 
     generator.generate(_messages(), _evidence())
     assert load_calls == 1
+
+
+def test_huggingface_generator_structured_path_returns_raw_json_once(monkeypatch) -> None:
+    generator = HuggingFaceAnswerGenerator(model_id="Qwen/test", max_new_tokens=32)
+    tokenizer = FakeTokenizer()
+    tokenizer.response = '{"status":"insufficient_content","questions":[]}'
+    model = FakeModel()
+    load_calls = 0
+
+    def fake_load_model() -> None:
+        nonlocal load_calls
+        if generator.is_loaded:
+            return
+        load_calls += 1
+        generator._tokenizer = tokenizer
+        generator._model = model
+        generator._torch = FakeTorch()
+
+    monkeypatch.setattr(generator, "_load_model", fake_load_model)
+    monkeypatch.setattr(
+        "src.rag_to_llm.answer_generator.validate_grounded_answer",
+        Mock(side_effect=AssertionError("QA validator must not run")),
+    )
+
+    result = generator.generate_structured(_messages(), max_new_tokens=64)
+
+    assert result.text == '{"status":"insufficient_content","questions":[]}'
+    assert result.attempts == 1
+    assert load_calls == 1
+    assert model.generate_kwargs["max_new_tokens"] == 64
+    assert model.generate_kwargs["do_sample"] is False
+
+    generator.generate_structured(_messages(), max_new_tokens=16)
+    assert load_calls == 1
+    assert model.generate_kwargs["max_new_tokens"] == 16
+
+
+@pytest.mark.parametrize("max_new_tokens", [0, 513])
+def test_huggingface_generator_structured_path_rejects_unsafe_token_limit(max_new_tokens: int) -> None:
+    generator = HuggingFaceAnswerGenerator(model_id="Qwen/test")
+
+    with pytest.raises(ValueError, match="max_new_tokens"):
+        generator.generate_structured(_messages(), max_new_tokens=max_new_tokens)
 
 
 def test_invalid_generation_retries_once_with_original_evidence_not_failed_claim(monkeypatch):
