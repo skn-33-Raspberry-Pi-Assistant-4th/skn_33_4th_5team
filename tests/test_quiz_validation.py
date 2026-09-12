@@ -1,5 +1,9 @@
 from src.contracts import QuizChoice, QuizEvidence, QuizQuestion
-from src.services.quiz_validation import validate_question_evidence, validate_question_structure
+from src.services.quiz_validation import (
+    supporting_quote_matches,
+    validate_question_evidence,
+    validate_question_structure,
+)
 
 
 def question_with(**overrides: object) -> QuizQuestion:
@@ -143,3 +147,49 @@ def test_question_evidence_rejects_multiple_evidence_ids() -> None:
     assert "evidence_ids_must_contain_exactly_one" in errors
     assert "supporting_quotes_must_contain_exactly_one" in errors
     assert "evidence_ids_must_be_allowed" not in errors
+
+
+def test_supporting_quote_matches_exact_evidence_sentence() -> None:
+    assert supporting_quote_matches(
+        "Raspberry Pi OS disables SSH by default.",
+        "Raspberry Pi OS disables SSH by default. Enable SSH in Imager.",
+    )
+
+
+def test_supporting_quote_matches_when_only_line_breaks_differ() -> None:
+    assert supporting_quote_matches(
+        "Raspberry Pi OS disables SSH by default.",
+        "Raspberry Pi OS\ndisables SSH by default.",
+    )
+
+
+def test_supporting_quote_matches_when_only_whitespace_differs() -> None:
+    assert supporting_quote_matches(
+        "  Raspberry Pi OS disables   SSH by default.  ",
+        "Raspberry Pi OS disables SSH by default.",
+    )
+
+
+def test_supporting_quote_rejects_text_outside_evidence() -> None:
+    assert not supporting_quote_matches(
+        "Raspberry Pi OS enables SSH by default.",
+        "Raspberry Pi OS disables SSH by default.",
+    )
+
+
+def test_supporting_quote_rejects_too_short_text() -> None:
+    assert not supporting_quote_matches("SSH", "SSH is disabled by default.")
+
+
+def test_supporting_quote_rejects_too_long_text() -> None:
+    quote = "a" * 241
+    assert not supporting_quote_matches(quote, quote)
+
+
+def test_question_evidence_rejects_quote_missing_from_its_evidence_body() -> None:
+    errors = validate_question_evidence(
+        question_with(supporting_quotes=["Raspberry Pi OS enables SSH by default."]),
+        evidence_by_id(),
+    )
+
+    assert "supporting_quote_must_match_evidence_content" in errors

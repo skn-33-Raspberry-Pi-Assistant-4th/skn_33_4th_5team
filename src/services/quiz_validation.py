@@ -8,6 +8,24 @@ from src.contracts import QuizEvidence, QuizQuestion
 
 
 _EXPECTED_CHOICE_IDS = {"A", "B", "C", "D"}
+_MIN_SUPPORTING_QUOTE_CHARS = 15
+_MAX_SUPPORTING_QUOTE_CHARS = 240
+
+
+def _normalize_whitespace(value: str) -> str:
+    """Trim and collapse whitespace without changing case or punctuation."""
+
+    return " ".join(value.split())
+
+
+def supporting_quote_matches(quote: str, evidence_content: str) -> bool:
+    """Return whether a length-valid quote occurs in the normalized evidence."""
+
+    normalized_quote = _normalize_whitespace(quote)
+    quote_length = len(normalized_quote)
+    if not _MIN_SUPPORTING_QUOTE_CHARS <= quote_length <= _MAX_SUPPORTING_QUOTE_CHARS:
+        return False
+    return normalized_quote in _normalize_whitespace(evidence_content)
 
 
 def validate_question_structure(question: QuizQuestion) -> list[str]:
@@ -47,8 +65,8 @@ def validate_question_evidence(
     """Return error codes when a question exceeds its supplied evidence scope.
 
     The MVP deliberately permits one evidence item and one supporting quote per
-    question. Verifying that the quote appears in the evidence body is handled
-    separately so this function only enforces identifier and cardinality rules.
+    question. The quote must be 15 to 240 characters after whitespace
+    normalization and appear in that evidence body.
     """
 
     errors: list[str] = []
@@ -58,7 +76,26 @@ def validate_question_evidence(
         errors.append("supporting_quotes_must_contain_exactly_one")
     if any(evidence_id not in evidence_by_id for evidence_id in question.evidence_ids):
         errors.append("evidence_ids_must_be_allowed")
+    if (
+        len(question.evidence_ids) == 1
+        and len(question.supporting_quotes) == 1
+        and question.evidence_ids[0] in evidence_by_id
+    ):
+        quote = question.supporting_quotes[0]
+        normalized_quote = _normalize_whitespace(quote)
+        quote_length = len(normalized_quote)
+        if not _MIN_SUPPORTING_QUOTE_CHARS <= quote_length <= _MAX_SUPPORTING_QUOTE_CHARS:
+            errors.append("supporting_quote_length_must_be_between_15_and_240")
+        elif not supporting_quote_matches(
+            quote,
+            evidence_by_id[question.evidence_ids[0]].content,
+        ):
+            errors.append("supporting_quote_must_match_evidence_content")
     return errors
 
 
-__all__ = ["validate_question_evidence", "validate_question_structure"]
+__all__ = [
+    "supporting_quote_matches",
+    "validate_question_evidence",
+    "validate_question_structure",
+]
