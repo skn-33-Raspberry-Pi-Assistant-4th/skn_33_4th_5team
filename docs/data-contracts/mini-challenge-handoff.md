@@ -236,8 +236,12 @@ quote 후보는 evidence 원문에서 서버가 추출한다. 모델은 후보 I
 - Quiz는 transient 데이터이며, 사용자가 오답노트 저장을 선택한 항목만 persistence 대상으로 본다.
 - Quiz 생성 실패가 기존 Q&A 응답을 실패시키면 안 된다.
 
-실제 Qwen 다문항 평가에서 `max_questions=3`의 평균 생성 시간은 약 28초였다. 이는 기능 오류는 아니지만 동기 HTTP 응답에서 UX 문제가 될 수 있다.
+실제 Qwen 다문항 평가에서 `max_questions=3`의 Quiz 생성 시간은 평균 약 28초였다. 실제 Q&A부터 Quiz까지 이어지는 E2E 5건의 전체 평균 시간은 약 44초였다. 이는 기능 오류는 아니지만 동기 HTTP 응답에서 UX 문제가 될 수 있다.
 
-- backend/frontend는 loading 상태, 요청 timeout, 취소 가능 여부를 협의한다.
-- 필요하면 Q&A 응답을 먼저 반환하고 Quiz를 비동기 작업으로 생성·조회하는 방식을 사용한다.
-- 동기 방식이라면 Q&A와 Quiz 실패를 분리하고, Quiz timeout/실패 시에도 Q&A 본문은 즉시 유지한다.
+### 권장 API/UX 처리
+
+- 권장: Q&A 답변을 먼저 반환하고, Quiz는 별도 비동기 작업으로 생성한 뒤 quiz 상태 또는 결과를 조회·전달한다.
+- frontend는 Quiz 생성 중에는 loading 상태를 표시하고, 완료 전에는 Q&A 본문을 정상적으로 읽을 수 있어야 한다.
+- backend/frontend는 Quiz 전용 timeout, 취소 가능 여부, polling 또는 push 방식의 결과 전달을 협의한다.
+- 동기 방식을 선택하더라도 Q&A와 Quiz 실패를 분리한다. Quiz timeout 또는 `generation_failed`가 발생해도 Q&A 본문은 그대로 반환한다.
+- `insufficient_content`는 오류가 아니므로 재시도 대상으로 취급하지 않고 Quiz UI만 숨긴다.
