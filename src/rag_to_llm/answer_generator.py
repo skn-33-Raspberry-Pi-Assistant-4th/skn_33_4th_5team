@@ -54,6 +54,7 @@ class AnswerGenerator(Protocol):
 
 _URL_PATTERN = re.compile(r"(?i)(?:https?://|www\.)[^\s)>\]]+")
 _CITATION_GROUP_PATTERN = re.compile(r"\[\s*(C[1-9][0-9]*(?:\s*,\s*C[1-9][0-9]*)*)\s*\]")
+_MAX_STRUCTURED_NEW_TOKENS = 1024
 
 
 def _normalize_citation_groups(answer: str) -> str:
@@ -299,8 +300,10 @@ class HuggingFaceAnswerGenerator:
 
         if not messages:
             raise ValueError("구조화 생성에는 최소 하나의 메시지가 필요합니다.")
-        if not 1 <= max_new_tokens <= 512:
-            raise ValueError("max_new_tokens must be between 1 and 512.")
+        if not 1 <= max_new_tokens <= _MAX_STRUCTURED_NEW_TOKENS:
+            raise ValueError(
+                f"max_new_tokens must be between 1 and {_MAX_STRUCTURED_NEW_TOKENS}."
+            )
 
         started_at = perf_counter()
         self._load_model()

@@ -18,7 +18,7 @@ class HuggingFaceQuizTextGenerator:
         self,
         answer_generator: HuggingFaceAnswerGenerator,
         *,
-        max_new_tokens: int = 512,
+        max_new_tokens: int = 1024,
     ) -> None:
         self._answer_generator = answer_generator
         self._max_new_tokens = max_new_tokens
