@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from src.contracts import QuizQuestion
+from collections.abc import Mapping
+
+from src.contracts import QuizEvidence, QuizQuestion
 
 
 _EXPECTED_CHOICE_IDS = {"A", "B", "C", "D"}
@@ -38,4 +40,25 @@ def validate_question_structure(question: QuizQuestion) -> list[str]:
     return errors
 
 
-__all__ = ["validate_question_structure"]
+def validate_question_evidence(
+    question: QuizQuestion,
+    evidence_by_id: Mapping[str, QuizEvidence],
+) -> list[str]:
+    """Return error codes when a question exceeds its supplied evidence scope.
+
+    The MVP deliberately permits one evidence item and one supporting quote per
+    question. Verifying that the quote appears in the evidence body is handled
+    separately so this function only enforces identifier and cardinality rules.
+    """
+
+    errors: list[str] = []
+    if len(question.evidence_ids) != 1:
+        errors.append("evidence_ids_must_contain_exactly_one")
+    if len(question.supporting_quotes) != 1:
+        errors.append("supporting_quotes_must_contain_exactly_one")
+    if any(evidence_id not in evidence_by_id for evidence_id in question.evidence_ids):
+        errors.append("evidence_ids_must_be_allowed")
+    return errors
+
+
+__all__ = ["validate_question_evidence", "validate_question_structure"]

@@ -1,5 +1,5 @@
-from src.contracts import QuizChoice, QuizQuestion
-from src.services.quiz_validation import validate_question_structure
+from src.contracts import QuizChoice, QuizEvidence, QuizQuestion
+from src.services.quiz_validation import validate_question_evidence, validate_question_structure
 
 
 def question_with(**overrides: object) -> QuizQuestion:
@@ -19,6 +19,16 @@ def question_with(**overrides: object) -> QuizQuestion:
     }
     payload.update(overrides)
     return QuizQuestion.model_construct(**payload)
+
+
+def evidence_by_id() -> dict[str, QuizEvidence]:
+    evidence = QuizEvidence(
+        citation_id="C1",
+        document_id="computers-remote-access-ssh",
+        chunk_id="computers-remote-access-ssh-001",
+        content="Raspberry Pi OS disables SSH by default.",
+    )
+    return {evidence.citation_id: evidence}
 
 
 def test_question_structure_accepts_a_valid_four_choice_question() -> None:
@@ -90,3 +100,46 @@ def test_question_structure_rejects_blank_question_explanation_and_choice_text()
     assert "question_must_not_be_blank" in errors
     assert "explanation_must_not_be_blank" in errors
     assert "choice_text_must_not_be_blank" in errors
+
+
+def test_question_evidence_accepts_one_allowed_evidence_id_and_quote() -> None:
+    assert validate_question_evidence(question_with(), evidence_by_id()) == []
+
+
+def test_question_evidence_rejects_unknown_evidence_id() -> None:
+    errors = validate_question_evidence(question_with(evidence_ids=["C9"]), evidence_by_id())
+
+    assert "evidence_ids_must_be_allowed" in errors
+
+
+def test_question_evidence_rejects_missing_evidence_id() -> None:
+    errors = validate_question_evidence(question_with(evidence_ids=[]), evidence_by_id())
+
+    assert "evidence_ids_must_contain_exactly_one" in errors
+
+
+def test_question_evidence_rejects_missing_supporting_quote() -> None:
+    errors = validate_question_evidence(question_with(supporting_quotes=[]), evidence_by_id())
+
+    assert "supporting_quotes_must_contain_exactly_one" in errors
+
+
+def test_question_evidence_rejects_multiple_evidence_ids() -> None:
+    allowed_evidence = evidence_by_id()
+    allowed_evidence["C2"] = QuizEvidence(
+        citation_id="C2",
+        document_id="computers-remote-access-ssh",
+        chunk_id="computers-remote-access-ssh-002",
+        content="Enable SSH in Raspberry Pi Imager.",
+    )
+    errors = validate_question_evidence(
+        question_with(
+            evidence_ids=["C1", "C2"],
+            supporting_quotes=["첫 번째 근거", "두 번째 근거"],
+        ),
+        allowed_evidence,
+    )
+
+    assert "evidence_ids_must_contain_exactly_one" in errors
+    assert "supporting_quotes_must_contain_exactly_one" in errors
+    assert "evidence_ids_must_be_allowed" not in errors
