@@ -1,5 +1,8 @@
+import pytest
+
 from src.contracts import QuizChoice, QuizEvidence, QuizQuestion
 from src.services.quiz_validation import (
+    finalize_questions,
     supporting_quote_matches,
     validate_question_evidence,
     validate_question_structure,
@@ -35,6 +38,15 @@ def evidence_by_id() -> dict[str, QuizEvidence]:
     return {evidence.citation_id: evidence}
 
 
+def finalization_candidate(number: int) -> QuizQuestion:
+    return question_with(
+        question_id=f"generated-{number:03d}",
+        question=f"SSH 확인 항목 {number}은 무엇인가요?",
+        evidence_ids=[f"C{number}"],
+        supporting_quotes=[f"SSH evidence sentence number {number}."],
+    )
+
+
 def test_question_structure_accepts_a_valid_four_choice_question() -> None:
     assert validate_question_structure(question_with()) == []
 
@@ -50,8 +62,8 @@ def test_question_structure_rejects_duplicate_choice_ids() -> None:
         choices=[
             QuizChoice(id="A", text="첫 번째 보기"),
             QuizChoice(id="A", text="두 번째 보기"),
-            QuizChoice(id="C", text="세 번째 보기"),
-            QuizChoice(id="D", text="네 번째 보기"),
+            QuizChoice(id="B", text="세 번째 보기"),
+            QuizChoice(id="C", text="네 번째 보기"),
         ]
     )
 
@@ -85,6 +97,36 @@ def test_question_structure_rejects_duplicate_choice_text() -> None:
     )
 
     assert "choice_texts_must_be_unique" in validate_question_structure(question)
+
+
+@pytest.mark.parametrize(
+    ("first_text", "second_text"),
+    [
+        ("같은 보기", " 같은 보기 "),
+        ("Answer", "answer"),
+    ],
+)
+def test_question_structure_rejects_normalized_duplicate_choice_text(
+    first_text: str,
+    second_text: str,
+) -> None:
+    question = question_with(
+        choices=[
+            QuizChoice(id="A", text=first_text),
+            QuizChoice(id="B", text=second_text),
+            QuizChoice(id="C", text="세 번째 보기"),
+            QuizChoice(id="D", text="네 번째 보기"),
+        ]
+    )
+
+    assert "choice_texts_must_be_unique" in validate_question_structure(question)
+
+
+def test_question_structure_allows_any_a_to_d_choice_order() -> None:
+    choices = question_with().choices
+    question = question_with(choices=[choices[3], choices[1], choices[0], choices[2]])
+
+    assert validate_question_structure(question) == []
 
 
 def test_question_structure_rejects_blank_question_explanation_and_choice_text() -> None:
@@ -177,13 +219,14 @@ def test_supporting_quote_rejects_text_outside_evidence() -> None:
     )
 
 
-def test_supporting_quote_rejects_too_short_text() -> None:
-    assert not supporting_quote_matches("SSH", "SSH is disabled by default.")
+@pytest.mark.parametrize(
+    ("quote_length", "expected"),
+    [(14, False), (15, True), (240, True), (241, False)],
+)
+def test_supporting_quote_enforces_length_boundaries(quote_length: int, expected: bool) -> None:
+    quote = "a" * quote_length
 
-
-def test_supporting_quote_rejects_too_long_text() -> None:
-    quote = "a" * 241
-    assert not supporting_quote_matches(quote, quote)
+    assert supporting_quote_matches(quote, quote) is expected
 
 
 def test_question_evidence_rejects_quote_missing_from_its_evidence_body() -> None:
@@ -193,3 +236,114 @@ def test_question_evidence_rejects_quote_missing_from_its_evidence_body() -> Non
     )
 
     assert "supporting_quote_must_match_evidence_content" in errors
+
+
+def test_finalize_questions_returns_three_distinct_candidates() -> None:
+    response = finalize_questions(
+        [finalization_candidate(1), finalization_candidate(2), finalization_candidate(3)],
+        max_questions=3,
+    )
+
+    assert response.status == "available"
+    assert [question.question_id for question in response.questions] == [
+        "generated-001",
+        "generated-002",
+        "generated-003",
+    ]
+
+
+def test_finalize_questions_removes_duplicate_question_text() -> None:
+    first = finalization_candidate(1)
+    duplicate = question_with(
+        question_id="generated-duplicate",
+        question=first.question,
+        evidence_ids=["C9"],
+        supporting_quotes=["SSH evidence sentence number 9."],
+    )
+
+    response = finalize_questions([first, duplicate], max_questions=3)
+
+    assert response.status == "available"
+    assert [question.question_id for question in response.questions] == ["generated-001"]
+
+
+def test_finalize_questions_removes_duplicate_from_four_candidates() -> None:
+    first = finalization_candidate(1)
+    duplicate = question_with(
+        question_id="generated-duplicate",
+        question=first.question,
+        evidence_ids=["C9"],
+        supporting_quotes=["SSH evidence sentence number 9."],
+    )
+    response = finalize_questions(
+        [first, duplicate, finalization_candidate(2), finalization_candidate(3)],
+        max_questions=3,
+    )
+
+    assert [question.question_id for question in response.questions] == [
+        "generated-001",
+        "generated-002",
+        "generated-003",
+    ]
+
+
+def test_finalize_questions_returns_insufficient_content_without_validated_candidates() -> None:
+    response = finalize_questions([], max_questions=3)
+
+    assert response.status == "insufficient_content"
+    assert response.questions == []
+
+
+def test_finalize_questions_respects_requested_limit() -> None:
+    response = finalize_questions(
+        [finalization_candidate(1), finalization_candidate(2)],
+        max_questions=1,
+    )
+
+    assert response.status == "available"
+    assert [question.question_id for question in response.questions] == ["generated-001"]
+
+
+def test_finalize_questions_limits_five_candidates_to_three() -> None:
+    response = finalize_questions(
+        [finalization_candidate(number) for number in range(1, 6)],
+        max_questions=3,
+    )
+
+    assert [question.question_id for question in response.questions] == [
+        "generated-001",
+        "generated-002",
+        "generated-003",
+    ]
+
+
+def test_finalize_questions_keeps_only_the_first_of_all_duplicate_candidates() -> None:
+    first = finalization_candidate(1)
+    duplicates = [
+        question_with(
+            question_id=f"generated-duplicate-{number}",
+            question=first.question,
+            evidence_ids=[f"C{number}"],
+            supporting_quotes=[f"SSH evidence sentence number {number}."],
+        )
+        for number in range(2, 5)
+    ]
+
+    response = finalize_questions([first, *duplicates], max_questions=3)
+
+    assert response.status == "available"
+    assert [question.question_id for question in response.questions] == ["generated-001"]
+
+
+def test_finalize_questions_removes_same_evidence_quote_for_different_questions() -> None:
+    first = finalization_candidate(1)
+    same_evidence = question_with(
+        question_id="generated-evidence-duplicate",
+        question="SSH를 어디에서 활성화하나요?",
+        evidence_ids=["C1"],
+        supporting_quotes=["SSH evidence sentence number 1."],
+    )
+
+    response = finalize_questions([first, same_evidence], max_questions=3)
+
+    assert [question.question_id for question in response.questions] == ["generated-001"]

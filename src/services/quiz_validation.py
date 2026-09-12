@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from src.contracts import QuizEvidence, QuizQuestion
+from src.contracts import QuizEvidence, QuizQuestion, QuizResponse
 
 
 _EXPECTED_CHOICE_IDS = {"A", "B", "C", "D"}
@@ -16,6 +16,12 @@ def _normalize_whitespace(value: str) -> str:
     """Trim and collapse whitespace without changing case or punctuation."""
 
     return " ".join(value.split())
+
+
+def _normalized_dedup_text(value: str) -> str:
+    """Normalize whitespace and letter case for duplicate comparison only."""
+
+    return _normalize_whitespace(value).casefold()
 
 
 def supporting_quote_matches(quote: str, evidence_content: str) -> bool:
@@ -39,6 +45,7 @@ def validate_question_structure(question: QuizQuestion) -> list[str]:
     errors: list[str] = []
     choice_ids = [choice.id for choice in question.choices]
     choice_texts = [choice.text for choice in question.choices]
+    normalized_choice_texts = [_normalized_dedup_text(text) for text in choice_texts]
 
     if len(question.choices) != 4:
         errors.append("choices_count_must_be_4")
@@ -46,7 +53,7 @@ def validate_question_structure(question: QuizQuestion) -> list[str]:
         errors.append("choice_ids_must_be_A_B_C_D_once_each")
     if any(not text.strip() for text in choice_texts):
         errors.append("choice_text_must_not_be_blank")
-    if len(choice_texts) != len(set(choice_texts)):
+    if len(normalized_choice_texts) != len(set(normalized_choice_texts)):
         errors.append("choice_texts_must_be_unique")
     if question.correct_choice_id not in choice_ids:
         errors.append("correct_choice_id_must_match_a_choice")
@@ -94,8 +101,67 @@ def validate_question_evidence(
     return errors
 
 
+def _correct_choice_text(question: QuizQuestion) -> str:
+    """Return the selected answer text; validated candidates always have one."""
+
+    return next(
+        (
+            choice.text
+            for choice in question.choices
+            if choice.id == question.correct_choice_id
+        ),
+        "",
+    )
+
+
+def finalize_questions(
+    candidates: list[QuizQuestion],
+    *,
+    max_questions: int,
+) -> QuizResponse:
+    """Return up to three prevalidated, non-duplicate quiz questions.
+
+    Candidates must already have passed structure and evidence validation. This
+    step preserves the model's order, removes MVP-defined duplicates, and does
+    not manufacture questions to satisfy the requested count.
+    """
+
+    if not 1 <= max_questions <= 3:
+        raise ValueError("max_questions must be between 1 and 3")
+
+    questions: list[QuizQuestion] = []
+    seen_question_texts: set[str] = set()
+    seen_question_answers: set[tuple[str, str]] = set()
+    seen_evidence_quotes: set[tuple[str, str]] = set()
+
+    for question in candidates:
+        question_text = _normalized_dedup_text(question.question)
+        correct_text = _normalized_dedup_text(_correct_choice_text(question))
+        evidence_quotes = {
+            (evidence_id, _normalized_dedup_text(quote))
+            for evidence_id, quote in zip(question.evidence_ids, question.supporting_quotes)
+        }
+        if (
+            question_text in seen_question_texts
+            or (question_text, correct_text) in seen_question_answers
+            or bool(evidence_quotes.intersection(seen_evidence_quotes))
+        ):
+            continue
+
+        questions.append(question)
+        seen_question_texts.add(question_text)
+        seen_question_answers.add((question_text, correct_text))
+        seen_evidence_quotes.update(evidence_quotes)
+        if len(questions) == max_questions:
+            break
+
+    status = "available" if questions else "insufficient_content"
+    return QuizResponse(status=status, questions=questions)
+
+
 __all__ = [
     "supporting_quote_matches",
+    "finalize_questions",
     "validate_question_evidence",
     "validate_question_structure",
 ]
