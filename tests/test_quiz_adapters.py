@@ -23,8 +23,13 @@ def citation(*, citation_id: str, chunk_id: str, quote: str) -> ChatCitation:
     )
 
 
-def answered_response(*, citations: list[ChatCitation]) -> ChatResponse:
-    citation_suffix = " ".join(f"[{item.citation_id}]" for item in citations)
+def answered_response(
+    *,
+    citations: list[ChatCitation],
+    cited_ids: list[str] | None = None,
+) -> ChatResponse:
+    used_ids = cited_ids if cited_ids is not None else [item.citation_id for item in citations]
+    citation_suffix = " ".join(f"[{citation_id}]" for citation_id in used_ids)
     return ChatResponse(
         schema_version="1.2.0",
         request_id="qa-request-001",
@@ -72,6 +77,27 @@ def test_adapter_preserves_requested_question_limit() -> None:
 
     assert request is not None
     assert request.max_questions == 1
+
+
+def test_adapter_excludes_final_citations_not_referenced_by_the_answer() -> None:
+    first = citation(
+        citation_id="C1",
+        chunk_id="ssh-001",
+        quote="Raspberry Pi OS disables SSH by default.",
+    )
+    extra = citation(
+        citation_id="C2",
+        chunk_id="ssh-002",
+        quote="Enable SSH in Raspberry Pi Imager.",
+    )
+
+    request = chat_response_to_quiz_request(
+        answered_response(citations=[first, extra], cited_ids=["C1"])
+    )
+
+    assert request is not None
+    assert [item.citation_id for item in request.evidence] == ["C1"]
+    assert [item.chunk_id for item in request.evidence] == ["ssh-001"]
 
 
 def test_adapter_skips_non_answered_response() -> None:

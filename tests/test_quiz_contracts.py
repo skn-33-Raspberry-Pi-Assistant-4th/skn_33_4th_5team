@@ -56,6 +56,20 @@ def test_quiz_evidence_rejects_empty_content() -> None:
         )
 
 
+@pytest.mark.parametrize("field_name", ["document_id", "chunk_id", "content"])
+def test_quiz_evidence_rejects_whitespace_only_required_text(field_name: str) -> None:
+    values = {
+        "citation_id": "C1",
+        "document_id": "computers-remote-access-ssh",
+        "chunk_id": "computers-remote-access-ssh-001",
+        "content": "Raspberry Pi OS disables SSH by default.",
+    }
+    values[field_name] = "   \n\t"
+
+    with pytest.raises(ValidationError):
+        QuizEvidence(**values)
+
+
 @pytest.mark.parametrize("citation_id", ["C0", "C01", "citation-1", "c1"])
 def test_quiz_evidence_rejects_invalid_citation_id(citation_id: str) -> None:
     with pytest.raises(ValidationError):

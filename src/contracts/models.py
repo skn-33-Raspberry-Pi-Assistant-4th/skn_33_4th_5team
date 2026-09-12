@@ -5,7 +5,7 @@ import re
 from datetime import date, datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
 
 CONTRACT_VERSION = "1.1.0"
@@ -74,6 +74,13 @@ class QuizEvidence(StrictContract):
     document_id: NonEmptyText
     chunk_id: NonEmptyText
     content: NonEmptyText
+
+    @field_validator("document_id", "chunk_id", "content")
+    @classmethod
+    def validate_non_blank_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("quiz evidence text must not be blank")
+        return value
 
 
 class QuizGenerationRequest(StrictContract):
