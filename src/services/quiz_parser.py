@@ -46,9 +46,13 @@ def parse_quiz_response(raw_output: str) -> QuizResponse:
         raise QuizOutputError("퀴즈 모델 출력이 유효한 JSON이 아닙니다.", raw_output) from exc
 
     try:
-        return QuizResponse.model_validate(payload, strict=True)
+        response = QuizResponse.model_validate(payload, strict=True)
     except ValidationError as exc:
         raise QuizOutputError("퀴즈 모델 출력이 응답 계약과 일치하지 않습니다.", raw_output) from exc
+
+    if response.status == "generation_failed":
+        raise QuizOutputError("모델 출력은 generation_failed 상태를 사용할 수 없습니다.", raw_output)
+    return response
 
 
 __all__ = ["QuizOutputError", "parse_quiz_response"]

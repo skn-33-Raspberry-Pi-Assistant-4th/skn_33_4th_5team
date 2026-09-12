@@ -1,3 +1,5 @@
+import pytest
+
 from src.contracts import QuizEvidence, QuizGenerationRequest
 from src.lang import QUIZ_GENERATION_SYSTEM_PROMPT, build_quiz_generation_messages
 
@@ -40,6 +42,18 @@ def test_quiz_prompt_lists_only_allowed_evidence_ids() -> None:
     messages = build_quiz_generation_messages(make_request())
 
     assert "<allowed_evidence_ids>\nC1\n</allowed_evidence_ids>" in messages[1]["content"]
+
+
+def test_quiz_prompt_rejects_duplicate_evidence_ids() -> None:
+    duplicate = QuizEvidence(
+        citation_id="C1",
+        document_id="computers-remote-access-ssh",
+        chunk_id="computers-remote-access-ssh-002",
+        content="Enable SSH in Raspberry Pi Imager.",
+    )
+
+    with pytest.raises(ValueError, match="중복된 인용 ID"):
+        build_quiz_generation_messages(make_request(evidence=[*make_request().evidence, duplicate]))
 
 
 def test_quiz_prompt_reflects_requested_question_limit() -> None:

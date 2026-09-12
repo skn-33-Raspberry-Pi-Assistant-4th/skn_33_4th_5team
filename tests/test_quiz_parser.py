@@ -73,8 +73,27 @@ def test_parse_quiz_response_accepts_json_or_complete_code_fence(raw_output: str
             id="invalid_status",
         ),
         pytest.param(
+            json.dumps({"status": "generation_failed", "questions": []}, ensure_ascii=False),
+            id="model_generated_failure_status",
+        ),
+        pytest.param(
+            json.dumps({"status": "available", "questions": []}, ensure_ascii=False),
+            id="available_without_questions",
+        ),
+        pytest.param(
+            json.dumps(
+                {"status": "insufficient_content", "questions": valid_response_payload()["questions"]},
+                ensure_ascii=False,
+            ),
+            id="insufficient_content_with_questions",
+        ),
+        pytest.param(
             "설명입니다\n```json\n" + serialized_valid_response() + "\n```",
             id="prose_before_fence",
+        ),
+        pytest.param(
+            "```json\n" + serialized_valid_response() + "\n```\n생성 완료",
+            id="prose_after_fence",
         ),
     ],
 )

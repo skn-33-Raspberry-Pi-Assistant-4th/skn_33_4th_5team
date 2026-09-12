@@ -116,6 +116,28 @@ def test_quiz_response_accepts_empty_insufficient_content() -> None:
     assert response.questions == []
 
 
+def test_quiz_response_accepts_empty_generation_failed() -> None:
+    response = QuizResponse(status="generation_failed", questions=[])
+
+    assert response.status == "generation_failed"
+
+
+@pytest.mark.parametrize(
+    ("status", "questions"),
+    [
+        ("available", []),
+        ("insufficient_content", [valid_quiz_question()]),
+        ("generation_failed", [valid_quiz_question()]),
+    ],
+)
+def test_quiz_response_rejects_status_question_mismatches(
+    status: str,
+    questions: list[QuizQuestion],
+) -> None:
+    with pytest.raises(ValidationError):
+        QuizResponse(status=status, questions=questions)
+
+
 def test_quiz_response_rejects_invalid_status() -> None:
     with pytest.raises(ValidationError):
         QuizResponse(status="unknown", questions=[])
