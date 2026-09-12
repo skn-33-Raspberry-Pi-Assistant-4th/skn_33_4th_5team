@@ -88,14 +88,18 @@ def test_quiz_system_prompt_requires_answer_evidence_intersection_and_single_evi
     assert "<answer>에 명시적으로 있는 사실만 확인" in QUIZ_GENERATION_SYSTEM_PROMPT
     assert "evidence에만 있거나 answer에만 있는 사실은 출제하지 마세요" in QUIZ_GENERATION_SYSTEM_PROMPT
     assert "evidence_ids에는 허용된 evidence ID 하나만" in QUIZ_GENERATION_SYSTEM_PROMPT
-    assert "supporting_quotes는 문자열이 아니라" in QUIZ_GENERATION_SYSTEM_PROMPT
-    assert '"supporting_quotes": ["원문 인용"]' in QUIZ_GENERATION_SYSTEM_PROMPT
+    assert "supporting_quotes는 정확히 문자열 하나를 담은 배열" in QUIZ_GENERATION_SYSTEM_PROMPT
+    assert '"supporting_quotes": ["SSH is disabled by default."]' in QUIZ_GENERATION_SYSTEM_PROMPT
+    assert "가장 짧은 충분한 구절" in QUIZ_GENERATION_SYSTEM_PROMPT
+    assert "전체 문단·긴 목록을 통째로 복사하지 마세요" in QUIZ_GENERATION_SYSTEM_PROMPT
+    assert "원문의 문장부호, 대소문자, 기호도 바꾸지 마세요" in QUIZ_GENERATION_SYSTEM_PROMPT
+    assert "요약·재작성·의역은 금지" in QUIZ_GENERATION_SYSTEM_PROMPT
     assert "정규화 후 15~240자" in QUIZ_GENERATION_SYSTEM_PROMPT
 
 
 def test_quiz_system_prompt_requires_grounded_explanation_and_single_answer_choices() -> None:
     assert "정답과 explanation을 직접 뒷받침" in QUIZ_GENERATION_SYSTEM_PROMPT
-    assert "explanation은 그 범위를 넘어서면 안 됩니다" in QUIZ_GENERATION_SYSTEM_PROMPT
+    assert "explanation은 그 인용과 answer의 범위를 넘어서면 안 됩니다" in QUIZ_GENERATION_SYSTEM_PROMPT
     assert "선택지 4개" in QUIZ_GENERATION_SYSTEM_PROMPT
     assert '"옳지 않은 것은", "틀린 것은", "모두 고르시오"' in QUIZ_GENERATION_SYSTEM_PROMPT
 
