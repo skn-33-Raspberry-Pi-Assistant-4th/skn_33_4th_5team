@@ -128,3 +128,22 @@ positive 15건의 raw output 중 13건은 507~512 generated tokens에서 JSON이
 | 평균 문항 수 1개 이상 | 0.67개 | 미달 |
 
 quote 지시 보완으로 길이 위반은 5건에서 2건으로 줄고 유효 문항 제공률은 60.0%에서 66.7%로 올랐다. 다만 현재 Commit 14 평가셋 기준 MVP는 **아직 통과하지 못했다**. 다음 개선은 validation 완화가 아니라, 짧은 원문 인용을 출력하는 행동을 더 안정화하는 별도 실험으로 판단해야 한다.
+
+## Final evaluation — quote 후보 ID 선택 계약
+
+평가 fixture의 positive answer를 한 핵심 사실 단위로 정리하고, evidence 원문에서 15~240자 범위의 정확한 문장·목록 항목 후보를 서버가 추출했다. 모델은 quote 본문 대신 `supporting_quote_id`만 선택하고, 서버가 해당 원문을 최종 `supporting_quotes`에 materialize했다.
+
+| 지표 | 실제 결과 | 상태 |
+| --- | ---: | --- |
+| draft JSON 통과율 | 15/15 (100.0%, 모델 호출 positive 케이스) | 통과 |
+| 구조 통과율 | 15/15 (100.0%) | 통과 |
+| evidence 정확성 | 15/15 (100.0%) | 통과 |
+| allowlist 위반 | 0건 | 통과 |
+| supporting quote 불일치 | 0건 | 통과 |
+| supporting quote 길이 위반 | 0건 | 통과 |
+| 유효 문항 제공률 | 15/15 (100.0%) | 통과 |
+| 평균 유효 문항 수 | 1.0개 | 통과 |
+| generation_failed | 0건 | 통과 |
+| 평균 생성 시간 | positive 15건 평균 11.4초 | 기록 완료 |
+
+근거 부족 fixture 5건은 quote 후보가 없으므로 LLM 호출 없이 `insufficient_content`로 반환됐다. 이들은 raw 모델 출력 parser 통과율의 분모에서 제외했다.

@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from src.services.quiz_parser import QuizOutputError, parse_quiz_response
+from src.services.quiz_parser import QuizOutputError, parse_quiz_draft_response, parse_quiz_response
 
 
 def valid_response_payload() -> dict[str, object]:
@@ -102,3 +102,15 @@ def test_parse_quiz_response_rejects_non_contract_or_non_json_output(raw_output:
         parse_quiz_response(raw_output)
 
     assert error.value.raw_output == raw_output
+
+
+def test_parse_quiz_draft_response_accepts_quote_candidate_id() -> None:
+    payload = valid_response_payload()
+    question = dict(payload["questions"][0])
+    question.pop("supporting_quotes")
+    question["supporting_quote_id"] = "C1-Q1"
+    raw_output = json.dumps({"status": "available", "questions": [question]}, ensure_ascii=False)
+
+    parsed = parse_quiz_draft_response(raw_output)
+
+    assert parsed.questions[0].supporting_quote_id == "C1-Q1"
