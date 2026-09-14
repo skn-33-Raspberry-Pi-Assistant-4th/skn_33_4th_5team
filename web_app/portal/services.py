@@ -40,8 +40,8 @@ def get_runtime_readiness() -> "RuntimeReadiness":
         from streamlit_app.runtime import check_runtime_readiness
 
         return check_runtime_readiness(PROJECT_ROOT)
-    except Exception as exc:
-        return DjangoRuntimeReadiness(False, f"RAG 실행 환경 준비 필요: {exc}")
+    except Exception:
+        return DjangoRuntimeReadiness(False, "RAG 실행 환경을 준비하지 못했습니다. 설정을 확인해 주세요.")
 
 
 @lru_cache(maxsize=1)
