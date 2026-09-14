@@ -1,0 +1,16 @@
+{% extends 'portal/base.html' %}
+{% block title %}PiCare | 마이페이지{% endblock %}
+{% block content %}
+<section class="hero text-center mx-auto">
+  <p class="eyebrow">MY PAGE</p>
+  <h1><em>{{ user.username }}</em>님의 정보</h1>
+  <p class="hero-copy">사용자명과 이메일만 수정할 수 있습니다.</p>
+</section>
+<form method="post" class="lab-card form-card mx-auto mt-4" style="max-width: 560px" novalidate>
+  {% csrf_token %}
+  {% for field in form %}
+    <div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>
+  {% endfor %}
+  <button class="btn btn-picare w-100" type="submit">회원정보 저장</button>
+</form>
+{% endblock %}

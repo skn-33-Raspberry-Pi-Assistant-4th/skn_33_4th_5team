@@ -1,0 +1,7 @@
+{% extends 'portal/base.html' %}
+{% block title %}PiCare | 내가 추천한 게시글{% endblock %}
+{% block content %}
+<section class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4"><div><p class="eyebrow mb-1">MY ACTIVITY</p><h1 class="h2 mb-1">내가 추천한 게시글</h1></div><a class="btn btn-outline-picare" href="{% url 'mypage' %}">마이페이지</a></section>
+<section class="vstack gap-3">{% for like in page_obj %}<article class="lab-card form-card"><div class="d-flex justify-content-between gap-3"><div><h2 class="h5 mb-1"><a class="text-decoration-none text-dark" href="{% url 'community_post_detail' like.post.pk %}">{{ like.post.title }}</a></h2><p class="small text-muted mb-0">작성자 {{ like.post.author.username }} · 추천일 {{ like.created_at|date:'Y.m.d H:i' }}</p></div><a class="btn btn-sm btn-outline-picare" href="{% url 'community_post_detail' like.post.pk %}">게시글 보기</a></div></article>{% empty %}<div class="lab-card form-card text-center text-muted">추천한 게시글이 없습니다.</div>{% endfor %}</section>
+{% include 'portal/pagination.html' %}
+{% endblock %}

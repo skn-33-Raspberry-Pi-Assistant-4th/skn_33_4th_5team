@@ -1,0 +1,16 @@
+{% extends 'portal/base.html' %}
+{% block title %}PiCare | {{ post.title }}{% endblock %}
+{% block content %}
+<article class="lab-card form-card">
+  <div class="d-flex justify-content-between align-items-start gap-3"><div><p class="eyebrow mb-1">COMMUNITY</p><h1 class="h3 mb-1">{{ post.title }}</h1><p class="small text-muted mb-0">{{ post.author.username }} · {{ post.created_at|date:'Y.m.d H:i' }}{% if post.updated_at != post.created_at %} · 수정됨{% endif %}</p></div><a class="btn btn-sm btn-outline-picare" href="{% url 'community_list' %}">목록</a></div>
+  <div class="mt-4 lh-lg">{{ post.content|linebreaksbr }}</div>
+  <div class="d-flex flex-wrap align-items-center gap-2 mt-4 pt-3 border-top">
+    {% if user.is_authenticated %}<form method="post" action="{% url 'community_post_like' post.pk %}">{% csrf_token %}<button class="btn btn-sm {% if is_liked %}btn-picare{% else %}btn-outline-picare{% endif %}" type="submit">{% if is_liked %}추천 취소{% else %}추천{% endif %} ({{ post.like_count }})</button></form>{% else %}<a class="btn btn-sm btn-outline-picare" href="{% url 'login' %}?next={% url 'community_post_detail' post.pk %}">추천 {{ post.like_count }}</a>{% endif %}
+    {% if user == post.author %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'community_post_edit' post.pk %}">수정</a><form method="post" action="{% url 'community_post_delete' post.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">삭제</button></form>{% endif %}
+  </div>
+</article>
+<section class="mt-5"><div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h4 mb-0">댓글 {{ comments|length }}개</h2></div>
+  {% if user.is_authenticated %}<form method="post" action="{% url 'community_comment_create' post.pk %}" class="lab-card form-card mb-3" novalidate>{% csrf_token %}<label class="form-label" for="{{ comment_form.content.id_for_label }}">{{ comment_form.content.label }}</label>{{ comment_form.content }}<button class="btn btn-picare btn-sm mt-2" type="submit">댓글 작성</button></form>{% else %}<p class="text-muted">댓글을 작성하려면 <a href="{% url 'login' %}?next={% url 'community_post_detail' post.pk %}">로그인</a>해 주세요.</p>{% endif %}
+  <div class="vstack gap-2">{% for comment in comments %}<article class="border rounded-4 bg-white p-3"><div class="d-flex justify-content-between gap-3"><strong>{{ comment.author.username }}</strong><span class="small text-muted">{{ comment.created_at|date:'Y.m.d H:i' }}</span></div><div class="mt-2">{{ comment.content|linebreaksbr }}</div>{% if user == comment.author %}<div class="d-flex gap-2 mt-2"><a class="btn btn-sm btn-outline-secondary" href="{% url 'community_comment_edit' post.pk comment.pk %}">수정</a><form method="post" action="{% url 'community_comment_delete' post.pk comment.pk %}">{% csrf_token %}<button class="btn btn-sm btn-outline-danger" type="submit">삭제</button></form></div>{% endif %}</article>{% empty %}<p class="text-muted">첫 댓글을 남겨 보세요.</p>{% endfor %}</div>
+</section>
+{% endblock %}

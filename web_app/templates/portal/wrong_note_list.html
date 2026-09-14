@@ -1,0 +1,7 @@
+{% extends 'portal/base.html' %}
+{% block title %}PiCare | 오답노트{% endblock %}
+{% block content %}
+<section class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4"><div><p class="eyebrow mb-1">WRONG NOTES</p><h1 class="h2 mb-1">오답노트</h1><p class="text-muted mb-0">직접 저장한 오답만 보관합니다.</p></div><a class="btn btn-picare" href="{% url 'qa' %}">Q&amp;A로 이동</a></section>
+<section class="vstack gap-3">{% for note in notes %}<article class="lab-card form-card"><h2 class="h5 mb-2"><a class="text-decoration-none text-dark" href="{% url 'wrong_note_detail' note.pk %}">{{ note.question }}</a></h2><p class="small text-muted mb-0">{{ note.question_id }} · {{ note.created_at|date:'Y.m.d H:i' }}</p></article>{% empty %}<div class="lab-card form-card text-center text-muted">저장한 오답노트가 없습니다.</div>{% endfor %}</section>
+{% include 'portal/pagination.html' %}
+{% endblock %}
