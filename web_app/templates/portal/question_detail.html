@@ -1,0 +1,50 @@
+{% extends 'portal/base.html' %}
+
+{% block title %}{{ question_post.title }} | PiCare{% endblock %}
+
+{% block content %}
+<nav class="archive-back" aria-label="이전 페이지">
+  <a href="{% url 'questions' %}"><span aria-hidden="true">←</span> 질문 아카이브로</a>
+</nav>
+
+<article class="question-detail">
+  <header class="question-detail-header">
+    <span class="question-topic">{{ question_post.topic }}</span>
+    <h1>{{ question_post.title }}</h1>
+    <p><span>👤 {{ question_post.author }}</span><span aria-hidden="true">·</span><time>{{ question_post.created_at }}</time></p>
+  </header>
+
+  <section class="detail-question-card" aria-labelledby="question-content-heading">
+    <p class="card-kicker">QUESTION</p>
+    <h2 id="question-content-heading">질문 내용</h2>
+    <p>{{ question_post.question }}</p>
+  </section>
+
+  <section class="detail-summary-card" aria-labelledby="ai-summary-heading">
+    <div class="detail-card-heading">
+      <span aria-hidden="true">🤖</span>
+      <div>
+        <p class="card-kicker">PICARE AI</p>
+        <h2 id="ai-summary-heading">AI 간단 요약</h2>
+      </div>
+      <span class="display-only-badge">화면 예시</span>
+    </div>
+    <p>{{ question_post.summary }}</p>
+    <div class="detail-source">
+      <span aria-hidden="true">▣</span>
+      <div>
+        <small>참고한 공식 근거</small>
+        <a href="{{ question_post.source_url }}" target="_blank" rel="noopener noreferrer">{{ question_post.source_title }} · {{ question_post.source_section }} <span aria-hidden="true">↗</span></a>
+      </div>
+    </div>
+  </section>
+
+  <aside class="archive-next-step">
+    <div>
+      <strong>내 환경에 맞는 설명이 더 필요하신가요?</strong>
+      <span>Q&A에서 상황을 적어 공식 문서 기반 답변을 받아보세요.</span>
+    </div>
+    <a class="btn btn-picare" href="{% url 'qa' %}">Q&A에서 이어서 질문 <span aria-hidden="true">→</span></a>
+  </aside>
+</article>
+{% endblock %}

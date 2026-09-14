@@ -1,0 +1,6 @@
+{% extends 'portal/base.html' %}
+{% block title %}PiCare | 로그인{% endblock %}
+{% block content %}
+<section class="hero text-center mx-auto"><p class="eyebrow">WELCOME BACK</p><h1>다시 만나서<br><em>반가워요</em></h1><p class="hero-copy">PiCare 계정으로 로그인하세요.</p></section>
+<section class="lab-card form-card auth-card mt-4 mx-auto"><div class="mb-4"><p class="card-kicker mb-1">로그인</p><h2 class="h4 mb-0">계정으로 계속하기</h2></div><form method="post" novalidate>{% csrf_token %}<input type="hidden" name="next" value="{{ next }}">{% for field in form %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{% if field.name == 'username' %}아이디{% else %}{{ field.label }}{% endif %}</label>{{ field }}{% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>{% endfor %}{% for error in form.non_field_errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}<button class="btn btn-picare w-100" type="submit">로그인 <span>→</span></button></form><p class="small text-center text-secondary mt-4 mb-0">처음이신가요? <a href="{% url 'accounts:signup' %}{% if next %}?next={{ next|urlencode }}{% endif %}">회원가입</a></p></section>
+{% endblock %}

@@ -39,6 +39,7 @@ class RecommendationForm(forms.Form):
     monitor_absent = forms.ChoiceField(label="모니터 없음", choices=OPTIONAL_BOOLEAN_CHOICES, required=False, widget=forms.Select(attrs={"class": "form-select"}))
 
     def clean_purpose(self) -> str:
+        """Apply the shared input-length and whitespace policy to a purpose."""
         try:
             return validate_input_text(self.cleaned_data["purpose"])
         except ValueError as exc:
@@ -46,6 +47,7 @@ class RecommendationForm(forms.Form):
 
     @staticmethod
     def as_optional_boolean(value: str) -> bool | None:
+        """Translate the HTML select value into the domain contract's tri-state boolean."""
         return {"": None, "true": True, "false": False}[value]
 
 
@@ -58,6 +60,7 @@ class QuestionForm(forms.Form):
     )
 
     def clean_question(self) -> str:
+        """Apply the same shared text policy used by the grounded Q&A service."""
         try:
             return validate_input_text(self.cleaned_data["question"])
         except ValueError as exc:

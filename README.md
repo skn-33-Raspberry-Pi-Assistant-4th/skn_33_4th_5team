@@ -84,6 +84,13 @@ draft 명령은 노출하지 않습니다. 기존 Streamlit은 호환·검증용
 RunPod 실행은 [Django RunPod 가이드](docs/runpod-django-setup.md), 재색인 및 테스트 결과는
 [B 검증 기록](docs/validation/2026-09-11-command-lab.md)을 참고하세요.
 
+### 회원가입·로그인과 MySQL
+
+기본 Django `User` 모델로 아이디·이메일·해시 비밀번호를 저장하고, `/accounts/signup/`,
+`/accounts/login/`에서 회원가입과 로그인을 제공합니다. 로그인 세션은 MySQL에 저장됩니다.
+로컬 Docker Compose 실행과 마이그레이션 절차는 [로컬 Django + MySQL 가이드](docs/local-django-mysql-setup.md)를,
+RunPod의 영속 MySQL 실행은 [Django RunPod 가이드](docs/runpod-django-setup.md)를 따르세요.
+
 | 화면 | 주요 기능 |
 |---|---|
 | RAG 챗봇 | 질문, 조건 JSON, 근거 기반 답변과 출처 확인 |

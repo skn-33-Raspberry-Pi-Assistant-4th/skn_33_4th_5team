@@ -5,5 +5,50 @@
 <section class="row g-3 mt-3 text-center"><div class="col-md-4"><div class="topic-card">💻 <strong>설치·사용법</strong></div></div><div class="col-md-4"><div class="topic-card">🔧 <strong>문제 해결</strong></div></div><div class="col-md-4"><div class="topic-card">🛡️ <strong>A/S·리콜</strong></div></div></section>
 <form method="post" class="lab-card form-card mt-4" novalidate>{% csrf_token %}<label class="form-label visually-hidden" for="{{ form.question.id_for_label }}">{{ form.question.label }}</label>{{ form.question }}<div class="d-flex justify-content-between align-items-center gap-3 mt-2"><span class="form-text">{{ form.question.help_text }} · 입력한 내용은 명령으로 실행되지 않습니다.</span><button class="btn btn-picare flex-shrink-0" type="submit">보내기 <span>→</span></button></div>{% for error in form.question.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</form>
 {% if service_error %}<div class="alert alert-danger mt-4">{{ service_error }}</div>{% endif %}
-{% if response %}<section class="mt-5"><div class="user-question">{{ question }}</div><div class="row g-4"><div class="col-lg-7"><article class="answer-card"><div class="d-flex justify-content-between gap-3 mb-3"><strong>🤖 PiCare</strong><span class="status-badge {% if is_blocked %}blocked{% endif %}">{{ status_label }}</span></div><div class="answer-text">{{ response.answer|linebreaksbr }}</div>{% for clarification in response.clarification_questions %}<div class="alert alert-info mt-3 mb-0">{{ clarification }}</div>{% endfor %}</article>{% if images or videos %}<section class="media-card mt-4"><h2 class="h5">인용 근거와 연결된 이미지·영상</h2><div class="row g-3">{% for image in images %}<div class="col-md-6"><img src="{{ image.url }}" alt="{{ image.alt_text|default:image.title }}" class="img-fluid rounded-4"><p class="small text-muted mt-2 mb-0">{{ image.title }} · {{ image.source_citation_id }}</p></div>{% endfor %}{% for video in videos %}<div class="col-md-6"><a class="video-link" href="{{ video.url }}" target="_blank" rel="noopener">▶ {{ video.title }} ↗</a></div>{% endfor %}</div></section>{% endif %}</div><aside class="col-lg-5">{% include 'portal/source_cards.html' %}</aside></div>{% if response.warnings %}<details class="mt-4"><summary>실행 추적 정보</summary><pre class="warning-log">{{ response.warnings|join:'\n' }}</pre></details>{% endif %}</section>{% elif not runtime_ready %}<div class="alert alert-warning mt-4 mb-0">{{ runtime_message }}</div>{% endif %}
+{% if response %}<section class="mt-5"><div class="user-question">{{ question }}</div><div class="row g-4"><div class="col-lg-7"><article class="answer-card"><div class="d-flex justify-content-between gap-3 mb-3"><strong>🤖 PiCare</strong><span class="status-badge {% if is_blocked %}blocked{% endif %}">{{ status_label }}</span></div><div class="answer-text">{{ response.answer|linebreaksbr }}</div>{% for clarification in response.clarification_questions %}<div class="alert alert-info mt-3 mb-0">{{ clarification }}</div>{% endfor %}</article>
+{% if inline_challenge %}<section class="mini-challenge-card mt-4" id="miniChallenge" data-submit-url="{{ inline_challenge.submit_url }}" data-challenge-url="{{ inline_challenge.challenge_url }}"><header class="mini-challenge-heading"><div><p class="card-kicker mb-1">✦ 학습 확인</p><h2>Mini Challenge</h2></div><span class="mini-progress">문제 1 / 1</span></header><p class="mini-topic">{{ inline_challenge.topic_label }} 공식 근거를 바탕으로 한 문제입니다.</p><form id="miniChallengeForm" novalidate>{% csrf_token %}<input type="hidden" name="question_id" value="{{ inline_challenge.question.question_id }}"><fieldset><legend class="mini-question">{{ inline_challenge.question.prompt }}</legend>{% for choice in inline_challenge.question.choices %}<label class="challenge-choice mini-choice"><input class="form-check-input" type="radio" name="choice_id" value="{{ choice.choice_id }}"><span class="choice-marker" aria-hidden="true">{{ choice.choice_id }}</span><span>{{ choice.text }}</span></label>{% endfor %}</fieldset><p class="mini-form-error" id="miniChallengeError" role="alert" hidden></p><button class="btn btn-picare mt-3" type="submit">답 제출하기 <span>→</span></button></form><div class="mini-challenge-result mt-3" id="miniChallengeResult" hidden><span class="status-badge" id="miniChallengeStatus"></span><h3 class="h5 mt-3" id="miniChallengeTitle"></h3><p class="answer-text mb-0" id="miniChallengeFeedback"></p><div class="lab-explanation"><strong>공식 문서 해설</strong><p class="mb-0" id="miniChallengeRationale"></p></div><div class="mini-evidence"><p class="card-kicker mb-2">근거</p><div id="miniChallengeEvidence"></div></div><div class="mini-challenge-actions"><a class="btn btn-picare" id="miniChallengeContinue" href="{{ inline_challenge.challenge_url }}">3문제 이어서 풀기 <span>→</span></a><button class="btn btn-outline-picare" id="miniChallengeNote" type="button">▣ 오답노트에 저장</button></div><p class="mini-note-message" id="miniChallengeNoteMessage" role="status" hidden>오답노트 저장 기능은 준비 중입니다.</p></div></section>{% elif inline_challenge_error %}<div class="mini-challenge-unavailable mt-4" role="status">{{ inline_challenge_error }}</div>{% endif %}
+{% if images or videos %}<section class="media-card mt-4"><h2 class="h5">인용 근거와 연결된 이미지·영상</h2><div class="row g-3">{% for image in images %}<div class="col-md-6"><img src="{{ image.url }}" alt="{{ image.alt_text|default:image.title }}" class="img-fluid rounded-4"><p class="small text-muted mt-2 mb-0">{{ image.title }} · {{ image.source_citation_id }}</p></div>{% endfor %}{% for video in videos %}<div class="col-md-6"><a class="video-link" href="{{ video.url }}" target="_blank" rel="noopener">▶ {{ video.title }} ↗</a></div>{% endfor %}</div></section>{% endif %}</div><aside class="col-lg-5">{% include 'portal/source_cards.html' %}</aside></div>{% if response.warnings %}<details class="mt-4"><summary>실행 추적 정보</summary><pre class="warning-log">{{ response.warnings|join:'\n' }}</pre></details>{% endif %}</section>{% elif not runtime_ready %}<div class="alert alert-warning mt-4 mb-0">{{ runtime_message }}</div>{% endif %}
+{% endblock %}
+{% block extra_script %}
+<script>
+(() => {
+  const card = document.getElementById('miniChallenge');
+  if (!card) return;
+  const form = document.getElementById('miniChallengeForm');
+  const error = document.getElementById('miniChallengeError');
+  const result = document.getElementById('miniChallengeResult');
+  const csrf = form.querySelector('[name=csrfmiddlewaretoken]').value;
+  const showError = (message) => { error.textContent = message; error.hidden = false; };
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const selected = form.querySelector('[name=choice_id]:checked');
+    if (!selected) { showError('답안을 하나 선택해 주세요.'); return; }
+    error.hidden = true;
+    const button = form.querySelector('[type=submit]');
+    button.disabled = true;
+    button.textContent = '채점 중…';
+    try {
+      const response = await fetch(card.dataset.submitUrl, {method: 'POST', headers: {'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest'}, body: new FormData(form)});
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || '미니 챌린지를 처리하지 못했습니다.');
+      form.querySelectorAll('input').forEach((input) => { input.disabled = true; });
+      form.querySelectorAll('.mini-choice').forEach((choice) => {
+        const input = choice.querySelector('input');
+        if (input.value === payload.correct_choice_id) { choice.classList.add('is-correct'); choice.setAttribute('aria-label', '정답: ' + choice.textContent.trim()); }
+        else if (input.checked) { choice.classList.add('is-incorrect'); choice.setAttribute('aria-label', '선택한 오답: ' + choice.textContent.trim()); }
+      });
+      document.getElementById('miniChallengeStatus').textContent = payload.correct ? '✓ 정답이에요' : '↻ 다시 확인해 볼 내용';
+      document.getElementById('miniChallengeStatus').classList.toggle('blocked', !payload.correct);
+      document.getElementById('miniChallengeTitle').textContent = payload.correct ? '좋아요, 맞게 이해하고 있어요.' : '정답은 ' + payload.correct_choice_id + '번입니다.';
+      document.getElementById('miniChallengeFeedback').textContent = payload.choice_feedback;
+      document.getElementById('miniChallengeRationale').textContent = payload.rationale_ko;
+      const evidence = document.getElementById('miniChallengeEvidence');
+      payload.evidence.forEach((source) => { const link = document.createElement('a'); link.className = 'mini-evidence-link'; link.href = source.url; link.target = '_blank'; link.rel = 'noopener'; link.textContent = source.title + ' · ' + source.section + ' ↗'; evidence.appendChild(link); });
+      result.hidden = false;
+      form.querySelector('[type=submit]').hidden = true;
+    } catch (exception) { showError(exception.message); button.disabled = false; button.textContent = '답 제출하기 →'; }
+  });
+  document.getElementById('miniChallengeNote').addEventListener('click', () => { document.getElementById('miniChallengeNoteMessage').hidden = false; });
+})();
+</script>
 {% endblock %}

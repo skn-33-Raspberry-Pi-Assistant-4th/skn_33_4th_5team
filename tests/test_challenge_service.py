@@ -43,3 +43,25 @@ def test_submit_rejects_a_question_other_than_the_current_one() -> None:
 
     with pytest.raises(ChallengeError, match="현재 문제"):
         service.submit(started["state"], question_id="not-current", choice_id=current["choices"][0]["choice_id"])
+
+
+def test_inline_challenge_uses_one_question_and_keeps_answer_data_server_side() -> None:
+    service = ChallengeService()
+
+    started = service.start_inline("remote_access")
+
+    assert len(started["state"]["question_ids"]) == 1
+    assert set(started["question"]) == {"question_id", "topic", "prompt", "choices"}
+    assert "correct_choice_id" not in str(started["state"])
+    assert "rationale_ko" not in str(started["question"])
+
+    result = service.submit_inline(
+        started["state"],
+        question_id=started["question"]["question_id"],
+        choice_id=started["question"]["choices"][0]["choice_id"],
+    )
+
+    assert result["completed"] is True
+    assert result["total"] == 1
+    assert result["rationale_ko"]
+    assert "chunk_checksum" not in result["evidence"][0]

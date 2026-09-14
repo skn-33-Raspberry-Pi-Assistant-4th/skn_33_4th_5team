@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 ROOT = Path(__file__).resolve().parents[2]
 ACTIVE_REVIEW_STATUS = "approved"
 QUESTIONS_PER_CHALLENGE = 3
+INLINE_QUESTIONS_PER_CHALLENGE = 1
 
 
 class ChallengeError(ValueError):
@@ -88,8 +89,16 @@ class ChallengeService:
     def start(self, topic: str) -> dict[str, Any]:
         """Return cookie-safe session state and the first public question."""
 
+        return self._start(topic, question_count=QUESTIONS_PER_CHALLENGE)
+
+    def start_inline(self, topic: str) -> dict[str, Any]:
+        """Start one Q&A follow-up question without exposing its answer."""
+
+        return self._start(topic, question_count=INLINE_QUESTIONS_PER_CHALLENGE)
+
+    def _start(self, topic: str, *, question_count: int) -> dict[str, Any]:
         candidates = self._approved_questions(topic)
-        selected = secrets.SystemRandom().sample(candidates, QUESTIONS_PER_CHALLENGE)
+        selected = secrets.SystemRandom().sample(candidates, question_count)
         state = {
             "topic": topic,
             "question_ids": [question["question_id"] for question in selected],
@@ -102,19 +111,19 @@ class ChallengeService:
             "current_index": 0,
             "score": 0,
         }
-        return {"state": state, "question": self.current_question(state)}
+        return {"state": state, "question": self._current_question(state, question_count=question_count)}
 
-    def _question_for_state(self, state: dict[str, Any]) -> dict[str, Any]:
+    def _question_for_state(self, state: dict[str, Any], *, question_count: int) -> dict[str, Any]:
         if not isinstance(state, dict):
             raise ChallengeError("진행 중인 챌린지 정보가 올바르지 않습니다.")
         question_ids = state.get("question_ids")
         current_index = state.get("current_index")
         if (
             not isinstance(question_ids, list)
-            or len(question_ids) != QUESTIONS_PER_CHALLENGE
-            or len(set(question_ids)) != QUESTIONS_PER_CHALLENGE
+            or len(question_ids) != question_count
+            or len(set(question_ids)) != question_count
             or not isinstance(current_index, int)
-            or not 0 <= current_index < QUESTIONS_PER_CHALLENGE
+            or not 0 <= current_index < question_count
         ):
             raise ChallengeError("진행 중인 챌린지 정보가 올바르지 않습니다.")
         question_id = question_ids[current_index]
@@ -136,14 +145,35 @@ class ChallengeService:
         }
 
     def current_question(self, state: dict[str, Any]) -> dict[str, Any]:
-        question = self._question_for_state(state)
+        return self._current_question(state, question_count=QUESTIONS_PER_CHALLENGE)
+
+    def current_inline_question(self, state: dict[str, Any]) -> dict[str, Any]:
+        return self._current_question(state, question_count=INLINE_QUESTIONS_PER_CHALLENGE)
+
+    def _current_question(self, state: dict[str, Any], *, question_count: int) -> dict[str, Any]:
+        question = self._question_for_state(state, question_count=question_count)
         order = state.get("choice_orders", {}).get(question["question_id"])
         return self._public_question(question, order)
 
     def submit(self, state: dict[str, Any], *, question_id: str, choice_id: str) -> dict[str, Any]:
         """Grade the current question, then return its explanation and next step."""
 
-        question = self._question_for_state(state)
+        return self._submit(state, question_id=question_id, choice_id=choice_id, question_count=QUESTIONS_PER_CHALLENGE)
+
+    def submit_inline(self, state: dict[str, Any], *, question_id: str, choice_id: str) -> dict[str, Any]:
+        """Grade a Q&A follow-up question; it never advances to another question."""
+
+        return self._submit(
+            state,
+            question_id=question_id,
+            choice_id=choice_id,
+            question_count=INLINE_QUESTIONS_PER_CHALLENGE,
+        )
+
+    def _submit(
+        self, state: dict[str, Any], *, question_id: str, choice_id: str, question_count: int
+    ) -> dict[str, Any]:
+        question = self._question_for_state(state, question_count=question_count)
         if question_id != question["question_id"]:
             raise ChallengeError("현재 문제를 제출해 주세요.")
         known_choices = {choice["choice_id"] for choice in question["choices"]}
@@ -156,7 +186,7 @@ class ChallengeService:
         next_state = deepcopy(state)
         next_state["score"] = int(next_state.get("score", 0)) + int(correct)
         next_state["current_index"] += 1
-        completed = next_state["current_index"] >= QUESTIONS_PER_CHALLENGE
+        completed = next_state["current_index"] >= question_count
         result = {
             "state": next_state,
             "correct": correct,
@@ -167,10 +197,10 @@ class ChallengeService:
             "evidence": self._evidence_cards(question),
             "completed": completed,
             "score": next_state["score"],
-            "total": QUESTIONS_PER_CHALLENGE,
+            "total": question_count,
         }
         if not completed:
-            result["next_question"] = self.current_question(next_state)
+            result["next_question"] = self._current_question(next_state, question_count=question_count)
         return result
 
     def _evidence_cards(self, question: dict[str, Any]) -> list[dict[str, str]]:

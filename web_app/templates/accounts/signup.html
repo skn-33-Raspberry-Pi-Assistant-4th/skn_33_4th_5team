@@ -1,0 +1,6 @@
+{% extends 'portal/base.html' %}
+{% block title %}PiCare | 회원가입{% endblock %}
+{% block content %}
+<section class="hero text-center mx-auto"><p class="eyebrow">CREATE YOUR PICARE ACCOUNT</p><h1>PiCare를 더 편하게<br><em>시작해요</em></h1><p class="hero-copy">아이디와 이메일로 계정을 만들면 바로 로그인됩니다.</p></section>
+<section class="lab-card form-card auth-card mt-4 mx-auto"><div class="mb-4"><p class="card-kicker mb-1">회원가입</p><h2 class="h4 mb-0">계정 정보 입력</h2></div><form method="post" novalidate>{% csrf_token %}<input type="hidden" name="next" value="{{ next }}">{% for field in form %}<div class="mb-3"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<div class="form-text">{{ field.help_text|safe }}</div>{% endif %}{% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>{% endfor %}{% for error in form.non_field_errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}<button class="btn btn-picare w-100" type="submit">회원가입하고 시작하기 <span>→</span></button></form><p class="small text-center text-secondary mt-4 mb-0">이미 계정이 있나요? <a href="{% url 'accounts:login' %}{% if next %}?next={{ next|urlencode }}{% endif %}">로그인</a></p></section>
+{% endblock %}

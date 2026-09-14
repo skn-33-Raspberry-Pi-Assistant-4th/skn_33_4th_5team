@@ -22,10 +22,15 @@ python -m pip check
 
 `pip check`가 통과하지 않으면 공용 환경을 고치지 말고, 활성화된 venv의 `which python`과 `python -m pip --version`을 다시 확인한다.
 
-## 2. 환경 설정과 데이터 확인
+## 2. 환경 설정, MySQL, 데이터 확인
 
 ```bash
 cp .env.example .env
+
+# .env에서 MYSQL_PASSWORD, DJANGO_SECRET_KEY를 강한 값으로 설정한 뒤 실행한다.
+bash scripts/runpod/start_mysql.sh
+python web_app/manage.py migrate
+python web_app/manage.py createsuperuser
 
 test -f document_pipeline/data/manifest_v3.json
 test -f data/indexed/chroma_official_v3/picare-index.json
@@ -35,6 +40,12 @@ test -f data/products/challenge_bank.json
 ```
 
 모델·색인·adapter·manifest는 Pod의 영속 `/workspace` volume에 준비한다. `LORA_ADAPTER_PATH`는 실제 adapter 위치와 일치해야 한다.
+
+회원가입·로그인용 MySQL 데이터는 기본적으로 `/workspace/picare-mysql`에 보관된다.
+`scripts/runpod/start_mysql.sh`는 MySQL 서버가 없으면 Ubuntu/Debian 기반 Pod에 설치하고,
+로컬 전용 `127.0.0.1:3306`으로 시작한 뒤 PiCare 앱 계정과 DB를 멱등적으로 준비한다.
+Pod를 종료·재생성해도 같은 영속 volume을 연결해야 가입 사용자와 세션이 유지된다. MySQL 포트는
+외부에 열지 않으며, Django가 같은 Pod에서만 연결한다.
 
 RunPod HTTP 프록시를 사용할 경우 `.env`의 `DJANGO_ALLOWED_HOSTS`에 실제 프록시 호스트를 추가한다. SSH 터널 방식이면 기본 `localhost,127.0.0.1`을 유지한다.
 
@@ -63,3 +74,8 @@ ssh -p <RUNPOD_SSH_PORT> -L 8000:127.0.0.1:8000 root@<RUNPOD_IP>
 | 제품 추천 | 필요 | 필요 | manifest, Chroma, product catalog, LoRA adapter |
 
 명령어 실험실과 미니 챌린지는 Qwen 장애 중에도 검수된 데이터로 동작하도록 구현한다. Qwen/LoRA 설정은 Django 전체 서비스에서 기존 Q&A·제품 추천도 함께 제공할 때 사용한다.
+
+회원가입은 `/accounts/signup/`, 로그인은 `/accounts/login/`에서 제공한다. RunPod HTTP 프록시를
+쓴다면 `.env`의 `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`에 프록시 호스트를 추가하고,
+HTTPS가 종료되는 프록시 환경에서는 `DJANGO_SESSION_COOKIE_SECURE=true`,
+`DJANGO_CSRF_COOKIE_SECURE=true`를 설정한다.

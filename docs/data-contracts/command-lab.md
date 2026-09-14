@@ -2,8 +2,8 @@
 
 명령어 실험실 로직은 `src/services/command_lab_service.py`에 있으며, Django 기본 UI와
 기존 Streamlit 화면이 같은 검수 카탈로그를 사용한다. Django는 명령을 실행하지 않는
-표시 계층이고, B 서비스는 Streamlit·Django 어느 쪽에도 의존하지 않는다. 회원 인증·DB·권한은
-현재 범위 밖이며, 공통 Django 화면은 `web_app/portal`이 담당한다.
+표시 계층이고, B 서비스는 Streamlit·Django 어느 쪽에도 의존하지 않는다. 회원가입·로그인과
+DB 세션은 Django `accounts` 앱이 담당하며, 명령어 실험실 자체는 인증 없이 계속 사용할 수 있다.
 
 ## 실행
 

@@ -29,7 +29,12 @@ class DjangoRuntimeReadiness:
 
 @lru_cache(maxsize=1)
 def get_runtime_readiness() -> "RuntimeReadiness":
-    """Check filesystem/config readiness without loading the model."""
+    """Return the team's RAG readiness check without loading a model.
+
+    Delegates to ``streamlit_app.runtime.check_runtime_readiness`` so Django
+    and the existing Streamlit entry point validate the same environment,
+    manifest, and Chroma index prerequisites.
+    """
 
     try:
         from streamlit_app.runtime import check_runtime_readiness
@@ -41,7 +46,11 @@ def get_runtime_readiness() -> "RuntimeReadiness":
 
 @lru_cache(maxsize=1)
 def get_qa_service() -> Any:
-    """Keep one QA service assembly per Django worker."""
+    """Build and cache the team's ``RagQaService`` for Django Q&A requests.
+
+    The factory assembles Hybrid retrieval, answer generation, and media
+    resolution. Django views only call its public ``answer`` method.
+    """
 
     from streamlit_app.runtime import build_qa_service
 
@@ -50,7 +59,11 @@ def get_qa_service() -> Any:
 
 @lru_cache(maxsize=1)
 def get_recommendation_service() -> Any:
-    """Keep one recommendation service assembly per Django worker."""
+    """Build and cache the team's evidence-backed recommendation service.
+
+    The returned service owns condition extraction, catalog filtering, Hybrid
+    RAG retrieval, and grounded recommendation generation.
+    """
 
     from streamlit_app.runtime import build_recommendation_service
 
@@ -59,7 +72,11 @@ def get_recommendation_service() -> Any:
 
 @lru_cache(maxsize=1)
 def get_citation_presenter() -> "CitationPresenter | None":
-    """Citation labels are optional and never block a source card."""
+    """Load the citation display adapter; fall back to raw citation fields.
+
+    Citation presentation is intentionally optional: a formatting failure must
+    never hide an otherwise valid official source card from the user.
+    """
 
     try:
         from src.presentation import load_citation_presenter
@@ -72,7 +89,11 @@ def get_citation_presenter() -> "CitationPresenter | None":
 
 @lru_cache(maxsize=1)
 def get_command_lab_service() -> Any:
-    """Keep the display-only command catalog verified once per worker."""
+    """Build and cache the reviewed, display-only command lab service.
+
+    ``CommandLabService`` validates catalog approval and input safety. It
+    analyzes or composes text only and has no command execution capability.
+    """
 
     from src.services.command_lab_service import CommandLabService
 
@@ -81,7 +102,11 @@ def get_command_lab_service() -> Any:
 
 @lru_cache(maxsize=1)
 def get_challenge_service() -> Any:
-    """Keep the reviewed challenge bank verified once per worker."""
+    """Build and cache the reviewed question-bank service for web challenges.
+
+    The service keeps answer keys and rationale server-side until a submitted
+    choice is validated, for both three-question and Q&A inline challenges.
+    """
 
     from src.services.challenge_service import ChallengeService
 
