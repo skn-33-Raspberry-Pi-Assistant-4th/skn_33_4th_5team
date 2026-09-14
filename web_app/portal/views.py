@@ -440,7 +440,7 @@ def recommend(request):
 @require_http_methods(["GET", "POST"])
 def qa(request):
     context = _base_context(active_page="qa")
-    form = QuestionForm(request.POST or None)
+    form = QuestionForm(request.POST or None, initial={"question": request.GET.get("question", "")})
     context["form"] = form
     if request.method == "POST" and form.is_valid():
         question = form.cleaned_data["question"]
