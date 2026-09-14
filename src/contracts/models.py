@@ -5,7 +5,7 @@ import re
 from datetime import date, datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
 
 
 CONTRACT_VERSION = "1.1.0"
@@ -65,6 +65,108 @@ class StrictContract(BaseModel):
     """Reject undeclared fields so independently developed modules cannot drift."""
 
     model_config = ConfigDict(extra="forbid")
+
+
+class QuizEvidence(StrictContract):
+    """One final Q&A citation reused as the source body for a quiz question."""
+
+    citation_id: Annotated[str, Field(pattern=r"^C[1-9][0-9]*$")]
+    document_id: NonEmptyText
+    chunk_id: NonEmptyText
+    content: NonEmptyText
+
+    @field_validator("document_id", "chunk_id", "content")
+    @classmethod
+    def validate_non_blank_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("quiz evidence text must not be blank")
+        return value
+
+
+class QuizQuoteCandidate(StrictContract):
+    """An exact, quote-safe substring selected from one quiz evidence body."""
+
+    quote_id: Annotated[str, Field(pattern=r"^C[1-9][0-9]*-Q[1-9][0-9]*$")]
+    evidence_id: Annotated[str, Field(pattern=r"^C[1-9][0-9]*$")]
+    content: NonEmptyText
+
+    @field_validator("content")
+    @classmethod
+    def validate_non_blank_content(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("quiz quote candidate content must not be blank")
+        return value
+
+
+class QuizGenerationRequest(StrictContract):
+    """Input passed to QuizGenerator after a grounded Q&A response is complete."""
+
+    request_id: str
+    answer: str
+    evidence: list[QuizEvidence]
+    quote_candidates: list[QuizQuoteCandidate] = Field(default_factory=list)
+    max_questions: int = Field(ge=1, le=3)
+
+
+class QuizChoice(StrictContract):
+    """One generated answer choice; detailed choice validation is service-owned."""
+
+    id: Literal["A", "B", "C", "D"]
+    text: str
+
+
+class QuizQuestion(StrictContract):
+    """A generated quiz question before deterministic service validation."""
+
+    question_id: str
+    question: str
+    choices: list[QuizChoice]
+    correct_choice_id: Literal["A", "B", "C", "D"]
+    explanation: str
+    evidence_ids: list[str]
+    supporting_quotes: list[str]
+
+
+class QuizDraftQuestion(StrictContract):
+    """LLM-only quiz shape; the server materializes the exact quote by ID."""
+
+    question_id: str
+    question: str
+    choices: list[QuizChoice]
+    correct_choice_id: Literal["A", "B", "C", "D"]
+    explanation: str
+    evidence_ids: list[str]
+    supporting_quote_id: str
+
+
+class QuizDraftResponse(StrictContract):
+    """Raw model response before an exact quote candidate is materialized."""
+
+    status: Literal["available", "insufficient_content", "generation_failed"]
+    questions: list[QuizDraftQuestion]
+
+    @model_validator(mode="after")
+    def validate_status_questions(self) -> "QuizDraftResponse":
+        if self.status == "available" and not self.questions:
+            raise ValueError("available quiz responses must contain at least one question")
+        if self.status != "available" and self.questions:
+            raise ValueError("non-available quiz responses must not contain questions")
+        return self
+
+
+class QuizResponse(StrictContract):
+    """Structured result returned by QuizGenerator."""
+
+    status: Literal["available", "insufficient_content", "generation_failed"]
+    questions: list[QuizQuestion]
+
+    @model_validator(mode="after")
+    def validate_status_questions(self) -> "QuizResponse":
+        if self.status == "available" and not self.questions:
+            raise ValueError("available quiz responses must contain at least one question")
+        if self.status != "available" and self.questions:
+            raise ValueError("non-available quiz responses must not contain questions")
+        return self
 
 
 class ConditionPayload(StrictContract):

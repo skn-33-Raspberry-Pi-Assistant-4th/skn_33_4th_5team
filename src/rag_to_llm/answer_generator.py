@@ -54,6 +54,7 @@ class AnswerGenerator(Protocol):
 
 _URL_PATTERN = re.compile(r"(?i)(?:https?://|www\.)[^\s)>\]]+")
 _CITATION_GROUP_PATTERN = re.compile(r"\[\s*(C[1-9][0-9]*(?:\s*,\s*C[1-9][0-9]*)*)\s*\]")
+_MAX_STRUCTURED_NEW_TOKENS = 1024
 
 
 def _normalize_citation_groups(answer: str) -> str:
@@ -283,7 +284,43 @@ class HuggingFaceAnswerGenerator:
             attempts=attempt + 1,
         )
 
-    def _generate_text(self, messages: Sequence[Mapping[str, str]]) -> str:
+    def generate_structured(
+        self,
+        messages: Sequence[Mapping[str, str]],
+        *,
+        max_new_tokens: int,
+    ) -> GenerationResult:
+        """Generate one raw structured response without QA answer validation.
+
+        Structured consumers own their JSON parsing and evidence validation.
+        This method deliberately bypasses the Q&A-only citation normalizer,
+        citation validator, and repair loop while sharing this instance's lazy
+        model, tokenizer, and deterministic generation path.
+        """
+
+        if not messages:
+            raise ValueError("구조화 생성에는 최소 하나의 메시지가 필요합니다.")
+        if not 1 <= max_new_tokens <= _MAX_STRUCTURED_NEW_TOKENS:
+            raise ValueError(
+                f"max_new_tokens must be between 1 and {_MAX_STRUCTURED_NEW_TOKENS}."
+            )
+
+        started_at = perf_counter()
+        self._load_model()
+        text = self._generate_text(messages, max_new_tokens=max_new_tokens)
+        return GenerationResult(
+            text=text,
+            provider=self.provider,
+            model_id=self.model_id,
+            elapsed_ms=(perf_counter() - started_at) * 1000,
+        )
+
+    def _generate_text(
+        self,
+        messages: Sequence[Mapping[str, str]],
+        *,
+        max_new_tokens: int | None = None,
+    ) -> str:
         """신규 토큰만 decode한다. 재시도에서도 같은 모델·생성 설정을 사용한다."""
 
         assert self._model is not None
@@ -307,7 +344,7 @@ class HuggingFaceAnswerGenerator:
         with context:
             output_ids = self._model.generate(
                 **encoded,
-                max_new_tokens=self.max_new_tokens,
+                max_new_tokens=max_new_tokens or self.max_new_tokens,
                 do_sample=False,
                 pad_token_id=self._tokenizer.pad_token_id,
                 eos_token_id=self._tokenizer.eos_token_id,

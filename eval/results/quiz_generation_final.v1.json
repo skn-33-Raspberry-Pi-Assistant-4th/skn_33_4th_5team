@@ -1,0 +1,1323 @@
+{
+  "environment": {
+    "model_id": "Qwen/Qwen3-4B-Instruct-2507",
+    "load_in_4bit": true,
+    "do_sample": false,
+    "structured_max_new_tokens": 1024,
+    "model_load_ms": 14233.564736321568,
+    "rag_retrieval_calls": 0,
+    "retry_count": 0
+  },
+  "dataset": {
+    "path": "eval/quiz_generation_cases.v1.jsonl",
+    "cases": 25,
+    "positive_cases": 20,
+    "insufficient_cases": 5
+  },
+  "metrics": {
+    "json_parse_success": {
+      "passed": 18,
+      "total": 20
+    },
+    "structure_validation": {
+      "passed": 18,
+      "total": 18
+    },
+    "evidence_validation": {
+      "passed": 18,
+      "total": 18
+    },
+    "valid_quiz_provision": {
+      "passed": 18,
+      "total": 20
+    },
+    "average_valid_questions_per_positive_case": 0.9,
+    "allowlist_violations": 0,
+    "quote_candidate_mapping_failures": 0,
+    "supporting_quote_match": {
+      "passed": 18,
+      "total": 18
+    },
+    "duplicate_questions_removed": 0,
+    "generation_failed_cases": 2,
+    "insufficient_content_cases": 5,
+    "availability_classification": {
+      "confusion_matrix": {
+        "tp": 18,
+        "fp": 0,
+        "tn": 5,
+        "fn": 2
+      },
+      "precision": 1.0,
+      "recall": 0.9,
+      "f1": 0.9473684210526316,
+      "accuracy": 0.92
+    },
+    "generation_latency_ms": {
+      "average": 10727.972037345171,
+      "p50": 9985.848642885685,
+      "p95": 15428.711766377091
+    },
+    "pipeline_latency_ms": {
+      "average": 8582.613138258457,
+      "p50": 9630.694398656487,
+      "p95": 15428.888218477368
+    }
+  },
+  "rows": [
+    {
+      "case_id": "quiz-os-001",
+      "category": "os_installation",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 11630.114637315273,
+      "pipeline_elapsed_ms": 11630.699643865228,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"Raspberry Pi OS를 설치하기 위해 필요한 가장 기본적인 조건은 무엇인가요?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"컴퓨터를 통해 OS 이미지를 쓰는 기능이 있는 장치\"},\n        {\"id\": \"B\", \"text\": \"비어 있는 부팅용 저장 장치, 일반적으로 microSD 카드\"},\n        {\"id\": \"C\", \"text\": \"Raspberry Pi를 직접 연결할 수 있는 케이블\"},\n        {\"id\": \"D\", \"text\": \"OS 이미지를 저장할 수 있는 클라우드 스토리지\"},\n        \"correct_choice_id\": \"B\",\n        \"explanation\": \"Raspberry Pi OS를 설치하려면 비어 있는 부팅용 저장 장치가 필요하며, 이는 일반적으로 microSD 카드로 제공됩니다. 해당 내용은 C1 증거에서 'A blank storage device to be your boot media, typically a microSD card'로 직접 지지됩니다.\",\n        \"evidence_ids\": [\"C1\"],\n        \"supporting_quote_id\": \"C1-Q1\"\n      }\n    }\n  ]\n}",
+      "quiz_status": "generation_failed",
+      "questions": [],
+      "draft": {
+        "parse_success": false,
+        "parse_error": "퀴즈 모델 출력이 유효한 JSON이 아닙니다.",
+        "questions": []
+      },
+      "provided_within_expected_range": false
+    },
+    {
+      "case_id": "quiz-os-002",
+      "category": "os_installation",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 7748.220771551132,
+      "pipeline_elapsed_ms": 7748.637033626437,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"Raspberry Pi Imager는 어떤 운영체제에서 사용할 수 있나요?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"Mac, Windows, Linux\"},\n        {\"id\": \"B\", \"text\": \"Mac, Windows, Android\"},\n        {\"id\": \"C\", \"text\": \"Linux, Android, iOS\"},\n        {\"id\": \"D\", \"text\": \"Windows, Linux, iOS\"}\n      ],\n      \"correct_choice_id\": \"A\",\n      \"explanation\": \"Raspberry Pi Imager는 Mac, Windows, Linux에서 사용할 수 있습니다. 이는 제공된 evidence에서 직접 명시된 내용입니다.\",\n      \"evidence_ids\": [\"C1\"],\n      \"supporting_quote_id\": \"C1-Q1\"\n    }\n  ]\n}",
+      "quiz_status": "available",
+      "questions": [
+        {
+          "question_id": "generated_001",
+          "question": "Raspberry Pi Imager는 어떤 운영체제에서 사용할 수 있나요?",
+          "choices": [
+            {
+              "id": "A",
+              "text": "Mac, Windows, Linux"
+            },
+            {
+              "id": "B",
+              "text": "Mac, Windows, Android"
+            },
+            {
+              "id": "C",
+              "text": "Linux, Android, iOS"
+            },
+            {
+              "id": "D",
+              "text": "Windows, Linux, iOS"
+            }
+          ],
+          "correct_choice_id": "A",
+          "explanation": "Raspberry Pi Imager는 Mac, Windows, Linux에서 사용할 수 있습니다. 이는 제공된 evidence에서 직접 명시된 내용입니다.",
+          "evidence_ids": [
+            "C1"
+          ],
+          "supporting_quotes": [
+            "Raspberry Pi Imager is a tool you use to download and write OS images for your Raspberry Pi on Mac, Windows, and Linux."
+          ]
+        }
+      ],
+      "draft": {
+        "parse_success": true,
+        "parse_error": null,
+        "draft_status": "available",
+        "questions": [
+          {
+            "question_id": "generated_001",
+            "allowlist_violation": false,
+            "quote_candidate_mapping_failure": false,
+            "structure_errors": [],
+            "evidence_errors": [],
+            "quote_matches": true
+          }
+        ],
+        "valid_question_count_before_finalizer": 1,
+        "duplicate_questions_removed": 0
+      },
+      "provided_within_expected_range": true
+    },
+    {
+      "case_id": "quiz-os-003",
+      "category": "os_installation",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 9630.37865050137,
+      "pipeline_elapsed_ms": 9630.694398656487,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"Raspberry Pi Imager에서 하드웨어를 설정하기 위해 어떤 탭에서 Raspberry Pi 모델을 선택해야 합니까?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"OS 탭에서\"},\n        {\"id\": \"B\", \"text\": \"Device 탭에서\"},\n        {\"id\": \"C\", \"text\": \"Settings 탭에서\"},\n        {\"id\": \"D\", \"text\": \"System 탭에서\"}\n      ],\n      \"correct_choice_id\": \"B\",\n      \"explanation\": \"Raspberry Pi Imager에서 하드웨어 설정은 Device 탭에서 이루어지며, 그 안에서 Raspberry Pi 모델을 선택해야 합니다. 이는 제공된 evidence C1에서 'In the *Device* tab, select your Raspberry Pi model from the list and then select *Next*.'라는 문장에서 직접적으로 확인할 수 있습니다.\",\n      \"evidence_ids\": [\"C1\"],\n      \"supporting_quote_id\": \"C1-Q1\"\n    }\n  ]\n}",
+      "quiz_status": "available",
+      "questions": [
+        {
+          "question_id": "generated_001",
+          "question": "Raspberry Pi Imager에서 하드웨어를 설정하기 위해 어떤 탭에서 Raspberry Pi 모델을 선택해야 합니까?",
+          "choices": [
+            {
+              "id": "A",
+              "text": "OS 탭에서"
+            },
+            {
+              "id": "B",
+              "text": "Device 탭에서"
+            },
+            {
+              "id": "C",
+              "text": "Settings 탭에서"
+            },
+            {
+              "id": "D",
+              "text": "System 탭에서"
+            }
+          ],
+          "correct_choice_id": "B",
+          "explanation": "Raspberry Pi Imager에서 하드웨어 설정은 Device 탭에서 이루어지며, 그 안에서 Raspberry Pi 모델을 선택해야 합니다. 이는 제공된 evidence C1에서 'In the *Device* tab, select your Raspberry Pi model from the list and then select *Next*.'라는 문장에서 직접적으로 확인할 수 있습니다.",
+          "evidence_ids": [
+            "C1"
+          ],
+          "supporting_quotes": [
+            "In the *Device* tab, select your Raspberry Pi model from the list and then select *Next*."
+          ]
+        }
+      ],
+      "draft": {
+        "parse_success": true,
+        "parse_error": null,
+        "draft_status": "available",
+        "questions": [
+          {
+            "question_id": "generated_001",
+            "allowlist_violation": false,
+            "quote_candidate_mapping_failure": false,
+            "structure_errors": [],
+            "evidence_errors": [],
+            "quote_matches": true
+          }
+        ],
+        "valid_question_count_before_finalizer": 1,
+        "duplicate_questions_removed": 0
+      },
+      "provided_within_expected_range": true
+    },
+    {
+      "case_id": "quiz-os-004",
+      "category": "os_installation",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 9479.230776429176,
+      "pipeline_elapsed_ms": 9479.531394317746,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"Imager의 Customisation에서 기기 호스트명을 미리 설정할 수 있는가?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"예, 기기 호스트명을 미리 설정할 수 있습니다.\"},\n        {\"id\": \"B\", \"text\": \"예, 시간대를 미리 설정할 수 있습니다.\"},\n        {\"id\": \"C\", \"text\": \"예, Wi-Fi 정보를 미리 설정할 수 있습니다.\"},\n        {\"id\": \"D\", \"text\": \"예, 원격 연결을 미리 설정할 수 있습니다.\"}\n      ],\n      \"correct_choice_id\": \"A\",\n      \"explanation\": \"기기 호스트명은 Imager의 Customisation에서 미리 설정할 수 있는 항목 중 하나로, 제공된 evidence에서 'The device hostname'이 명시되어 있습니다.\",\n      \"evidence_ids\": [\"C1\"],\n      \"supporting_quote_id\": \"C1-Q1\"\n    }\n  ]\n}",
+      "quiz_status": "available",
+      "questions": [
+        {
+          "question_id": "generated_001",
+          "question": "Imager의 Customisation에서 기기 호스트명을 미리 설정할 수 있는가?",
+          "choices": [
+            {
+              "id": "A",
+              "text": "예, 기기 호스트명을 미리 설정할 수 있습니다."
+            },
+            {
+              "id": "B",
+              "text": "예, 시간대를 미리 설정할 수 있습니다."
+            },
+            {
+              "id": "C",
+              "text": "예, Wi-Fi 정보를 미리 설정할 수 있습니다."
+            },
+            {
+              "id": "D",
+              "text": "예, 원격 연결을 미리 설정할 수 있습니다."
+            }
+          ],
+          "correct_choice_id": "A",
+          "explanation": "기기 호스트명은 Imager의 Customisation에서 미리 설정할 수 있는 항목 중 하나로, 제공된 evidence에서 'The device hostname'이 명시되어 있습니다.",
+          "evidence_ids": [
+            "C1"
+          ],
+          "supporting_quotes": [
+            "The device hostname"
+          ]
+        }
+      ],
+      "draft": {
+        "parse_success": true,
+        "parse_error": null,
+        "draft_status": "available",
+        "questions": [
+          {
+            "question_id": "generated_001",
+            "allowlist_violation": false,
+            "quote_candidate_mapping_failure": false,
+            "structure_errors": [],
+            "evidence_errors": [],
+            "quote_matches": true
+          }
+        ],
+        "valid_question_count_before_finalizer": 1,
+        "duplicate_questions_removed": 0
+      },
+      "provided_within_expected_range": true
+    },
+    {
+      "case_id": "quiz-os-005",
+      "category": "os_installation",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 10420.453809201717,
+      "pipeline_elapsed_ms": 10420.703181996942,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"Imager가 이미지를 기록한 후에 수행하는 주요 작업은 무엇인가요?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"이미지를 다시 작성합니다.\"},\n        {\"id\": \"B\", \"text\": \"이미지가 올바르게 기록됐는지 검증합니다.\"},\n        {\"id\": \"C\", \"text\": \"저장 장치의 용량을 확인합니다.\"},\n        {\"id\": \"D\", \"text\": \"기기의 작동 온도를 측정합니다.\"}\n      ],\n      \"correct_choice_id\": \"B\",\n      \"explanation\": \"Imager는 이미지 기록 후 이미지가 올바르게 기록됐는지 검증하는 작업을 수행합니다. 이는 제공된 evidence에서 'After writing the image, Imager verifies that the image is correctly written'라는 문장에서 직접적으로 확인할 수 있습니다.\",\n      \"evidence_ids\": [\"C1\"],\n      \"supporting_quote_id\": \"C1-Q3\"\n    }\n  ]\n}",
+      "quiz_status": "available",
+      "questions": [
+        {
+          "question_id": "generated_001",
+          "question": "Imager가 이미지를 기록한 후에 수행하는 주요 작업은 무엇인가요?",
+          "choices": [
+            {
+              "id": "A",
+              "text": "이미지를 다시 작성합니다."
+            },
+            {
+              "id": "B",
+              "text": "이미지가 올바르게 기록됐는지 검증합니다."
+            },
+            {
+              "id": "C",
+              "text": "저장 장치의 용량을 확인합니다."
+            },
+            {
+              "id": "D",
+              "text": "기기의 작동 온도를 측정합니다."
+            }
+          ],
+          "correct_choice_id": "B",
+          "explanation": "Imager는 이미지 기록 후 이미지가 올바르게 기록됐는지 검증하는 작업을 수행합니다. 이는 제공된 evidence에서 'After writing the image, Imager verifies that the image is correctly written'라는 문장에서 직접적으로 확인할 수 있습니다.",
+          "evidence_ids": [
+            "C1"
+          ],
+          "supporting_quotes": [
+            "After writing the image, Imager verifies that the image is correctly written."
+          ]
+        }
+      ],
+      "draft": {
+        "parse_success": true,
+        "parse_error": null,
+        "draft_status": "available",
+        "questions": [
+          {
+            "question_id": "generated_001",
+            "allowlist_violation": false,
+            "quote_candidate_mapping_failure": false,
+            "structure_errors": [],
+            "evidence_errors": [],
+            "quote_matches": true
+          }
+        ],
+        "valid_question_count_before_finalizer": 1,
+        "duplicate_questions_removed": 0
+      },
+      "provided_within_expected_range": true
+    },
+    {
+      "case_id": "quiz-ssh-001",
+      "category": "ssh_remote_access",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 11823.801459744573,
+      "pipeline_elapsed_ms": 11824.209071695805,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"같은 네트워크에 있는 다른 컴퓨터에서 Raspberry Pi의 터미널에 원격으로 접속할 수 있는 방법은 무엇인가요?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"Raspberry Pi의 터미널을 직접 물리적으로 연결하여 사용한다\"},\n        {\"id\": \"B\", \"text\": \"SSH 프로토콜을 사용하여 원격으로 접속할 수 있다\"},\n        {\"id\": \"C\", \"text\": \"Raspberry Pi에 연결된 외부 저장장치를 통해 접근한다\"},\n        {\"id\": \"D\", \"text\": \"웹 브라우저를 통해 Raspberry Pi의 인터페이스를 열어 사용한다\"}\n      ],\n      \"correct_choice_id\": \"B\",\n      \"explanation\": \"같은 네트워크의 다른 컴퓨터에서 Raspberry Pi의 터미널에 원격으로 접속하기 위해서는 SSH 프로토콜을 사용해야 하며, 이는 제공된 증거에서 명시적으로 언급되어 있습니다.\",\n      \"evidence_ids\": [\"C1\"],\n      \"supporting_quote_id\": \"C1-Q1\"\n    }\n  ]\n}",
+      "quiz_status": "available",
+      "questions": [
+        {
+          "question_id": "generated_001",
+          "question": "같은 네트워크에 있는 다른 컴퓨터에서 Raspberry Pi의 터미널에 원격으로 접속할 수 있는 방법은 무엇인가요?",
+          "choices": [
+            {
+              "id": "A",
+              "text": "Raspberry Pi의 터미널을 직접 물리적으로 연결하여 사용한다"
+            },
+            {
+              "id": "B",
+              "text": "SSH 프로토콜을 사용하여 원격으로 접속할 수 있다"
+            },
+            {
+              "id": "C",
+              "text": "Raspberry Pi에 연결된 외부 저장장치를 통해 접근한다"
+            },
+            {
+              "id": "D",
+              "text": "웹 브라우저를 통해 Raspberry Pi의 인터페이스를 열어 사용한다"
+            }
+          ],
+          "correct_choice_id": "B",
+          "explanation": "같은 네트워크의 다른 컴퓨터에서 Raspberry Pi의 터미널에 원격으로 접속하기 위해서는 SSH 프로토콜을 사용해야 하며, 이는 제공된 증거에서 명시적으로 언급되어 있습니다.",
+          "evidence_ids": [
+            "C1"
+          ],
+          "supporting_quotes": [
+            "You can access the terminal of a Raspberry Pi remotely from another computer on the same network using the Secure SHell (SSH) protocol."
+          ]
+        }
+      ],
+      "draft": {
+        "parse_success": true,
+        "parse_error": null,
+        "draft_status": "available",
+        "questions": [
+          {
+            "question_id": "generated_001",
+            "allowlist_violation": false,
+            "quote_candidate_mapping_failure": false,
+            "structure_errors": [],
+            "evidence_errors": [],
+            "quote_matches": true
+          }
+        ],
+        "valid_question_count_before_finalizer": 1,
+        "duplicate_questions_removed": 0
+      },
+      "provided_within_expected_range": true
+    },
+    {
+      "case_id": "quiz-ssh-002",
+      "category": "ssh_remote_access",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 11492.28398501873,
+      "pipeline_elapsed_ms": 11492.670023813844,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"Raspberry Pi OS 설치 시 SSH를 활성화하려면 어디에서 Enable SSH를 켜야 하나요?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"Imager의 Customisation > Remote Access 탭에서 Enable SSH를 켤 수 있습니다.\"},\n        {\"id\": \"B\", \"text\": \"설치 후에 Raspberry Pi OS의 설정 메뉴에서 SSH를 켜야 합니다.\"},\n        {\"id\": \"C\", \"text\": \"Imager의 Customisation > Network 설정에서 Enable SSH를 켤 수 있습니다.\"},\n        {\"id\": \"D\", \"text\": \"Raspberry Pi OS 설치 프로그램에서 SSH 설정을 직접 수정해야 합니다.\"}\n      ],\n      \"correct_choice_id\": \"A\",\n      \"explanation\": \"Imager의 Customisation > Remote Access 탭에서 Enable SSH 스위치를 활성화하면 SSH가 설정됩니다. 이는 제공된 evidence에서 명시된 절차와 일치합니다.\",\n      \"evidence_ids\": [\"C1\"],\n      \"supporting_quote_id\": \"C1-Q3\"\n    }\n  ]\n}",
+      "quiz_status": "available",
+      "questions": [
+        {
+          "question_id": "generated_001",
+          "question": "Raspberry Pi OS 설치 시 SSH를 활성화하려면 어디에서 Enable SSH를 켜야 하나요?",
+          "choices": [
+            {
+              "id": "A",
+              "text": "Imager의 Customisation > Remote Access 탭에서 Enable SSH를 켤 수 있습니다."
+            },
+            {
+              "id": "B",
+              "text": "설치 후에 Raspberry Pi OS의 설정 메뉴에서 SSH를 켜야 합니다."
+            },
+            {
+              "id": "C",
+              "text": "Imager의 Customisation > Network 설정에서 Enable SSH를 켤 수 있습니다."
+            },
+            {
+              "id": "D",
+              "text": "Raspberry Pi OS 설치 프로그램에서 SSH 설정을 직접 수정해야 합니다."
+            }
+          ],
+          "correct_choice_id": "A",
+          "explanation": "Imager의 Customisation > Remote Access 탭에서 Enable SSH 스위치를 활성화하면 SSH가 설정됩니다. 이는 제공된 evidence에서 명시된 절차와 일치합니다.",
+          "evidence_ids": [
+            "C1"
+          ],
+          "supporting_quotes": [
+            "In the Customisation > Remote Access tab, toggle the Enable SSH switch to the active position."
+          ]
+        }
+      ],
+      "draft": {
+        "parse_success": true,
+        "parse_error": null,
+        "draft_status": "available",
+        "questions": [
+          {
+            "question_id": "generated_001",
+            "allowlist_violation": false,
+            "quote_candidate_mapping_failure": false,
+            "structure_errors": [],
+            "evidence_errors": [],
+            "quote_matches": true
+          }
+        ],
+        "valid_question_count_before_finalizer": 1,
+        "duplicate_questions_removed": 0
+      },
+      "provided_within_expected_range": true
+    },
+    {
+      "case_id": "quiz-ssh-003",
+      "category": "ssh_remote_access",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 9838.58934044838,
+      "pipeline_elapsed_ms": 9838.963847607374,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"SSH를 처음 연결할 때 보안 경고가 나타나면 어떤 행동을 해야 합니까?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"보안 경고를 무시하고 연결을 시도합니다.\"},\n        {\"id\": \"B\", \"text\": \"네를 입력하여 연결을 계속합니다.\"},\n        {\"id\": \"C\", \"text\": \"보안 경고를 끄기 위해 설정을 수정합니다.\"},\n        {\"id\": \"D\", \"text\": \"연결을 종료하고 다시 시도합니다.\"}\n      ],\n      \"correct_choice_id\": \"B\",\n      \"explanation\": \"보안 경고가 처음 연결될 때 나타나며, 이 경우 'yes'를 입력하여 계속해야 합니다. 이는 제공된 evidence에서 'Type `yes` to continue.'라는 문장에서 직접적으로 확인할 수 있습니다.\",\n      \"evidence_ids\": [\"C1\"],\n      \"supporting_quote_id\": \"C1-Q3\"\n    }\n  ]\n}",
+      "quiz_status": "available",
+      "questions": [
+        {
+          "question_id": "generated_001",
+          "question": "SSH를 처음 연결할 때 보안 경고가 나타나면 어떤 행동을 해야 합니까?",
+          "choices": [
+            {
+              "id": "A",
+              "text": "보안 경고를 무시하고 연결을 시도합니다."
+            },
+            {
+              "id": "B",
+              "text": "네를 입력하여 연결을 계속합니다."
+            },
+            {
+              "id": "C",
+              "text": "보안 경고를 끄기 위해 설정을 수정합니다."
+            },
+            {
+              "id": "D",
+              "text": "연결을 종료하고 다시 시도합니다."
+            }
+          ],
+          "correct_choice_id": "B",
+          "explanation": "보안 경고가 처음 연결될 때 나타나며, 이 경우 'yes'를 입력하여 계속해야 합니다. 이는 제공된 evidence에서 'Type `yes` to continue.'라는 문장에서 직접적으로 확인할 수 있습니다.",
+          "evidence_ids": [
+            "C1"
+          ],
+          "supporting_quotes": [
+            "Type `yes` to continue."
+          ]
+        }
+      ],
+      "draft": {
+        "parse_success": true,
+        "parse_error": null,
+        "draft_status": "available",
+        "questions": [
+          {
+            "question_id": "generated_001",
+            "allowlist_violation": false,
+            "quote_candidate_mapping_failure": false,
+            "structure_errors": [],
+            "evidence_errors": [],
+            "quote_matches": true
+          }
+        ],
+        "valid_question_count_before_finalizer": 1,
+        "duplicate_questions_removed": 0
+      },
+      "provided_within_expected_range": true
+    },
+    {
+      "case_id": "quiz-ssh-004",
+      "category": "ssh_remote_access",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 8887.437015771866,
+      "pipeline_elapsed_ms": 8887.741757556796,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"SSH 접속 시마다 비밀번호를 입력하지 않으려면 무엇을 사용해야 하나요?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"SSH 키 쌍을 사용합니다\"},\n        {\"id\": \"B\", \"text\": \"SSH 서버를 재설정합니다\"},\n        {\"id\": \"C\", \"text\": \"SSH 포트를 변경합니다\"},\n        {\"id\": \"D\", \"text\": \"SSH 프로토콜을 업데이트합니다\"}\n      ],\n      \"correct_choice_id\": \"A\",\n      \"explanation\": \"SSH 접속 시마다 비밀번호를 입력하지 않으려면 SSH 키 쌍을 사용해야 합니다. 이는 제공된 답변과 증거에서 명시된 내용입니다.\",\n      \"evidence_ids\": [\"C1\"],\n      \"supporting_quote_id\": \"C1-Q1\"\n    }\n  ]\n}",
+      "quiz_status": "available",
+      "questions": [
+        {
+          "question_id": "generated_001",
+          "question": "SSH 접속 시마다 비밀번호를 입력하지 않으려면 무엇을 사용해야 하나요?",
+          "choices": [
+            {
+              "id": "A",
+              "text": "SSH 키 쌍을 사용합니다"
+            },
+            {
+              "id": "B",
+              "text": "SSH 서버를 재설정합니다"
+            },
+            {
+              "id": "C",
+              "text": "SSH 포트를 변경합니다"
+            },
+            {
+              "id": "D",
+              "text": "SSH 프로토콜을 업데이트합니다"
+            }
+          ],
+          "correct_choice_id": "A",
+          "explanation": "SSH 접속 시마다 비밀번호를 입력하지 않으려면 SSH 키 쌍을 사용해야 합니다. 이는 제공된 답변과 증거에서 명시된 내용입니다.",
+          "evidence_ids": [
+            "C1"
+          ],
+          "supporting_quotes": [
+            "To remotely access your Raspberry Pi without providing a password each time you connect, use an SSH keypair."
+          ]
+        }
+      ],
+      "draft": {
+        "parse_success": true,
+        "parse_error": null,
+        "draft_status": "available",
+        "questions": [
+          {
+            "question_id": "generated_001",
+            "allowlist_violation": false,
+            "quote_candidate_mapping_failure": false,
+            "structure_errors": [],
+            "evidence_errors": [],
+            "quote_matches": true
+          }
+        ],
+        "valid_question_count_before_finalizer": 1,
+        "duplicate_questions_removed": 0
+      },
+      "provided_within_expected_range": true
+    },
+    {
+      "case_id": "quiz-ssh-005",
+      "category": "ssh_remote_access",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 13164.449129253626,
+      "pipeline_elapsed_ms": 13164.757339283824,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"Raspberry Pi Imager에서 기존 SSH 공개 키를 사용해 텍스트 상자를 미리 채우는 방법은 무엇인가?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"SSH 공개 키가 `~/.ssh/id_rsa.pub`에 저장되어 있을 경우 Imager가 자동으로 그 키를 사용하여 텍스트 상자를 미리 채운다.\"},\n        {\"id\": \"B\", \"text\": \"Imager를 실행할 컴퓨터에서 SSH 키를 복사하여 텍스트 상자에 직접 입력해야 한다.\"},\n        {\"id\": \"C\", \"text\": \"Remote Access 탭에서 'Enable SSH'를 활성화하고, 'Use public key authentication'를 선택해야 한다.\"},\n        {\"id\": \"D\", \"text\": \"Imager는 SSH 키를 미리 채우는 기능을 제공하지 않는다.\"}\n      ],\n      \"correct_choice_id\": \"A\",\n      \"explanation\": \"Imager는 이미 존재하는 SSH 공개 키를 사용해 텍스트 상자를 미리 채울 수 있으며, 이는 `~/.ssh/id_rsa.pub`에 저장된 키가 있을 경우 자동으로 적용된다는 점에서 정확하다.\",\n      \"evidence_ids\": [\"C1\"],\n      \"supporting_quote_id\": \"C1-Q5\"\n    }\n  ]\n}",
+      "quiz_status": "available",
+      "questions": [
+        {
+          "question_id": "generated_001",
+          "question": "Raspberry Pi Imager에서 기존 SSH 공개 키를 사용해 텍스트 상자를 미리 채우는 방법은 무엇인가?",
+          "choices": [
+            {
+              "id": "A",
+              "text": "SSH 공개 키가 `~/.ssh/id_rsa.pub`에 저장되어 있을 경우 Imager가 자동으로 그 키를 사용하여 텍스트 상자를 미리 채운다."
+            },
+            {
+              "id": "B",
+              "text": "Imager를 실행할 컴퓨터에서 SSH 키를 복사하여 텍스트 상자에 직접 입력해야 한다."
+            },
+            {
+              "id": "C",
+              "text": "Remote Access 탭에서 'Enable SSH'를 활성화하고, 'Use public key authentication'를 선택해야 한다."
+            },
+            {
+              "id": "D",
+              "text": "Imager는 SSH 키를 미리 채우는 기능을 제공하지 않는다."
+            }
+          ],
+          "correct_choice_id": "A",
+          "explanation": "Imager는 이미 존재하는 SSH 공개 키를 사용해 텍스트 상자를 미리 채울 수 있으며, 이는 `~/.ssh/id_rsa.pub`에 저장된 키가 있을 경우 자동으로 적용된다는 점에서 정확하다.",
+          "evidence_ids": [
+            "C1"
+          ],
+          "supporting_quotes": [
+            "If you already have an SSH public key stored in `~/.ssh/id_rsa.pub`, Imager automatically uses that public key to prefill the text box."
+          ]
+        }
+      ],
+      "draft": {
+        "parse_success": true,
+        "parse_error": null,
+        "draft_status": "available",
+        "questions": [
+          {
+            "question_id": "generated_001",
+            "allowlist_violation": false,
+            "quote_candidate_mapping_failure": false,
+            "structure_errors": [],
+            "evidence_errors": [],
+            "quote_matches": true
+          }
+        ],
+        "valid_question_count_before_finalizer": 1,
+        "duplicate_questions_removed": 0
+      },
+      "provided_within_expected_range": true
+    },
+    {
+      "case_id": "quiz-camera-001",
+      "category": "camera_installation",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 8390.920121222734,
+      "pipeline_elapsed_ms": 8391.105042770505,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"카메라 PCB를 다루기 전에 무엇을 해야 하는가?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"접지해야 한다.\"},\n        {\"id\": \"B\", \"text\": \"에어컨을 켜야 한다.\"},\n        {\"id\": \"C\", \"text\": \"필터를 교체해야 한다.\"},\n        {\"id\": \"D\", \"text\": \"전원을 끄고 기다려야 한다.\"}\n      ],\n      \"correct_choice_id\": \"A\",\n      \"explanation\": \"카메라 PCB는 정전기를 감지하기 때문에 다루기 전에 접지해야 하며, 이는 제공된 답변과 직접적으로 일치한다.\",\n      \"evidence_ids\": [\"C1\"],\n      \"supporting_quote_id\": \"C1-Q2\"\n    }\n  ]\n}",
+      "quiz_status": "available",
+      "questions": [
+        {
+          "question_id": "generated_001",
+          "question": "카메라 PCB를 다루기 전에 무엇을 해야 하는가?",
+          "choices": [
+            {
+              "id": "A",
+              "text": "접지해야 한다."
+            },
+            {
+              "id": "B",
+              "text": "에어컨을 켜야 한다."
+            },
+            {
+              "id": "C",
+              "text": "필터를 교체해야 한다."
+            },
+            {
+              "id": "D",
+              "text": "전원을 끄고 기다려야 한다."
+            }
+          ],
+          "correct_choice_id": "A",
+          "explanation": "카메라 PCB는 정전기를 감지하기 때문에 다루기 전에 접지해야 하며, 이는 제공된 답변과 직접적으로 일치한다.",
+          "evidence_ids": [
+            "C1"
+          ],
+          "supporting_quotes": [
+            "Earth yourself prior to handling the PCB."
+          ]
+        }
+      ],
+      "draft": {
+        "parse_success": true,
+        "parse_error": null,
+        "draft_status": "available",
+        "questions": [
+          {
+            "question_id": "generated_001",
+            "allowlist_violation": false,
+            "quote_candidate_mapping_failure": false,
+            "structure_errors": [],
+            "evidence_errors": [],
+            "quote_matches": true
+          }
+        ],
+        "valid_question_count_before_finalizer": 1,
+        "duplicate_questions_removed": 0
+      },
+      "provided_within_expected_range": true
+    },
+    {
+      "case_id": "quiz-camera-002",
+      "category": "camera_installation",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 11876.490611582994,
+      "pipeline_elapsed_ms": 11876.74113549292,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"Raspberry Pi를 카메라 케이블을 연결하기 전에 어떤 조치를 취해야 합니까?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"Raspberry Pi를 종료하고 전원에서 분리합니다.\"},\n        {\"id\": \"B\", \"text\": \"카메라 케이블을 먼저 연결한 후에 전원을 연결합니다.\"},\n        {\"id\": \"C\", \"text\": \"Raspberry Pi의 전원을 연결하고 즉시 켜줍니다.\"},\n        {\"id\": \"D\", \"text\": \"카메라 커넥터를 찾는 것이 가장 먼저입니다.\"}\n      ],\n      \"correct_choice_id\": \"A\",\n      \"explanation\": \"카메라 케이블을 연결하기 전에 Raspberry Pi를 종료하고 전원에서 분리해야 하며, 이는 제공된 evidence C1에서 'Shut down your Raspberry Pi and disconnect it from power.'라는 문장으로 직접적으로 지지됩니다.\",\n      \"evidence_ids\": [\"C1\"],\n      \"supporting_quote_id\": \"C1-Q1\"\n    }\n  ]\n}",
+      "quiz_status": "available",
+      "questions": [
+        {
+          "question_id": "generated_001",
+          "question": "Raspberry Pi를 카메라 케이블을 연결하기 전에 어떤 조치를 취해야 합니까?",
+          "choices": [
+            {
+              "id": "A",
+              "text": "Raspberry Pi를 종료하고 전원에서 분리합니다."
+            },
+            {
+              "id": "B",
+              "text": "카메라 케이블을 먼저 연결한 후에 전원을 연결합니다."
+            },
+            {
+              "id": "C",
+              "text": "Raspberry Pi의 전원을 연결하고 즉시 켜줍니다."
+            },
+            {
+              "id": "D",
+              "text": "카메라 커넥터를 찾는 것이 가장 먼저입니다."
+            }
+          ],
+          "correct_choice_id": "A",
+          "explanation": "카메라 케이블을 연결하기 전에 Raspberry Pi를 종료하고 전원에서 분리해야 하며, 이는 제공된 evidence C1에서 'Shut down your Raspberry Pi and disconnect it from power.'라는 문장으로 직접적으로 지지됩니다.",
+          "evidence_ids": [
+            "C1"
+          ],
+          "supporting_quotes": [
+            "Shut down your Raspberry Pi and disconnect it from power."
+          ]
+        }
+      ],
+      "draft": {
+        "parse_success": true,
+        "parse_error": null,
+        "draft_status": "available",
+        "questions": [
+          {
+            "question_id": "generated_001",
+            "allowlist_violation": false,
+            "quote_candidate_mapping_failure": false,
+            "structure_errors": [],
+            "evidence_errors": [],
+            "quote_matches": true
+          }
+        ],
+        "valid_question_count_before_finalizer": 1,
+        "duplicate_questions_removed": 0
+      },
+      "provided_within_expected_range": true
+    },
+    {
+      "case_id": "quiz-camera-003",
+      "category": "camera_installation",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 9321.411030367017,
+      "pipeline_elapsed_ms": 9321.610687300563,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"Raspberry Pi 5의 카메라 커넥터는 어떤 라벨로 표시되나요?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"CAM/DISP0과 CAM/DISP1\"},\n        {\"id\": \"B\", \"text\": \"CAM/DISP0과 DISP1\"},\n        {\"id\": \"C\", \"text\": \"CAM0과 CAM1\"},\n        {\"id\": \"D\", \"text\": \"CAM/DISP과 DISP0\"}\n      ],\n      \"correct_choice_id\": \"A\",\n      \"explanation\": \"Raspberry Pi 5의 카메라 커넥터는 CAM/DISP0과 CAM/DISP1로 표시됩니다. 이는 evidence C1에서 'They're labelled CAM/DISP0 and CAM/DISP1'이라는 문장에서 직접적으로 확인할 수 있습니다.\",\n      \"evidence_ids\": [\"C1\"],\n      \"supporting_quote_id\": \"C1-Q2\"\n    }\n  ]\n}",
+      "quiz_status": "available",
+      "questions": [
+        {
+          "question_id": "generated_001",
+          "question": "Raspberry Pi 5의 카메라 커넥터는 어떤 라벨로 표시되나요?",
+          "choices": [
+            {
+              "id": "A",
+              "text": "CAM/DISP0과 CAM/DISP1"
+            },
+            {
+              "id": "B",
+              "text": "CAM/DISP0과 DISP1"
+            },
+            {
+              "id": "C",
+              "text": "CAM0과 CAM1"
+            },
+            {
+              "id": "D",
+              "text": "CAM/DISP과 DISP0"
+            }
+          ],
+          "correct_choice_id": "A",
+          "explanation": "Raspberry Pi 5의 카메라 커넥터는 CAM/DISP0과 CAM/DISP1로 표시됩니다. 이는 evidence C1에서 'They're labelled CAM/DISP0 and CAM/DISP1'이라는 문장에서 직접적으로 확인할 수 있습니다.",
+          "evidence_ids": [
+            "C1"
+          ],
+          "supporting_quotes": [
+            "They're labelled CAM/DISP0 and CAM/DISP1."
+          ]
+        }
+      ],
+      "draft": {
+        "parse_success": true,
+        "parse_error": null,
+        "draft_status": "available",
+        "questions": [
+          {
+            "question_id": "generated_001",
+            "allowlist_violation": false,
+            "quote_candidate_mapping_failure": false,
+            "structure_errors": [],
+            "evidence_errors": [],
+            "quote_matches": true
+          }
+        ],
+        "valid_question_count_before_finalizer": 1,
+        "duplicate_questions_removed": 0
+      },
+      "provided_within_expected_range": true
+    },
+    {
+      "case_id": "quiz-camera-004",
+      "category": "camera_installation",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 10361.94216646254,
+      "pipeline_elapsed_ms": 10362.158922478557,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"카메라 케이블을 연결할 때 금속 접점의 방향은 어떻게 설정해야 하나요?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"플랩 쪽을 향하도록 넣어야 합니다.\"},\n        {\"id\": \"B\", \"text\": \"플랩 반대쪽을 향하도록 넣어야 합니다.\"},\n        {\"id\": \"C\", \"text\": \"플랩에 맞닿도록 넣어야 합니다.\"},\n        {\"id\": \"D\", \"text\": \"플랩을 밀어내는 방향으로 넣어야 합니다.\"}\n      ],\n      \"correct_choice_id\": \"B\",\n      \"explanation\": \"금속 접점이 플랩 반대쪽을 향하도록 넣어야 하며, 이는 케이블이 정확히 삽입되고 접점이 올바르게 정렬되도록 하는 데 필수적입니다.\",\n      \"evidence_ids\": [\"C1\"],\n      \"supporting_quote_id\": \"C1-Q1\"\n    }\n  ]\n}",
+      "quiz_status": "available",
+      "questions": [
+        {
+          "question_id": "generated_001",
+          "question": "카메라 케이블을 연결할 때 금속 접점의 방향은 어떻게 설정해야 하나요?",
+          "choices": [
+            {
+              "id": "A",
+              "text": "플랩 쪽을 향하도록 넣어야 합니다."
+            },
+            {
+              "id": "B",
+              "text": "플랩 반대쪽을 향하도록 넣어야 합니다."
+            },
+            {
+              "id": "C",
+              "text": "플랩에 맞닿도록 넣어야 합니다."
+            },
+            {
+              "id": "D",
+              "text": "플랩을 밀어내는 방향으로 넣어야 합니다."
+            }
+          ],
+          "correct_choice_id": "B",
+          "explanation": "금속 접점이 플랩 반대쪽을 향하도록 넣어야 하며, 이는 케이블이 정확히 삽입되고 접점이 올바르게 정렬되도록 하는 데 필수적입니다.",
+          "evidence_ids": [
+            "C1"
+          ],
+          "supporting_quotes": [
+            "Insert the end of your camera cable with the metallic contacts facing away from the flap."
+          ]
+        }
+      ],
+      "draft": {
+        "parse_success": true,
+        "parse_error": null,
+        "draft_status": "available",
+        "questions": [
+          {
+            "question_id": "generated_001",
+            "allowlist_violation": false,
+            "quote_candidate_mapping_failure": false,
+            "structure_errors": [],
+            "evidence_errors": [],
+            "quote_matches": true
+          }
+        ],
+        "valid_question_count_before_finalizer": 1,
+        "duplicate_questions_removed": 0
+      },
+      "provided_within_expected_range": true
+    },
+    {
+      "case_id": "quiz-camera-005",
+      "category": "camera_installation",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 10684.932922944427,
+      "pipeline_elapsed_ms": 10685.210891067982,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"Raspberry Pi에 카메라 케이블을 연결한 후, 다음 중 어떤 절차를 수행해야 합니까?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"Raspberry Pi에 전원을 다시 연결하고 켭니다.\"},\n        {\"id\": \"B\", \"text\": \"운영체제를 최신 버전으로 업데이트합니다.\"},\n        {\"id\": \"C\", \"text\": \"rpicam-apps 설정 지침을 따릅니다.\"},\n        {\"id\": \"D\", \"text\": \"카메라 케이블을 다시 연결합니다.\"}\n      ],\n      \"correct_choice_id\": \"A\",\n      \"explanation\": \"카메라 케이블을 연결한 후 Raspberry Pi에 전원을 다시 연결해 켜야 한다는 점은 evidence C1에서 'Reconnect your Raspberry Pi device to power and turn it on'과 일치하며, 이는 정답입니다.\",\n      \"evidence_ids\": [\"C1\"],\n      \"supporting_quote_id\": \"C1-Q1\"\n    }\n  ]\n}",
+      "quiz_status": "available",
+      "questions": [
+        {
+          "question_id": "generated_001",
+          "question": "Raspberry Pi에 카메라 케이블을 연결한 후, 다음 중 어떤 절차를 수행해야 합니까?",
+          "choices": [
+            {
+              "id": "A",
+              "text": "Raspberry Pi에 전원을 다시 연결하고 켭니다."
+            },
+            {
+              "id": "B",
+              "text": "운영체제를 최신 버전으로 업데이트합니다."
+            },
+            {
+              "id": "C",
+              "text": "rpicam-apps 설정 지침을 따릅니다."
+            },
+            {
+              "id": "D",
+              "text": "카메라 케이블을 다시 연결합니다."
+            }
+          ],
+          "correct_choice_id": "A",
+          "explanation": "카메라 케이블을 연결한 후 Raspberry Pi에 전원을 다시 연결해 켜야 한다는 점은 evidence C1에서 'Reconnect your Raspberry Pi device to power and turn it on'과 일치하며, 이는 정답입니다.",
+          "evidence_ids": [
+            "C1"
+          ],
+          "supporting_quotes": [
+            "Reconnect your Raspberry Pi device to power and turn it on."
+          ]
+        }
+      ],
+      "draft": {
+        "parse_success": true,
+        "parse_error": null,
+        "draft_status": "available",
+        "questions": [
+          {
+            "question_id": "generated_001",
+            "allowlist_violation": false,
+            "quote_candidate_mapping_failure": false,
+            "structure_errors": [],
+            "evidence_errors": [],
+            "quote_matches": true
+          }
+        ],
+        "valid_question_count_before_finalizer": 1,
+        "duplicate_questions_removed": 0
+      },
+      "provided_within_expected_range": true
+    },
+    {
+      "case_id": "quiz-insufficient-001",
+      "category": "insufficient_content",
+      "gold_status": "insufficient_content",
+      "expected_min_questions": 0,
+      "expected_max_questions": 0,
+      "model_called": false,
+      "generation_elapsed_ms": null,
+      "pipeline_elapsed_ms": 0.008417293429374695,
+      "runtime_error": null,
+      "raw_output": null,
+      "quiz_status": "insufficient_content",
+      "questions": [],
+      "draft": null,
+      "provided_within_expected_range": false
+    },
+    {
+      "case_id": "quiz-insufficient-002",
+      "category": "insufficient_content",
+      "gold_status": "insufficient_content",
+      "expected_min_questions": 0,
+      "expected_max_questions": 0,
+      "model_called": false,
+      "generation_elapsed_ms": null,
+      "pipeline_elapsed_ms": 0.002592802047729492,
+      "runtime_error": null,
+      "raw_output": null,
+      "quiz_status": "insufficient_content",
+      "questions": [],
+      "draft": null,
+      "provided_within_expected_range": false
+    },
+    {
+      "case_id": "quiz-insufficient-003",
+      "category": "insufficient_content",
+      "gold_status": "insufficient_content",
+      "expected_min_questions": 0,
+      "expected_max_questions": 0,
+      "model_called": false,
+      "generation_elapsed_ms": null,
+      "pipeline_elapsed_ms": 0.0018049031496047974,
+      "runtime_error": null,
+      "raw_output": null,
+      "quiz_status": "insufficient_content",
+      "questions": [],
+      "draft": null,
+      "provided_within_expected_range": false
+    },
+    {
+      "case_id": "quiz-insufficient-004",
+      "category": "insufficient_content",
+      "gold_status": "insufficient_content",
+      "expected_min_questions": 0,
+      "expected_max_questions": 0,
+      "model_called": false,
+      "generation_elapsed_ms": null,
+      "pipeline_elapsed_ms": 0.0018067657947540283,
+      "runtime_error": null,
+      "raw_output": null,
+      "quiz_status": "insufficient_content",
+      "questions": [],
+      "draft": null,
+      "provided_within_expected_range": false
+    },
+    {
+      "case_id": "quiz-insufficient-005",
+      "category": "insufficient_content",
+      "gold_status": "insufficient_content",
+      "expected_min_questions": 0,
+      "expected_max_questions": 0,
+      "model_called": false,
+      "generation_elapsed_ms": null,
+      "pipeline_elapsed_ms": 0.0018812716007232666,
+      "runtime_error": null,
+      "raw_output": null,
+      "quiz_status": "insufficient_content",
+      "questions": [],
+      "draft": null,
+      "provided_within_expected_range": false
+    },
+    {
+      "case_id": "quiz-os-006",
+      "category": "os_installation",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 9985.848642885685,
+      "pipeline_elapsed_ms": 9986.142920330167,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"Raspberry Pi OS 이미지를 저장 장치에 기록하려면 어떤 컴퓨터가 필요합니까?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"Raspberry Pi 본체를 사용하는 컴퓨터\"},\n        {\"id\": \"B\", \"text\": \"OS 이미지를 작성하기 위해 사용할 수 있는 컴퓨터\"},\n        {\"id\": \"C\", \"text\": \"저장 장치를 전원을 공급하기 위한 컴퓨터\"},\n        {\"id\": \"D\", \"text\": \"저장 장치를 네트워크에 연결하기 위한 컴퓨터\"}\n      ],\n      \"correct_choice_id\": \"B\",\n      \"explanation\": \"Raspberry Pi OS 이미지를 저장 장치에 기록하려면 OS 이미지를 쓰기 위한 컴퓨터가 필요하며, 이는 제공된 자료에서 'A computer you can use to write the OS image onto your storage device'로 명시되어 있습니다.\",\n      \"evidence_ids\": [\"C1\"],\n      \"supporting_quote_id\": \"C1-Q3\"\n    }\n  ]\n}",
+      "quiz_status": "available",
+      "questions": [
+        {
+          "question_id": "generated_001",
+          "question": "Raspberry Pi OS 이미지를 저장 장치에 기록하려면 어떤 컴퓨터가 필요합니까?",
+          "choices": [
+            {
+              "id": "A",
+              "text": "Raspberry Pi 본체를 사용하는 컴퓨터"
+            },
+            {
+              "id": "B",
+              "text": "OS 이미지를 작성하기 위해 사용할 수 있는 컴퓨터"
+            },
+            {
+              "id": "C",
+              "text": "저장 장치를 전원을 공급하기 위한 컴퓨터"
+            },
+            {
+              "id": "D",
+              "text": "저장 장치를 네트워크에 연결하기 위한 컴퓨터"
+            }
+          ],
+          "correct_choice_id": "B",
+          "explanation": "Raspberry Pi OS 이미지를 저장 장치에 기록하려면 OS 이미지를 쓰기 위한 컴퓨터가 필요하며, 이는 제공된 자료에서 'A computer you can use to write the OS image onto your storage device'로 명시되어 있습니다.",
+          "evidence_ids": [
+            "C1"
+          ],
+          "supporting_quotes": [
+            "A computer you can use to write the OS image onto your storage device so that your Raspberry Pi can boot from it."
+          ]
+        }
+      ],
+      "draft": {
+        "parse_success": true,
+        "parse_error": null,
+        "draft_status": "available",
+        "questions": [
+          {
+            "question_id": "generated_001",
+            "allowlist_violation": false,
+            "quote_candidate_mapping_failure": false,
+            "structure_errors": [],
+            "evidence_errors": [],
+            "quote_matches": true
+          }
+        ],
+        "valid_question_count_before_finalizer": 1,
+        "duplicate_questions_removed": 0
+      },
+      "provided_within_expected_range": true
+    },
+    {
+      "case_id": "quiz-os-007",
+      "category": "os_installation",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 9403.713665902615,
+      "pipeline_elapsed_ms": 9403.91437150538,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"Imager의 Customisation에서 어떤 설정을 미리 구성할 수 있나요?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"디바이스 호스트명을 미리 설정할 수 있다\"},\n        {\"id\": \"B\", \"text\": \"Wi-Fi 자격 증명을 미리 설정할 수 있다\"},\n        {\"id\": \"C\", \"text\": \"시간대를 미리 설정할 수 있다\"},\n        {\"id\": \"D\", \"text\": \"리모트 커넥티비티를 미리 설정할 수 있다\"}\n      ],\n      \"correct_choice_id\": \"B\",\n      \"explanation\": \"Imager의 Customisation에서 Wi-Fi 자격 증명을 미리 설정할 수 있다는 내용은 evidence C1에서 'Wi-Fi credentials'가 포함된 것으로 명시되어 있습니다.\",\n      \"evidence_ids\": [\"C1\"],\n      \"supporting_quote_id\": \"C1-Q3\"\n    }\n  ]\n}",
+      "quiz_status": "available",
+      "questions": [
+        {
+          "question_id": "generated_001",
+          "question": "Imager의 Customisation에서 어떤 설정을 미리 구성할 수 있나요?",
+          "choices": [
+            {
+              "id": "A",
+              "text": "디바이스 호스트명을 미리 설정할 수 있다"
+            },
+            {
+              "id": "B",
+              "text": "Wi-Fi 자격 증명을 미리 설정할 수 있다"
+            },
+            {
+              "id": "C",
+              "text": "시간대를 미리 설정할 수 있다"
+            },
+            {
+              "id": "D",
+              "text": "리모트 커넥티비티를 미리 설정할 수 있다"
+            }
+          ],
+          "correct_choice_id": "B",
+          "explanation": "Imager의 Customisation에서 Wi-Fi 자격 증명을 미리 설정할 수 있다는 내용은 evidence C1에서 'Wi-Fi credentials'가 포함된 것으로 명시되어 있습니다.",
+          "evidence_ids": [
+            "C1"
+          ],
+          "supporting_quotes": [
+            "Wi-Fi credentials"
+          ]
+        }
+      ],
+      "draft": {
+        "parse_success": true,
+        "parse_error": null,
+        "draft_status": "available",
+        "questions": [
+          {
+            "question_id": "generated_001",
+            "allowlist_violation": false,
+            "quote_candidate_mapping_failure": false,
+            "structure_errors": [],
+            "evidence_errors": [],
+            "quote_matches": true
+          }
+        ],
+        "valid_question_count_before_finalizer": 1,
+        "duplicate_questions_removed": 0
+      },
+      "provided_within_expected_range": true
+    },
+    {
+      "case_id": "quiz-ssh-006",
+      "category": "ssh_remote_access",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 9545.937713235617,
+      "pipeline_elapsed_ms": 9546.143863350153,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"SSH로 Raspberry Pi에 연결할 때 나타나는 보안 경고는 언제만 표시되나요?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"다시 연결할 때마다 나타납니다.\"},\n        {\"id\": \"B\", \"text\": \"첫 연결 시에만 나타납니다.\"},\n        {\"id\": \"C\", \"text\": \"연결 실패 시에만 나타납니다.\"},\n        {\"id\": \"D\", \"text\": \"서버가 설정된 후에만 나타납니다.\"}\n      ],\n      \"correct_choice_id\": \"B\",\n      \"explanation\": \"보안 경고는 첫 연결 시에만 나타나며, 이후 연결 시에는 나타나지 않습니다. 이는 제공된 자료에서 'You will only see this warning the first time you connect.'라는 문장에서 직접적으로 확인할 수 있습니다.\",\n      \"evidence_ids\": [\"C1\"],\n      \"supporting_quote_id\": \"C1-Q4\"\n    }\n  ]\n}",
+      "quiz_status": "available",
+      "questions": [
+        {
+          "question_id": "generated_001",
+          "question": "SSH로 Raspberry Pi에 연결할 때 나타나는 보안 경고는 언제만 표시되나요?",
+          "choices": [
+            {
+              "id": "A",
+              "text": "다시 연결할 때마다 나타납니다."
+            },
+            {
+              "id": "B",
+              "text": "첫 연결 시에만 나타납니다."
+            },
+            {
+              "id": "C",
+              "text": "연결 실패 시에만 나타납니다."
+            },
+            {
+              "id": "D",
+              "text": "서버가 설정된 후에만 나타납니다."
+            }
+          ],
+          "correct_choice_id": "B",
+          "explanation": "보안 경고는 첫 연결 시에만 나타나며, 이후 연결 시에는 나타나지 않습니다. 이는 제공된 자료에서 'You will only see this warning the first time you connect.'라는 문장에서 직접적으로 확인할 수 있습니다.",
+          "evidence_ids": [
+            "C1"
+          ],
+          "supporting_quotes": [
+            "You will only see this warning the first time you connect."
+          ]
+        }
+      ],
+      "draft": {
+        "parse_success": true,
+        "parse_error": null,
+        "draft_status": "available",
+        "questions": [
+          {
+            "question_id": "generated_001",
+            "allowlist_violation": false,
+            "quote_candidate_mapping_failure": false,
+            "structure_errors": [],
+            "evidence_errors": [],
+            "quote_matches": true
+          }
+        ],
+        "valid_question_count_before_finalizer": 1,
+        "duplicate_questions_removed": 0
+      },
+      "provided_within_expected_range": true
+    },
+    {
+      "case_id": "quiz-camera-006",
+      "category": "camera_installation",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 15428.711766377091,
+      "pipeline_elapsed_ms": 15428.888218477368,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"카메라 케이블을 연결한 후 커넥터 플랩을 어떻게 고정해야 합니까?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"플랩을 케이블 쪽으로 틀어뜨려 제자리에 고정한다\"},\n        {\"id\": \"B\", \"text\": \"플랩을 케이블 쪽으로 틀어뜨리고 아래로 밀어 제자리에 고정한다\"},\n        {\"id\": \"C\", \"text\": \"플랩을 케이블 쪽으로 돌려 틀어뜨리고 밀어 제자리에 고정한다\"},\n        {\"id\": \"D\", \"text\": \"플랩을 케이블 쪽으로 돌려 틀어뜨리고 밀어 제자리에 고정하며 클릭음을 들을 때까지 한다\"},\n      ],\n      \"correct_choice_id\": \"C\",\n      \"explanation\": \"플랩을 케이블 쪽으로 돌려 틀어뜨리고 밀어 제자리에 고정하는 것은 'tilting it back towards the cable and pushing it down'과 동일하며, 이는 플랩을 케이블 쪽으로 돌려 밀어 고정하는 동작을 의미합니다. 이는 제공된 answer에서 '커넥터 플랩을 케이블 쪽으로 닫아 제자리에 고정합니다'와 일치합니다.\",\n      \"evidence_ids\": [\"C1\"],\n      \"supporting_quote_id\": \"C1-Q4\"\n    }\n  ]\n}",
+      "quiz_status": "generation_failed",
+      "questions": [],
+      "draft": {
+        "parse_success": false,
+        "parse_error": "퀴즈 모델 출력이 유효한 JSON이 아닙니다.",
+        "questions": []
+      },
+      "provided_within_expected_range": false
+    },
+    {
+      "case_id": "quiz-camera-007",
+      "category": "camera_installation",
+      "gold_status": "available",
+      "expected_min_questions": 1,
+      "expected_max_questions": 1,
+      "model_called": true,
+      "generation_elapsed_ms": 15444.572530686855,
+      "pipeline_elapsed_ms": 15444.78820823133,
+      "runtime_error": null,
+      "raw_output": "{\n  \"status\": \"available\",\n  \"questions\": [\n    {\n      \"question_id\": \"generated_001\",\n      \"question\": \"카메라 케이블을 구부리지 않도록 주의해야 하는 이유는 무엇인가요?\",\n      \"choices\": [\n        {\"id\": \"A\", \"text\": \"메탈 접촉부가 손상될 수 있기 때문입니다.\"},\n        {\"id\": \"B\", \"text\": \"케이블을 날카로운 각도로 구부리면 접촉이 정확히 정렬되지 않기 때문입니다.\"},\n        {\"id\": \"C\", \"text\": \"케이블을 날카로운 각도로 구부리지 않도록 주의해야 한다는 것은 케이블의 길이를 줄이기 위한 조치입니다.\"},\n        {\"id\": \"D\", \"text\": \"케이블을 날카로운 각도로 구부리지 않도록 주의해야 한다는 것은 케이블을 더 빠르게 연결하기 위한 조치입니다.\"}\n      ],\n      \"correct_choice_id\": \"B\",\n      \"explanation\": \"카메라 케이블을 날카로운 각도로 구부리지 않도록 주의해야 한다는 것은 케이블이 정확히 삽입되고 접촉이 정렬되도록 하기 위함이며, 이는 케이블을 날카로운 각도로 구부리면 접촉이 정확히 정렬되지 않기 때문입니다. 이는 제공된 evidence C1에서 'Take care not to bend the flexible cable at a sharp angle'에 명시되어 있습니다.\",\n      \"evidence_ids\": [\"C1\"],\n      \"supporting_quote_id\": \"C1-Q3\"\n    }\n  ]\n}",
+      "quiz_status": "available",
+      "questions": [
+        {
+          "question_id": "generated_001",
+          "question": "카메라 케이블을 구부리지 않도록 주의해야 하는 이유는 무엇인가요?",
+          "choices": [
+            {
+              "id": "A",
+              "text": "메탈 접촉부가 손상될 수 있기 때문입니다."
+            },
+            {
+              "id": "B",
+              "text": "케이블을 날카로운 각도로 구부리면 접촉이 정확히 정렬되지 않기 때문입니다."
+            },
+            {
+              "id": "C",
+              "text": "케이블을 날카로운 각도로 구부리지 않도록 주의해야 한다는 것은 케이블의 길이를 줄이기 위한 조치입니다."
+            },
+            {
+              "id": "D",
+              "text": "케이블을 날카로운 각도로 구부리지 않도록 주의해야 한다는 것은 케이블을 더 빠르게 연결하기 위한 조치입니다."
+            }
+          ],
+          "correct_choice_id": "B",
+          "explanation": "카메라 케이블을 날카로운 각도로 구부리지 않도록 주의해야 한다는 것은 케이블이 정확히 삽입되고 접촉이 정렬되도록 하기 위함이며, 이는 케이블을 날카로운 각도로 구부리면 접촉이 정확히 정렬되지 않기 때문입니다. 이는 제공된 evidence C1에서 'Take care not to bend the flexible cable at a sharp angle'에 명시되어 있습니다.",
+          "evidence_ids": [
+            "C1"
+          ],
+          "supporting_quotes": [
+            "Take care not to bend the flexible cable at a sharp angle."
+          ]
+        }
+      ],
+      "draft": {
+        "parse_success": true,
+        "parse_error": null,
+        "draft_status": "available",
+        "questions": [
+          {
+            "question_id": "generated_001",
+            "allowlist_violation": false,
+            "quote_candidate_mapping_failure": false,
+            "structure_errors": [],
+            "evidence_errors": [],
+            "quote_matches": true
+          }
+        ],
+        "valid_question_count_before_finalizer": 1,
+        "duplicate_questions_removed": 0
+      },
+      "provided_within_expected_range": true
+    }
+  ]
+}

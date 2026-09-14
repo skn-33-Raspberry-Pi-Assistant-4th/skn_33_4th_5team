@@ -15,6 +15,10 @@ from .prompts import (
     build_grounded_answer_messages,
     build_recommendation_answer_messages,
 )
+from .quiz_prompts import (
+    QUIZ_GENERATION_SYSTEM_PROMPT,
+    build_quiz_generation_messages,
+)
 from .safety import (
     INSUFFICIENT_EVIDENCE_MARKER,
     AnswerSafetyError,
@@ -31,12 +35,14 @@ __all__ = [
     "AnswerSafetyError",
     "GROUNDED_ANSWER_SYSTEM_PROMPT",
     "RECOMMENDATION_ANSWER_SYSTEM_PROMPT",
+    "QUIZ_GENERATION_SYSTEM_PROMPT",
     "PromptBuildError",
     "PromptEvidence",
     "build_citation_repair_messages",
     "SafetyDecision",
     "build_grounded_answer_messages",
     "build_recommendation_answer_messages",
+    "build_quiz_generation_messages",
     "evaluate_request",
     "extract_citation_ids",
     "has_korean_prose",
