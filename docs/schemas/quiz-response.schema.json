@@ -1,0 +1,117 @@
+{
+  "$defs": {
+    "QuizChoice": {
+      "additionalProperties": false,
+      "description": "One generated answer choice; detailed choice validation is service-owned.",
+      "properties": {
+        "id": {
+          "enum": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "title": "Id",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "text"
+      ],
+      "title": "QuizChoice",
+      "type": "object"
+    },
+    "QuizQuestion": {
+      "additionalProperties": false,
+      "description": "A generated quiz question before deterministic service validation.",
+      "properties": {
+        "question_id": {
+          "title": "Question Id",
+          "type": "string"
+        },
+        "question": {
+          "title": "Question",
+          "type": "string"
+        },
+        "choices": {
+          "items": {
+            "$ref": "#/$defs/QuizChoice"
+          },
+          "title": "Choices",
+          "type": "array"
+        },
+        "correct_choice_id": {
+          "enum": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ],
+          "title": "Correct Choice Id",
+          "type": "string"
+        },
+        "explanation": {
+          "title": "Explanation",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "supporting_quotes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Supporting Quotes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "question_id",
+        "question",
+        "choices",
+        "correct_choice_id",
+        "explanation",
+        "evidence_ids",
+        "supporting_quotes"
+      ],
+      "title": "QuizQuestion",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Structured result returned by QuizGenerator.",
+  "properties": {
+    "status": {
+      "enum": [
+        "available",
+        "insufficient_content",
+        "generation_failed"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "questions": {
+      "items": {
+        "$ref": "#/$defs/QuizQuestion"
+      },
+      "title": "Questions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "status",
+    "questions"
+  ],
+  "title": "QuizResponse",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

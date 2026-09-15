@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .models import ChatResponse, ConditionPayload, SearchResponse
+from .models import ChatResponse, ConditionPayload, QuizResponse, SearchResponse
 
 
 def export_schemas(output_dir: str | Path | None = None) -> list[Path]:
@@ -14,6 +14,7 @@ def export_schemas(output_dir: str | Path | None = None) -> list[Path]:
         "condition.schema.json": ConditionPayload,
         "search-response.schema.json": SearchResponse,
         "chat-response.schema.json": ChatResponse,
+        "quiz-response.schema.json": QuizResponse,
     }
     written: list[Path] = []
     for filename, model in schema_models.items():

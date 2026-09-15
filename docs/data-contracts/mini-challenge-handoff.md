@@ -103,6 +103,70 @@ quote 후보는 evidence 원문에서 서버가 추출한다. 모델은 후보 I
 | `insufficient_content` | citation/quote 후보가 없거나 유효 문항이 없음 | 정상 결과로 취급. quiz UI를 숨기거나 “생성 가능한 문제가 없음” 표시 |
 | `generation_failed` | Qwen 출력이 draft JSON 계약을 통과하지 못함 | quiz 오류로 로깅 가능. 기존 Q&A는 그대로 반환 |
 
+## 분리 frontend용 JSON API 계약
+
+이 절은 Django template render가 아니라 별도 frontend가 Quiz를 호출할 때 적용한다. endpoint 구현 전 backend와 frontend는 이 경로와 payload를 함께 확정해야 한다.
+
+### Quiz 생성 요청
+
+`POST /api/qa/mini-challenge`
+
+Q&A의 원문이나 citation을 client가 다시 보내지 않는다. backend는 현재 browser session에 저장된 최신 final `ChatResponse`만 읽어 `QuizGenerator.generate_from_chat_response()`에 전달한다. 이렇게 해야 client가 다른 답변 또는 임의 evidence로 Quiz를 만들 수 없다.
+
+```json
+{
+  "max_questions": 3
+}
+```
+
+| 필드 | 필수 | 규칙 |
+| --- | --- | --- |
+| `max_questions` | 아니오 | 정수 `1`~`3`, 생략하면 `3` |
+
+요청은 `Content-Type: application/json` 및 session cookie를 포함해야 하며, cookie 인증을 쓰는 Django 배포에서는 CSRF token도 포함해야 한다.
+
+### 성공 응답
+
+HTTP `200 OK`에서 반환한다. `quiz_id`는 이후 답안 제출·오답노트 저장에 쓰는 서버 발급 UUID이며, `quiz` 값은 [quiz-response.schema.json](../schemas/quiz-response.schema.json) 전체와 일치한다.
+
+```json
+{
+  "quiz_id": "2d345026-2d80-42e5-ae7b-2374d30a561a",
+  "quiz": {
+    "status": "insufficient_content",
+    "questions": []
+  }
+}
+```
+
+`quiz.status`는 HTTP 실패가 아니라 Quiz 생성 결과다. frontend는 아래처럼 처리한다.
+
+| `quiz.status` | frontend 처리 |
+| --- | --- |
+| `available` | `questions`를 표시하고 `quiz_id`로 답안을 제출한다. |
+| `insufficient_content` | 오류 토스트나 자동 재시도 없이 “현재 답변으로는 문제를 만들 수 없음”을 표시한다. |
+| `generation_failed` | Q&A 본문을 유지하고 Quiz 영역에 재시도 안내를 표시한다. |
+
+### 오류 응답
+
+`generation_failed`는 아래 오류 응답이 아니라 HTTP 200의 정상 Quiz 상태다. HTTP 오류는 API 호출 자체를 완료할 수 없었을 때만 사용한다.
+
+```json
+{
+  "error": {
+    "code": "qa_response_not_found",
+    "message": "퀴즈를 만들 Q&A 결과가 없습니다. 먼저 질문을 제출해 주세요."
+  }
+}
+```
+
+| HTTP 상태 | `error.code` | 의미 및 frontend 처리 |
+| --- | --- | --- |
+| `400` | `invalid_request` | JSON 형식, `max_questions` 범위 또는 Content-Type이 잘못됨. 입력을 수정해 다시 요청한다. |
+| `403` | `csrf_failed` | CSRF token 또는 session 검증 실패. 로그인/세션 상태를 갱신한 뒤 다시 요청한다. |
+| `404` | `qa_response_not_found` | 현재 session에 Quiz 대상 Q&A가 없음 또는 만료됨. Q&A 화면으로 이동한다. |
+| `500` | `internal_error` | 예상하지 못한 backend 오류. Q&A는 유지하고 잠시 뒤 재시도 안내를 표시한다. |
+
 ## 요청/응답 예시
 
 ### 1. ChatResponse → QuizResponse 전체 예시
