@@ -17,7 +17,7 @@ from src.contracts import QuizEvidence, QuizGenerationRequest
 from src.rag_to_llm import HuggingFaceAnswerGenerator, HuggingFaceQuizTextGenerator
 from src.rag_to_llm.settings import DEFAULT_ANSWER_MODEL_ID, DEFAULT_ANSWER_MODEL_REVISION
 from src.services.quiz_generator import QuizGenerator
-from src.services.quiz_parser import QuizOutputError, parse_quiz_response
+from src.services.quiz_parser import QuizOutputError, parse_quiz_draft_response
 from src.services.quiz_validation import supporting_quote_matches
 
 
@@ -150,14 +150,16 @@ def test_qwen_generates_grounded_quiz_for_fixed_evidence_cases() -> None:
         raw_result = text_generator.last_result
         assert raw_result is not None
         try:
-            parsed = parse_quiz_response(raw_result.text)
+            parse_quiz_draft_response(raw_result.text)
         except QuizOutputError:
             failures.append(f"{case.request_id}: parser_failed")
             continue
 
         parser_passes += 1
         evidence_by_id = {item.citation_id: item for item in request.evidence}
-        for question in parsed.questions:
+        # The raw Qwen output is a draft that selects a quote candidate ID.
+        # Audit quote materialization on the final QuizResponse instead.
+        for question in response.questions:
             if any(item not in evidence_by_id for item in question.evidence_ids):
                 allowlist_violations += 1
             quote_checks += 1
