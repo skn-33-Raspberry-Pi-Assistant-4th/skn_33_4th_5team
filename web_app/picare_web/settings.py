@@ -29,7 +29,8 @@ if str(PROJECT_ROOT) not in sys.path:
 load_dotenv(PROJECT_ROOT / ".env")
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-local-picare-only")
-DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() == "true"
+# 개발 환경에서만 DJANGO_DEBUG=true를 명시해 상세 오류 화면을 사용한다.
+DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() == "true"
 ALLOWED_HOSTS = [host.strip() for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",") if host.strip()]
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
@@ -42,8 +43,9 @@ def _env_flag(name: str, default: bool = False) -> bool:
     return os.getenv(name, str(default)).lower() in {"1", "true", "yes", "on"}
 
 INSTALLED_APPS = [
-    "django.contrib.contenttypes",
+    "django.contrib.admin",
     "django.contrib.auth",
+    "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
@@ -82,32 +84,18 @@ TEMPLATES = [
 WSGI_APPLICATION = "picare_web.wsgi.application"
 ASGI_APPLICATION = "picare_web.asgi.application"
 
-# Django test and pytest runs use an isolated SQLite database unless a caller
-# explicitly requests another backend. Runtime defaults to the configured MySQL.
-_is_test_run = "test" in sys.argv or "pytest" in Path(sys.argv[0]).name
-DATABASE_ENGINE = os.getenv(
-    "DJANGO_DB_ENGINE",
-    "django.db.backends.sqlite3" if _is_test_run else "django.db.backends.mysql",
-)
-if DATABASE_ENGINE == "django.db.backends.sqlite3":
-    DATABASES = {
-        "default": {
-            "ENGINE": DATABASE_ENGINE,
-            "NAME": os.getenv("DJANGO_SQLITE_PATH", ":memory:" if _is_test_run else str(PROJECT_ROOT / "picare.sqlite3")),
-        }
+# 개발 기본값은 저장소에 포함되지 않는 SQLite 파일이다. AWS 운영 환경에서는
+# DJANGO_DB_ENGINE과 연결 정보를 설정해 별도 DB 백엔드로 교체할 수 있다.
+DATABASES = {
+    "default": {
+        "ENGINE": os.getenv("DJANGO_DB_ENGINE", "django.db.backends.sqlite3"),
+        "NAME": os.getenv("DJANGO_DB_NAME", str(WEB_APP_ROOT / "db.sqlite3")),
+        "USER": os.getenv("DJANGO_DB_USER", ""),
+        "PASSWORD": os.getenv("DJANGO_DB_PASSWORD", ""),
+        "HOST": os.getenv("DJANGO_DB_HOST", ""),
+        "PORT": os.getenv("DJANGO_DB_PORT", ""),
     }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": DATABASE_ENGINE,
-            "NAME": os.getenv("MYSQL_DATABASE", "picare"),
-            "USER": os.getenv("MYSQL_USER", "picare_app"),
-            "PASSWORD": os.getenv("MYSQL_PASSWORD", ""),
-            "HOST": os.getenv("MYSQL_HOST", "127.0.0.1"),
-            "PORT": os.getenv("MYSQL_PORT", "3306"),
-            "OPTIONS": {"charset": "utf8mb4", "connect_timeout": 10},
-        }
-    }
+}
 
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 SESSION_COOKIE_HTTPONLY = True

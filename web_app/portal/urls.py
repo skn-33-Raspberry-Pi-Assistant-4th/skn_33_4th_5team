@@ -1,6 +1,8 @@
+from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from . import views
+from .forms import LoginForm
 
 
 urlpatterns = [
@@ -16,4 +18,35 @@ urlpatterns = [
     path("api/lab/analyze", views.lab_analyze_api, name="lab_analyze_api"),
     path("api/lab/compose", views.lab_compose_api, name="lab_compose_api"),
     path("health/", views.health, name="health"),
+    path("accounts/signup/", views.signup, name="signup"),
+    path("accounts/login/", auth_views.LoginView.as_view(authentication_form=LoginForm, redirect_authenticated_user=True), name="login"),
+    path("accounts/logout/", auth_views.LogoutView.as_view(), name="logout"),
+    path("accounts/profile/edit/", views.profile_edit, name="profile_edit"),
+    path("mypage/", views.mypage, name="mypage"),
+    path("mypage/posts/", views.mypage_posts, name="mypage_posts"),
+    path("mypage/comments/", views.mypage_comments, name="mypage_comments"),
+    path("mypage/likes/", views.mypage_likes, name="mypage_likes"),
+    path("community/", views.community_list, name="community_list"),
+    path("community/posts/new/", views.community_post_create, name="community_post_create"),
+    path("community/posts/<int:pk>/", views.community_post_detail, name="community_post_detail"),
+    path("community/posts/<int:pk>/edit/", views.community_post_edit, name="community_post_edit"),
+    path("community/posts/<int:pk>/delete/", views.community_post_delete, name="community_post_delete"),
+    path("community/posts/<int:pk>/comments/", views.community_comment_create, name="community_comment_create"),
+    path("community/posts/<int:pk>/comments/<int:comment_pk>/edit/", views.community_comment_edit, name="community_comment_edit"),
+    path("community/posts/<int:pk>/comments/<int:comment_pk>/delete/", views.community_comment_delete, name="community_comment_delete"),
+    path("community/posts/<int:pk>/like/", views.community_post_like, name="community_post_like"),
+    path("api/lab/templates/", views.api_lab_templates, name="api_lab_templates"),
+    path("api/lab/analyze/", views.api_lab_analyze, name="api_lab_analyze"),
+    path("api/lab/compose/", views.api_lab_compose, name="api_lab_compose"),
+    path("command-lab/", views.command_lab, name="command_lab"),
+    path("drawer/", views.drawer_list, name="drawer_list"),
+    path("drawer/save/", views.drawer_save, name="drawer_save"),
+    path("drawer/<int:pk>/", views.drawer_detail, name="drawer_detail"),
+    path("drawer/<int:pk>/delete/", views.drawer_delete, name="drawer_delete"),
+    path("quiz/generate/", views.quiz_generate, name="quiz_generate"),
+    path("quiz/<uuid:quiz_id>/submit/", views.quiz_submit, name="quiz_submit"),
+    path("quiz/<uuid:quiz_id>/wrong-notes/", views.wrong_note_save, name="wrong_note_save"),
+    path("wrong-notes/", views.wrong_note_list, name="wrong_note_list"),
+    path("wrong-notes/<int:pk>/", views.wrong_note_detail, name="wrong_note_detail"),
+    path("wrong-notes/<int:pk>/delete/", views.wrong_note_delete, name="wrong_note_delete"),
 ]

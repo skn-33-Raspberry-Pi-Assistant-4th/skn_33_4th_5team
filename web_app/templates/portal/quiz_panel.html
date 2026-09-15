@@ -1,0 +1,23 @@
+{% if quiz_can_generate %}
+  <section class="lab-card form-card mt-4"><p class="card-kicker mb-1">MINI CHALLENGE</p><h2 class="h5">답변 내용을 확인해 볼까요?</h2><p class="text-muted small">퀴즈는 이미 표시된 답변과 인용 근거만 사용하며, 새 검색을 하지 않습니다.</p><form method="post" action="{% url 'quiz_generate' %}">{% csrf_token %}<button class="btn btn-outline-picare" type="submit">미니 챌린지 시작</button></form></section>
+{% elif quiz_response %}
+  <section class="lab-card form-card mt-4"><p class="card-kicker mb-1">MINI CHALLENGE</p>
+    {% if quiz_status == 'available' %}
+      <h2 class="h5">답변 이해 확인</h2>
+      {% for quiz_question in quiz_response.questions %}
+        <article class="border rounded-4 p-3 mt-3"><h3 class="h6">{{ forloop.counter }}. {{ quiz_question.question }}</h3>
+          {% if quiz_submission and quiz_submission.question_id == quiz_question.question_id %}
+            <div class="alert {% if quiz_submission.is_correct %}alert-success{% else %}alert-warning{% endif %} mb-2">{% if quiz_submission.is_correct %}정답입니다.{% else %}오답입니다. 정답은 {{ quiz_submission.correct_choice_id }}번입니다.{% endif %}<br><span class="small">{{ quiz_question.explanation }}</span></div>
+            {% if not quiz_submission.is_correct and user.is_authenticated %}<form method="post" action="{% url 'wrong_note_save' quiz_id %}">{% csrf_token %}<input type="hidden" name="question_id" value="{{ quiz_question.question_id }}"><button class="btn btn-sm btn-outline-picare" type="submit">오답노트에 저장</button></form>{% elif not quiz_submission.is_correct %}<p class="small mb-0"><a href="{% url 'login' %}?next={% url 'qa' %}">로그인</a>하면 오답노트에 저장할 수 있습니다.</p>{% endif %}
+          {% else %}
+            <form method="post" action="{% url 'quiz_submit' quiz_id %}">{% csrf_token %}<input type="hidden" name="question_id" value="{{ quiz_question.question_id }}">{% for choice in quiz_question.choices %}<div class="form-check mt-2"><input class="form-check-input" type="radio" name="selected_choice_id" id="{{ quiz_question.question_id }}-{{ choice.id }}" value="{{ choice.id }}" required><label class="form-check-label" for="{{ quiz_question.question_id }}-{{ choice.id }}">{{ choice.id }}. {{ choice.text }}</label></div>{% endfor %}<button class="btn btn-sm btn-picare mt-3" type="submit">답 제출</button></form>
+          {% endif %}
+        </article>
+      {% endfor %}
+    {% elif quiz_status == 'insufficient_content' %}
+      <p class="mb-0">현재 답변의 인용 근거로는 생성 가능한 문제가 없습니다.</p>
+    {% elif quiz_status == 'generation_failed' %}
+      <div class="alert alert-warning mb-0">퀴즈를 생성하지 못했습니다. Q&A 답변은 정상적으로 이용할 수 있습니다.</div>
+    {% endif %}
+  </section>
+{% endif %}

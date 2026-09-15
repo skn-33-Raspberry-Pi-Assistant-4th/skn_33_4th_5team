@@ -1,11 +1,103 @@
 """Django form boundaries for existing PiCare service inputs."""
 
 from django import forms
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth.models import User
 
 from src.contracts.input_limits import INPUT_LENGTH_HINT, MAX_INPUT_CHARS, validate_input_text
 
+from .models import Comment, Post
+
 
 OPTIONAL_BOOLEAN_CHOICES = (("", "선택 안 함"), ("true", "예"), ("false", "아니요"))
+POST_CONTENT_MAX_LENGTH = 10_000
+COMMENT_CONTENT_MAX_LENGTH = 2_000
+
+
+class LoginForm(AuthenticationForm):
+    """Django 기본 인증 폼에 기존 화면의 입력 스타일만 적용한다."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-control"
+
+
+class SignUpForm(UserCreationForm):
+    """Django 기본 User 모델의 안전한 생성 폼."""
+
+    email = forms.EmailField(label="이메일", required=True)
+
+    class Meta(UserCreationForm.Meta):
+        model = User
+        fields = ("username", "email")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-control"
+
+
+class ProfileUpdateForm(forms.ModelForm):
+    """로그인한 사용자가 수정할 수 있는 기본 정보만 노출한다."""
+
+    class Meta:
+        model = User
+        fields = ("username", "email")
+        labels = {"username": "사용자명", "email": "이메일"}
+        widgets = {
+            "username": forms.TextInput(attrs={"class": "form-control"}),
+            "email": forms.EmailInput(attrs={"class": "form-control"}),
+        }
+
+
+class PostForm(forms.ModelForm):
+    """게시글의 사용자 입력 필드만 노출한다."""
+
+    title = forms.CharField(
+        label="제목",
+        max_length=200,
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "제목을 입력하세요"}),
+    )
+    content = forms.CharField(
+        label="내용",
+        max_length=POST_CONTENT_MAX_LENGTH,
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 10, "placeholder": "내용을 입력하세요"}),
+    )
+
+    class Meta:
+        model = Post
+        fields = ("title", "content")
+
+
+class CommentForm(forms.ModelForm):
+    """댓글의 사용자 입력 필드만 노출한다."""
+
+    content = forms.CharField(
+        label="댓글",
+        max_length=COMMENT_CONTENT_MAX_LENGTH,
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 3, "placeholder": "댓글을 입력하세요"}),
+    )
+
+    class Meta:
+        model = Comment
+        fields = ("content",)
+
+
+class CommandAnalyzeForm(forms.Form):
+    """Display-only command analysis input; service validation remains authoritative."""
+
+    command = forms.CharField(
+        label="명령어 분석",
+        max_length=2000,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "placeholder": "예: ssh pi@raspberrypi.local",
+                "autocomplete": "off",
+            }
+        ),
+    )
 
 
 class RecommendationForm(forms.Form):

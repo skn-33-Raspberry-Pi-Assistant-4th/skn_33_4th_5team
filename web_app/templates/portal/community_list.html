@@ -1,0 +1,24 @@
+{% extends 'portal/base.html' %}
+{% block title %}PiCare | 커뮤니티{% endblock %}
+{% block content %}
+<section class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+  <div><p class="eyebrow mb-1">COMMUNITY</p><h1 class="h2 mb-1">커뮤니티</h1><p class="text-muted mb-0">Raspberry Pi 경험과 팁을 나눠 보세요.</p></div>
+  {% if user.is_authenticated %}<a class="btn btn-picare" href="{% url 'community_post_create' %}">글 작성</a>{% else %}<a class="btn btn-outline-picare" href="{% url 'login' %}?next={% url 'community_post_create' %}">로그인 후 글 작성</a>{% endif %}
+</section>
+<section class="vstack gap-3">
+  {% for post in page_obj %}
+    <article class="lab-card form-card">
+      <div class="d-flex justify-content-between gap-3"><div><h2 class="h5 mb-1"><a class="text-decoration-none text-dark" href="{% url 'community_post_detail' post.pk %}">{{ post.title }}</a></h2><p class="small text-muted mb-0">{{ post.author.username }} · {{ post.created_at|date:'Y.m.d H:i' }}</p></div><span class="status-badge">추천 {{ post.like_count }}</span></div>
+    </article>
+  {% empty %}
+    <div class="lab-card form-card text-center text-muted">아직 작성된 게시글이 없습니다.</div>
+  {% endfor %}
+</section>
+{% if page_obj.paginator.num_pages > 1 %}
+  <nav class="mt-4" aria-label="게시글 페이지"><ul class="pagination justify-content-center mb-0">
+    {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">이전</a></li>{% endif %}
+    <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">다음</a></li>{% endif %}
+  </ul></nav>
+{% endif %}
+{% endblock %}

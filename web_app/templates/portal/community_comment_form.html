@@ -1,0 +1,9 @@
+{% extends 'portal/base.html' %}
+{% block title %}PiCare | 댓글 수정{% endblock %}
+{% block content %}
+<section class="hero text-center mx-auto"><p class="eyebrow">COMMUNITY</p><h1><em>댓글 수정</em></h1><p class="hero-copy">{{ post.title }}</p></section>
+<form method="post" class="lab-card form-card mx-auto mt-4" style="max-width: 760px" novalidate>{% csrf_token %}
+  <label class="form-label" for="{{ form.content.id_for_label }}">{{ form.content.label }}</label>{{ form.content }}{% for error in form.content.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+  <div class="d-flex gap-2 mt-3"><button class="btn btn-picare" type="submit">저장</button><a class="btn btn-outline-secondary" href="{% url 'community_post_detail' post.pk %}">취소</a></div>
+</form>
+{% endblock %}

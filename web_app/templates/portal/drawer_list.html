@@ -1,0 +1,7 @@
+{% extends 'portal/base.html' %}
+{% block title %}PiCare | 내 서랍{% endblock %}
+{% block content %}
+<section class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4"><div><p class="eyebrow mb-1">MY DRAWER</p><h1 class="h2 mb-1">내 서랍</h1><p class="text-muted mb-0">서버가 검증해 저장한 명령어 결과입니다.</p></div><a class="btn btn-picare" href="{% url 'command_lab' %}">명령어 실험실</a></section>
+<section class="vstack gap-3">{% for item in items %}<article class="lab-card form-card d-flex justify-content-between align-items-center gap-3"><div><h2 class="h5 mb-1"><a class="text-decoration-none text-dark" href="{% url 'drawer_detail' item.pk %}">{{ item.title }}</a></h2><p class="small text-muted mb-0">{{ item.kind }} · {{ item.created_at|date:'Y.m.d H:i' }}</p></div><a class="btn btn-sm btn-outline-picare" href="{% url 'drawer_detail' item.pk %}">보기</a></article>{% empty %}<div class="lab-card form-card text-center text-muted">저장한 명령어 결과가 없습니다.</div>{% endfor %}</section>
+{% include 'portal/pagination.html' %}
+{% endblock %}
