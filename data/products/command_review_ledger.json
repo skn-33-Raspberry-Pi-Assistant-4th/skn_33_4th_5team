@@ -1,9 +1,18 @@
 {
   "schema_version": "1.0.0",
-  "catalog_version": "2026-09-11-command-lab-v2.1",
+  "catalog_version": "2026-09-16-command-lab-v2.2",
   "reviewers": {
     "B": "양원",
     "C": "나은"
+  },
+  "data_owner_approval": {
+    "reviewer_role": "A",
+    "reviewer_name": "최지흠",
+    "verdict": "approve",
+    "reason": "명령 카탈로그 100개 최종 검수 완료 및 사용 승인",
+    "reviewed_at": "2026-09-16",
+    "scope": "all_candidates",
+    "template_count": 92
   },
   "candidate_template_ids": [
     "cmd-os-installation-002", "cmd-os-installation-003", "cmd-os-installation-004", "cmd-os-installation-005", "cmd-os-installation-006", "cmd-os-installation-007", "cmd-os-installation-008", "cmd-os-installation-009", "cmd-os-installation-010",

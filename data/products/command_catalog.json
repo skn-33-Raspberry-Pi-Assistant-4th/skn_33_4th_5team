@@ -1,6 +1,6 @@
 {
   "schema_version": "2.0.0",
-  "catalog_version": "2026-09-11-command-lab-v2.1",
+  "catalog_version": "2026-09-16-command-lab-v2.2",
   "source_manifest": "document_pipeline/data/manifest_v3.json",
   "execution_policy": "display_only",
   "generated_at": "2026-09-11T02:13:45.966141+00:00",
@@ -103,9 +103,9 @@
       "evidence_checksums": [
         "sha256:3b60dbbb3518779fc94d29ec76b4611960f28ccb53a250947102f6410e1edaaa"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-os-installation-003",
@@ -154,9 +154,9 @@
       "evidence_checksums": [
         "sha256:3b60dbbb3518779fc94d29ec76b4611960f28ccb53a250947102f6410e1edaaa"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-os-installation-004",
@@ -223,9 +223,9 @@
       "evidence_checksums": [
         "sha256:229e9966ebefb6028f3b9c155a0f57d5f698c9ad4316af14a24367cedb5948f3"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-os-installation-005",
@@ -292,9 +292,9 @@
       "evidence_checksums": [
         "sha256:757e21fe3424ed0dda17e7d72e5c3d392c9f3de74be1ba4f0d20ac3a4c93fcf4"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-os-installation-006",
@@ -370,9 +370,9 @@
       "evidence_checksums": [
         "sha256:3b60dbbb3518779fc94d29ec76b4611960f28ccb53a250947102f6410e1edaaa"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-os-installation-007",
@@ -457,9 +457,9 @@
       "evidence_checksums": [
         "sha256:229e9966ebefb6028f3b9c155a0f57d5f698c9ad4316af14a24367cedb5948f3"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-os-installation-008",
@@ -553,9 +553,9 @@
       "evidence_checksums": [
         "sha256:3b60dbbb3518779fc94d29ec76b4611960f28ccb53a250947102f6410e1edaaa"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-os-installation-009",
@@ -649,9 +649,9 @@
       "evidence_checksums": [
         "sha256:229e9966ebefb6028f3b9c155a0f57d5f698c9ad4316af14a24367cedb5948f3"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-os-installation-010",
@@ -763,9 +763,9 @@
       "evidence_checksums": [
         "sha256:3b60dbbb3518779fc94d29ec76b4611960f28ccb53a250947102f6410e1edaaa"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-remote-access-001",
@@ -1113,9 +1113,9 @@
       "evidence_checksums": [
         "sha256:6f6cf401cced675806b5239fafd176f101f954a03e704fa6986fbae89795a0e3"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-remote-access-009",
@@ -1155,9 +1155,9 @@
       "evidence_checksums": [
         "sha256:801d4b8ad995c423e8a19e49fb5940bb1b3c30037833cfd75fcbd7586a164e10"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-remote-access-010",
@@ -1206,9 +1206,9 @@
       "evidence_checksums": [
         "sha256:6f6cf401cced675806b5239fafd176f101f954a03e704fa6986fbae89795a0e3"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-remote-access-011",
@@ -1257,9 +1257,9 @@
       "evidence_checksums": [
         "sha256:6f6cf401cced675806b5239fafd176f101f954a03e704fa6986fbae89795a0e3"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-remote-access-012",
@@ -1306,9 +1306,9 @@
       "evidence_checksums": [
         "sha256:94eb3c689e8db3625c5d7f1717d9b96e06a67411274d419c2e44bd2dfd9ab5b8"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-remote-access-013",
@@ -1355,9 +1355,9 @@
       "evidence_checksums": [
         "sha256:a5e898ebb12a8354a0a8fb4316d19fca19c21febd571731194304cf179bc7edd"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-remote-access-014",
@@ -1406,9 +1406,9 @@
       "evidence_checksums": [
         "sha256:f30f75e37e16d041392629bfda1188af1cc42ac63669e238eb4706da9f2beada"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-remote-access-015",
@@ -1464,9 +1464,9 @@
       "evidence_checksums": [
         "sha256:6f6cf401cced675806b5239fafd176f101f954a03e704fa6986fbae89795a0e3"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-remote-access-016",
@@ -1522,9 +1522,9 @@
       "evidence_checksums": [
         "sha256:b3af8367927c010dd3d7487e7fe36577a0cbb1dc7187aa851f1ab9b73d3f2ef8"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-networking-001",
@@ -1571,9 +1571,9 @@
       "evidence_checksums": [
         "sha256:3206e4989d67b8eb87b883224e7b5e42693ff1ca675d792b0d07ac23c9f4159a"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-networking-002",
@@ -1620,9 +1620,9 @@
       "evidence_checksums": [
         "sha256:9574d4ccf3108daaf0399d7228b55dc644b3c06f2e55d20652caaffec4232f1f"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-networking-003",
@@ -1669,9 +1669,9 @@
       "evidence_checksums": [
         "sha256:4bf5456a6fcd03811e19f28073a21c8847f6f58d2d24974fbbfff417b22944fc"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-networking-004",
@@ -1720,9 +1720,9 @@
       "evidence_checksums": [
         "sha256:668513bea1939f1a74ba0d7ad9f525ee859a2507ac032a6115b29eaf817a4e23"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-networking-005",
@@ -1780,9 +1780,9 @@
       "evidence_checksums": [
         "sha256:b47fe45de96bd8a9086a24eaa5375a94d7f999add45e224f15fd07471618951f"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-networking-006",
@@ -1840,9 +1840,9 @@
       "evidence_checksums": [
         "sha256:a1cbefebfac4afac69edfc62766e2c62e66d36af0739dd805a920a257dfbe1ea"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-networking-007",
@@ -1900,9 +1900,9 @@
       "evidence_checksums": [
         "sha256:668513bea1939f1a74ba0d7ad9f525ee859a2507ac032a6115b29eaf817a4e23"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-networking-008",
@@ -1985,9 +1985,9 @@
       "evidence_checksums": [
         "sha256:67a21f87ca5dae49356828a5a51d912d3c0b0da898c4f11003da4b13b367a18c"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-networking-009",
@@ -2079,9 +2079,9 @@
       "evidence_checksums": [
         "sha256:3206e4989d67b8eb87b883224e7b5e42693ff1ca675d792b0d07ac23c9f4159a"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-networking-010",
@@ -2173,9 +2173,9 @@
       "evidence_checksums": [
         "sha256:abc4865bc1d0df6c74f26436c335a326cb401b004193a89de53549adc4b538ad"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-networking-011",
@@ -2267,9 +2267,9 @@
       "evidence_checksums": [
         "sha256:abc4865bc1d0df6c74f26436c335a326cb401b004193a89de53549adc4b538ad"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-networking-012",
@@ -2361,9 +2361,9 @@
       "evidence_checksums": [
         "sha256:a34ee6c0d347c15ccd3aea8dab720903f8df5bcfb9066fc2ef64fcdd99a93372"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-networking-013",
@@ -2464,9 +2464,9 @@
       "evidence_checksums": [
         "sha256:9574d4ccf3108daaf0399d7228b55dc644b3c06f2e55d20652caaffec4232f1f"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-networking-014",
@@ -2551,9 +2551,9 @@
       "evidence_checksums": [
         "sha256:b47fe45de96bd8a9086a24eaa5375a94d7f999add45e224f15fd07471618951f"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-networking-015",
@@ -2663,9 +2663,9 @@
       "evidence_checksums": [
         "sha256:9574d4ccf3108daaf0399d7228b55dc644b3c06f2e55d20652caaffec4232f1f"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-networking-016",
@@ -2775,9 +2775,9 @@
       "evidence_checksums": [
         "sha256:67a21f87ca5dae49356828a5a51d912d3c0b0da898c4f11003da4b13b367a18c"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-networking-017",
@@ -2896,9 +2896,9 @@
       "evidence_checksums": [
         "sha256:12e5a2dc6fa6246cebfad74224112ef3dbe890639f939959b60cfbcdb7ab59c4"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-networking-018",
@@ -3017,9 +3017,9 @@
       "evidence_checksums": [
         "sha256:12e5a2dc6fa6246cebfad74224112ef3dbe890639f939959b60cfbcdb7ab59c4"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-camera-001",
@@ -3050,9 +3050,9 @@
       "evidence_checksums": [
         "sha256:757e21fe3424ed0dda17e7d72e5c3d392c9f3de74be1ba4f0d20ac3a4c93fcf4"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-camera-002",
@@ -3083,9 +3083,9 @@
       "evidence_checksums": [
         "sha256:757e21fe3424ed0dda17e7d72e5c3d392c9f3de74be1ba4f0d20ac3a4c93fcf4"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-camera-003",
@@ -3125,9 +3125,9 @@
       "evidence_checksums": [
         "sha256:757e21fe3424ed0dda17e7d72e5c3d392c9f3de74be1ba4f0d20ac3a4c93fcf4"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-camera-004",
@@ -3167,9 +3167,9 @@
       "evidence_checksums": [
         "sha256:513bbf5cfc140354836a1997825d78da71a1a25edecd8d8b04a273f3ea036f01"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-camera-005",
@@ -3209,9 +3209,9 @@
       "evidence_checksums": [
         "sha256:757e21fe3424ed0dda17e7d72e5c3d392c9f3de74be1ba4f0d20ac3a4c93fcf4"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-camera-006",
@@ -3251,9 +3251,9 @@
       "evidence_checksums": [
         "sha256:57445d6fef50cf19d0cb96ba35ae0d0d9ea23ffb8ba9ce66d77ef081e5fb213c"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-camera-007",
@@ -3293,9 +3293,9 @@
       "evidence_checksums": [
         "sha256:57445d6fef50cf19d0cb96ba35ae0d0d9ea23ffb8ba9ce66d77ef081e5fb213c"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-camera-008",
@@ -3344,9 +3344,9 @@
       "evidence_checksums": [
         "sha256:757e21fe3424ed0dda17e7d72e5c3d392c9f3de74be1ba4f0d20ac3a4c93fcf4"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-camera-009",
@@ -3395,9 +3395,9 @@
       "evidence_checksums": [
         "sha256:513bbf5cfc140354836a1997825d78da71a1a25edecd8d8b04a273f3ea036f01"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-camera-010",
@@ -3446,9 +3446,9 @@
       "evidence_checksums": [
         "sha256:4eb47ab9fea83af3cdaf18abf9f9238831857b6213d5faa7276bd70ccfefd684"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-camera-011",
@@ -3497,9 +3497,9 @@
       "evidence_checksums": [
         "sha256:757e21fe3424ed0dda17e7d72e5c3d392c9f3de74be1ba4f0d20ac3a4c93fcf4"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-camera-012",
@@ -3566,9 +3566,9 @@
       "evidence_checksums": [
         "sha256:57445d6fef50cf19d0cb96ba35ae0d0d9ea23ffb8ba9ce66d77ef081e5fb213c"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-camera-013",
@@ -3635,9 +3635,9 @@
       "evidence_checksums": [
         "sha256:513bbf5cfc140354836a1997825d78da71a1a25edecd8d8b04a273f3ea036f01"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-camera-014",
@@ -3767,9 +3767,9 @@
       "evidence_checksums": [
         "sha256:54d66df3560922ceea55f6e5b51728f1fbcf71fa88a158966286bd07c3401bdc"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-camera-015",
@@ -3899,9 +3899,9 @@
       "evidence_checksums": [
         "sha256:54d66df3560922ceea55f6e5b51728f1fbcf71fa88a158966286bd07c3401bdc"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-camera-016",
@@ -4049,9 +4049,9 @@
       "evidence_checksums": [
         "sha256:513bbf5cfc140354836a1997825d78da71a1a25edecd8d8b04a273f3ea036f01"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-storage-001",
@@ -4091,9 +4091,9 @@
       "evidence_checksums": [
         "sha256:519c644927b6ead45e3b6fc7ce85593e43989d3a12b0ec7ed04999c7ab61f513"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-storage-002",
@@ -4133,9 +4133,9 @@
       "evidence_checksums": [
         "sha256:27be1d374ae42beffb55f1ba119f2ce2539c087134b5ab7e019d2b6efa872e96"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-storage-003",
@@ -4175,9 +4175,9 @@
       "evidence_checksums": [
         "sha256:41b760e23a7b9417ac47105e092f59a1cafde4c83b5c79019fa500cfeb08bc54"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-storage-004",
@@ -4226,9 +4226,9 @@
       "evidence_checksums": [
         "sha256:41b760e23a7b9417ac47105e092f59a1cafde4c83b5c79019fa500cfeb08bc54"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-storage-005",
@@ -4277,9 +4277,9 @@
       "evidence_checksums": [
         "sha256:519c644927b6ead45e3b6fc7ce85593e43989d3a12b0ec7ed04999c7ab61f513"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-storage-006",
@@ -4328,9 +4328,9 @@
       "evidence_checksums": [
         "sha256:73edfed712c035a5f4380a78e4beb458cd0aa1277e19799c16b3d71cf99d28fd"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-storage-007",
@@ -4379,9 +4379,9 @@
       "evidence_checksums": [
         "sha256:c174d5518fec18d208cb691b930bdbc7ba638adf437bd6c3eadd892a888663e5"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-storage-008",
@@ -4439,9 +4439,9 @@
       "evidence_checksums": [
         "sha256:41b760e23a7b9417ac47105e092f59a1cafde4c83b5c79019fa500cfeb08bc54"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-storage-009",
@@ -4499,9 +4499,9 @@
       "evidence_checksums": [
         "sha256:27be1d374ae42beffb55f1ba119f2ce2539c087134b5ab7e019d2b6efa872e96"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-storage-010",
@@ -4559,9 +4559,9 @@
       "evidence_checksums": [
         "sha256:41b760e23a7b9417ac47105e092f59a1cafde4c83b5c79019fa500cfeb08bc54"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-storage-011",
@@ -4619,9 +4619,9 @@
       "evidence_checksums": [
         "sha256:41b760e23a7b9417ac47105e092f59a1cafde4c83b5c79019fa500cfeb08bc54"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-storage-012",
@@ -4679,9 +4679,9 @@
       "evidence_checksums": [
         "sha256:519c644927b6ead45e3b6fc7ce85593e43989d3a12b0ec7ed04999c7ab61f513"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-interfaces-001",
@@ -4721,9 +4721,9 @@
       "evidence_checksums": [
         "sha256:d5b2a872c46108c1247af6697fb8f66c9f0bafef4edfffa94c309feefcb0e0d8"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-interfaces-002",
@@ -4763,9 +4763,9 @@
       "evidence_checksums": [
         "sha256:661aaa32a1b5107ef25cef1a90709d7bf0f9a8e5fc02f7d4cb03d58ef515504b"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-interfaces-003",
@@ -4805,9 +4805,9 @@
       "evidence_checksums": [
         "sha256:bc283804456c2244f08368e385436d014a5d1c903b49ebb2ffc15156121c9e6a"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-interfaces-004",
@@ -4847,9 +4847,9 @@
       "evidence_checksums": [
         "sha256:a2f5762930df7dda7f9b8bf8e5c0d305ddf8b1e0e8a1836cb685ef3f5bb07928"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-interfaces-005",
@@ -4889,9 +4889,9 @@
       "evidence_checksums": [
         "sha256:662f68a74c1b15c83417017ecccd607d05022eb39e82b19745b64e8bb2513d57"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-interfaces-006",
@@ -4931,9 +4931,9 @@
       "evidence_checksums": [
         "sha256:77bb80256fbe0264ff87a3021d957debdc80cbc869e22d462cadf86f9556f02b"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-interfaces-007",
@@ -4973,9 +4973,9 @@
       "evidence_checksums": [
         "sha256:661aaa32a1b5107ef25cef1a90709d7bf0f9a8e5fc02f7d4cb03d58ef515504b"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-interfaces-008",
@@ -5024,9 +5024,9 @@
       "evidence_checksums": [
         "sha256:aff5eb7d09a2ef6d0899ca7c8290576cf3088e20b894a84c23159d81ed0a360d"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-interfaces-009",
@@ -5075,9 +5075,9 @@
       "evidence_checksums": [
         "sha256:661aaa32a1b5107ef25cef1a90709d7bf0f9a8e5fc02f7d4cb03d58ef515504b"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-interfaces-010",
@@ -5135,9 +5135,9 @@
       "evidence_checksums": [
         "sha256:aff5eb7d09a2ef6d0899ca7c8290576cf3088e20b894a84c23159d81ed0a360d"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-interfaces-011",
@@ -5195,9 +5195,9 @@
       "evidence_checksums": [
         "sha256:661aaa32a1b5107ef25cef1a90709d7bf0f9a8e5fc02f7d4cb03d58ef515504b"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-interfaces-012",
@@ -5255,9 +5255,9 @@
       "evidence_checksums": [
         "sha256:bc283804456c2244f08368e385436d014a5d1c903b49ebb2ffc15156121c9e6a"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-interfaces-013",
@@ -5315,9 +5315,9 @@
       "evidence_checksums": [
         "sha256:08d83188c248f195445fafe5177f815a6f450b4b4bdbcf77d8a81003665b5e10"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-interfaces-014",
@@ -5375,9 +5375,9 @@
       "evidence_checksums": [
         "sha256:d08b49000e8648100ffb7ea027416beb95665ab26ee11cebb758e57a6dad79e6"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-interfaces-015",
@@ -5435,9 +5435,9 @@
       "evidence_checksums": [
         "sha256:f30f75e37e16d041392629bfda1188af1cc42ac63669e238eb4706da9f2beada"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-interfaces-016",
@@ -5517,9 +5517,9 @@
       "evidence_checksums": [
         "sha256:aff5eb7d09a2ef6d0899ca7c8290576cf3088e20b894a84c23159d81ed0a360d"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-interfaces-017",
@@ -5586,9 +5586,9 @@
       "evidence_checksums": [
         "sha256:4c6fa8ad770d623398b3a9e6863cfe53339285350d5a50486ea3203c8cc28adc"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-interfaces-018",
@@ -5655,9 +5655,9 @@
       "evidence_checksums": [
         "sha256:a954fa31bcf917120b2e25b02dfe7c241dd2e4d16f8545a71b2707f1485f4c00"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-system-status-001",
@@ -5697,9 +5697,9 @@
       "evidence_checksums": [
         "sha256:96a3a9f838c6dc35b3e2e56ee2c4106c288490a3207456f728f1c75952b58254"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-system-status-002",
@@ -5739,9 +5739,9 @@
       "evidence_checksums": [
         "sha256:f45733e8f45f2d01472a290950dc5eb61ceaac0da1c4218b762fceac93131834"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-system-status-003",
@@ -5781,9 +5781,9 @@
       "evidence_checksums": [
         "sha256:62d4f8d83d34fe9d2c175bc8bd15d54903879b0867c00c80177a22d9004e4e9e"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-system-status-004",
@@ -5839,9 +5839,9 @@
       "evidence_checksums": [
         "sha256:60189396b179591be2b85691f7188c41c922f30b3e0f90c0d4458da82fef68db"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-system-status-005",
@@ -5890,9 +5890,9 @@
       "evidence_checksums": [
         "sha256:5ac9cb721c7ebde277bed4d392d67ce06a400d464ac4f48774e5a11f823e17bd"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-system-status-006",
@@ -5941,9 +5941,9 @@
       "evidence_checksums": [
         "sha256:8c90331e2675456c4fe7126854a64ede1e5aa86c036e1dc0631a9da0e968a201"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-system-status-007",
@@ -6001,9 +6001,9 @@
       "evidence_checksums": [
         "sha256:29e5a7dea2530d187a566b1d7fd5dee9767bc2290d904019b2aca5c251b057f3"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-system-status-008",
@@ -6061,9 +6061,9 @@
       "evidence_checksums": [
         "sha256:be802dbda634d90fd7281b915257827bc5801eb86d743348a3ec37dd73b76ba6"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-system-status-009",
@@ -6121,9 +6121,9 @@
       "evidence_checksums": [
         "sha256:60189396b179591be2b85691f7188c41c922f30b3e0f90c0d4458da82fef68db"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     },
     {
       "template_id": "cmd-system-status-010",
@@ -6181,9 +6181,9 @@
       "evidence_checksums": [
         "sha256:29e5a7dea2530d187a566b1d7fd5dee9767bc2290d904019b2aca5c251b057f3"
       ],
-      "review_status": "draft",
-      "reviewed_by": null,
-      "reviewed_at": null
+      "review_status": "approved",
+      "reviewed_by": "A: 최지흠",
+      "reviewed_at": "2026-09-16"
     }
   ]
 }

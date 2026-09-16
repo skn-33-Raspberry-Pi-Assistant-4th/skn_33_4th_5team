@@ -295,7 +295,7 @@ def build_catalog(manifest_path: Path, catalog_path: Path) -> dict[str, object]:
             )
     return {
         "schema_version": "2.0.0",
-        "catalog_version": "2026-09-11-command-lab-v2.1",
+        "catalog_version": "2026-09-16-command-lab-v2.2",
         "source_manifest": "document_pipeline/data/manifest_v3.json",
         "execution_policy": "display_only",
         "generated_at": datetime.now(UTC).isoformat(),

@@ -39,7 +39,7 @@ def main(argv: list[str] | None = None) -> int:
             print("no completed dual approvals to synchronize")
             return 0
         CATALOG_PATH.write_text(json.dumps(sync_approved_reviews(catalog, ledger), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print("completed dual approvals were synchronized into command_catalog.json")
+        print("completed approvals were synchronized into command_catalog.json")
         return 0
     except CommandReviewError as exc:
         parser.exit(2, f"{exc}\n")
