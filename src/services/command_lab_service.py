@@ -16,6 +16,41 @@ from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[2]
 UNSAFE = re.compile(r"[\r\n\x00-\x1f\x7f;|&`$<>\\]")
+PLACEHOLDER = re.compile(r"<[^<>]+>")
+
+
+def _placeholder_fragment(placeholder: str) -> str:
+    label = placeholder[1:-1].casefold()
+    if label == "username":
+        return r"[A-Za-z_][A-Za-z0-9_.-]*"
+    if "ip" in label:
+        return r"[A-Za-z0-9][A-Za-z0-9.:-]*"
+    if label == "port":
+        return r"[0-9]{1,5}"
+    if label in {"row", "column"}:
+        return r"[0-9]+"
+    if "ssid" in label:
+        return r"[^\r\n]{1,32}"
+    if label.endswith(".tga"):
+        return r"[^\s]+\.tga"
+    return r"[^\s]+"
+
+
+def _placeholder_pattern(example: str) -> re.Pattern[str]:
+    """Keep the documented literal shape while replacing placeholder values."""
+    cursor = 0
+    fragments: list[str] = []
+    for match in PLACEHOLDER.finditer(example):
+        fragments.append(re.escape(example[cursor:match.start()]))
+        fragments.append(_placeholder_fragment(match.group()))
+        cursor = match.end()
+    fragments.append(re.escape(example[cursor:]))
+    return re.compile("^" + "".join(fragments) + "$")
+
+
+def _editable_value_matches(part: dict, value: str) -> bool:
+    example = part["value"]
+    return PLACEHOLDER.search(example) is None or _placeholder_pattern(example).fullmatch(value) is not None
 
 
 class CommandLabError(ValueError):
@@ -117,6 +152,8 @@ class CommandLabService:
                 raise CommandLabError("입력값에 빈 값, 앞뒤 공백 또는 추가 옵션을 넣을 수 없습니다.")
             if not re.fullmatch(fields[key]["validation_pattern"], value):
                 raise CommandLabError("입력값 형식이 올바르지 않습니다.")
+            if not _editable_value_matches(part, value):
+                raise CommandLabError(f"입력값은 예시 구조를 유지해 주세요: {part['value']}")
             if part["value"] == "learner@raspberrypi.local" and not re.fullmatch(
                 r"[a-zA-Z_][a-zA-Z0-9_.-]*@[a-zA-Z0-9][a-zA-Z0-9.-]*", value
             ):
@@ -145,22 +182,46 @@ class CommandLabService:
         return result
 
     def analyze(self, command: str) -> dict:
-        if not isinstance(command, str) or not 1 <= len(command.strip()) <= 2000 or UNSAFE.search(command):
+        if not isinstance(command, str) or not 1 <= len(command.strip()) <= 2000:
+            raise CommandLabError("한 줄 명령어를 입력해 주세요. 쉘 연산자는 지원하지 않습니다.")
+        templates = self.list_templates()
+        for item in templates:
+            if command == item["canonical_command"]:
+                return self.compose(item["template_id"])
+        if UNSAFE.search(command):
             raise CommandLabError("한 줄 명령어를 입력해 주세요. 쉘 연산자는 지원하지 않습니다.")
         try:
             incoming = shlex.split(command)
         except ValueError as exc:
             raise CommandLabError("따옴표를 확인해 주세요.") from exc
-        for item in self.list_templates():
+        for item in templates:
             if incoming == shlex.split(item["canonical_command"]):
                 return self.compose(item["template_id"])
+
+        matches: list[tuple[int, dict, dict[str, str]]] = []
+        for item in templates:
             parts = item["parts"]
             if len(incoming) != len(parts):
                 continue
-            if all(p["editable"] or incoming[i] == shlex.split(p["value"])[0]
-                   for i, p in enumerate(parts)):
-                return self.compose(item["template_id"], {
-                    p["part_id"]: incoming[i] for i, p in enumerate(parts) if p["editable"]})
+            if not all(
+                (_editable_value_matches(part, incoming[index]) if part["editable"] else incoming[index] == shlex.split(part["value"])[0])
+                for index, part in enumerate(parts)
+            ):
+                continue
+            values = {
+                part["part_id"]: incoming[index]
+                for index, part in enumerate(parts)
+                if part["editable"]
+            }
+            specificity = sum(len(PLACEHOLDER.sub("", part["value"])) for part in parts if part["editable"])
+            matches.append((specificity, item, values))
+        if matches:
+            best_specificity = max(match[0] for match in matches)
+            best = [match for match in matches if match[0] == best_specificity]
+            if len(best) > 1:
+                raise CommandLabError("여러 검수 템플릿과 일치합니다. 명령어 목록에서 하나를 선택해 주세요.")
+            _, item, values = best[0]
+            return self.compose(item["template_id"], values)
         raise CommandLabError("검수된 템플릿과 일치하지 않습니다. 명령어 목록에서 선택해 주세요.")
 
     def drawer_payload(self, template_id: str, values: dict[str, str] | None = None,
