@@ -20,6 +20,7 @@ import django
 django.setup()
 
 from django.test import Client, TestCase
+from src.services.command_lab_service import CommandLabService
 
 
 def response(*, status: str = "answered", document_id: str = "rpi-doc-remote-access-ssh"):
@@ -54,7 +55,7 @@ class DjangoPortalTests(TestCase):
     @patch("portal.views.get_runtime_readiness", return_value=SimpleNamespace(ready=True, message="ready"))
     def test_command_lab_api_exposes_only_approved_browser_payload(self, _readiness):
         templates = self.client.get("/api/lab/templates").json()["templates"]
-        self.assertEqual(len(templates), 8)
+        self.assertEqual(len(templates), CommandLabService().audit()["approved"])
         self.assertNotIn("review_status", templates[0])
         self.assertNotIn("evidence_checksums", templates[0])
 

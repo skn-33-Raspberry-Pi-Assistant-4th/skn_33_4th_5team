@@ -12,10 +12,14 @@ def lab():
 
 
 def test_approved_only_and_audit(lab):
-    assert lab.audit() == {"total": 100, "approved": 8, "draft": 92, "errors": []}
-    assert len(lab.list_templates()) == 8
+    audit = lab.audit()
+    assert audit["total"] == 100
+    assert audit["approved"] + audit["draft"] == audit["total"]
+    assert audit["errors"] == []
+    assert len(lab.list_templates()) == audit["approved"]
+    draft = next(item for item in lab.templates.values() if item["review_status"] != "approved")
     with pytest.raises(CommandLabError):
-        lab.compose("cmd-camera-001")
+        lab.compose(draft["template_id"])
 
 
 def test_every_approved_command_roundtrip(lab):

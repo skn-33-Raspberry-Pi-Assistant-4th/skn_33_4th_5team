@@ -52,6 +52,45 @@ analyzed = lab.analyze("ssh pi@192.168.0.12")
 명령 실행 함수는 없다. 알려진 템플릿에 일치하지 않으면 `CommandLabError`로 안내한다.
 ID는 A의 `cmd-{topic}-{번호}` 형식을 그대로 유지한다. 92개 draft는 목록·직접 ID 접근 모두 차단한다.
 
+## 92개 초안의 이중 검수·공개 절차
+
+`data/products/command_review_ledger.json`은 최초 draft 92개의 고정 검수 범위를 보관한다.
+검수자는 B(양원)와 C(나은)이며, 각각 공식 근거·명령 구조·주제·설명·위험 안내·편집값 안전성을
+독립적으로 `approve` 또는 `revise`로 판정한다. 두 사람 모두 `approve`일 때만 resolution을
+`approved`로 기록할 수 있다. 한 사람이라도 `revise`하거나 의견이 다르면 카탈로그는 `draft`로
+유지하고 보완 사유를 남긴 뒤 재검수한다.
+
+검수 현황과 전체 대상 CSV는 다음 명령으로 확인한다. 이 명령들은 명령을 실행하지 않는다.
+
+```bash
+python -m scripts.command_review --audit
+python -m scripts.command_review --export-review-sheet > command-lab-review.csv
+```
+
+두 승인 기록과 resolution이 완성된 항목만 아래 명령으로 카탈로그에 반영한다. 반영 시
+`reviewed_by`는 `B: 양원; C: 나은`이고 `reviewed_at`은 resolution의 날짜와 같아야 한다.
+
+`reviews`에는 아래처럼 template ID별 판정을 기록한다. `reason`은 공식 근거·주제·안전성 중
+무엇을 확인했는지 명시하며, 한 명이라도 `revise`면 resolution은 반드시 `draft`다.
+
+```json
+{
+  "cmd-remote-access-008": {
+    "B": {"verdict": "approve", "reason": "공식 SSH 문서의 디렉터리 준비 절차와 일치", "reviewed_at": "2026-09-16"},
+    "C": {"verdict": "approve", "reason": "학습 설명과 위험 안내가 적절함", "reviewed_at": "2026-09-16"},
+    "resolution": {"status": "approved", "note": "B/C 독립 검수 모두 통과", "resolved_at": "2026-09-16"}
+  }
+}
+```
+
+```bash
+python -m scripts.command_review --sync-approved
+```
+
+동기화 후에는 `python -m src.services.command_lab_cli --audit`과 Command Lab·Django 테스트를
+실행한다. 기존 8개 승인 항목은 이 절차 이전의 legacy 승인으로 유지하며, 이 ledger의 대상은
+당시 draft였던 92개로 한정한다.
+
 HTTP API에서 E는 `CommandLabError`를 입력 오류 응답으로 변환한다. Django의 현재 경로는
 목록 `GET /api/lab/templates`, 분석 `POST /api/lab/analyze`, 재조합 `POST /api/lab/compose`다.
 POST API는 Django CSRF 보호를 받으며 JSON 요청 본문을 사용한다. 브라우저 응답에는 출처 제목·섹션·URL만

@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "catalog_version": "2026-09-11-command-lab-v2.1",
+  "reviewers": {
+    "B": "양원",
+    "C": "나은"
+  },
+  "candidate_template_ids": [
+    "cmd-os-installation-002", "cmd-os-installation-003", "cmd-os-installation-004", "cmd-os-installation-005", "cmd-os-installation-006", "cmd-os-installation-007", "cmd-os-installation-008", "cmd-os-installation-009", "cmd-os-installation-010",
+    "cmd-remote-access-008", "cmd-remote-access-009", "cmd-remote-access-010", "cmd-remote-access-011", "cmd-remote-access-012", "cmd-remote-access-013", "cmd-remote-access-014", "cmd-remote-access-015", "cmd-remote-access-016",
+    "cmd-networking-001", "cmd-networking-002", "cmd-networking-003", "cmd-networking-004", "cmd-networking-005", "cmd-networking-006", "cmd-networking-007", "cmd-networking-008", "cmd-networking-009", "cmd-networking-010", "cmd-networking-011", "cmd-networking-012", "cmd-networking-013", "cmd-networking-014", "cmd-networking-015", "cmd-networking-016", "cmd-networking-017", "cmd-networking-018",
+    "cmd-camera-001", "cmd-camera-002", "cmd-camera-003", "cmd-camera-004", "cmd-camera-005", "cmd-camera-006", "cmd-camera-007", "cmd-camera-008", "cmd-camera-009", "cmd-camera-010", "cmd-camera-011", "cmd-camera-012", "cmd-camera-013", "cmd-camera-014", "cmd-camera-015", "cmd-camera-016",
+    "cmd-storage-001", "cmd-storage-002", "cmd-storage-003", "cmd-storage-004", "cmd-storage-005", "cmd-storage-006", "cmd-storage-007", "cmd-storage-008", "cmd-storage-009", "cmd-storage-010", "cmd-storage-011", "cmd-storage-012",
+    "cmd-interfaces-001", "cmd-interfaces-002", "cmd-interfaces-003", "cmd-interfaces-004", "cmd-interfaces-005", "cmd-interfaces-006", "cmd-interfaces-007", "cmd-interfaces-008", "cmd-interfaces-009", "cmd-interfaces-010", "cmd-interfaces-011", "cmd-interfaces-012", "cmd-interfaces-013", "cmd-interfaces-014", "cmd-interfaces-015", "cmd-interfaces-016", "cmd-interfaces-017", "cmd-interfaces-018",
+    "cmd-system-status-001", "cmd-system-status-002", "cmd-system-status-003", "cmd-system-status-004", "cmd-system-status-005", "cmd-system-status-006", "cmd-system-status-007", "cmd-system-status-008", "cmd-system-status-009", "cmd-system-status-010"
+  ],
+  "reviews": {}
+}
