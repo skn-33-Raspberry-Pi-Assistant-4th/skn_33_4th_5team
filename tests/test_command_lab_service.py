@@ -13,13 +13,9 @@ def lab():
 
 def test_approved_only_and_audit(lab):
     audit = lab.audit()
-    assert audit["total"] == 100
-    assert audit["approved"] + audit["draft"] == audit["total"]
+    assert audit == {"total": 100, "approved": 100, "draft": 0, "errors": []}
     assert audit["errors"] == []
-    assert len(lab.list_templates()) == audit["approved"]
-    draft = next(item for item in lab.templates.values() if item["review_status"] != "approved")
-    with pytest.raises(CommandLabError):
-        lab.compose(draft["template_id"])
+    assert len(lab.list_templates()) == 100
 
 
 def test_every_approved_command_roundtrip(lab):
@@ -28,6 +24,39 @@ def test_every_approved_command_roundtrip(lab):
         assert result["command"] == item["canonical_command"]
         assert result["execution_policy"] == "display_only"
         assert result["evidence"]
+
+
+def test_all_topics_are_available_after_final_review(lab):
+    assert {topic: len(lab.list_templates(topic=topic)) for topic in (
+        "os_installation", "remote_access", "networking", "camera", "storage", "interfaces", "system_status"
+    )} == {
+        "os_installation": 10,
+        "remote_access": 16,
+        "networking": 18,
+        "camera": 16,
+        "storage": 12,
+        "interfaces": 18,
+        "system_status": 10,
+    }
+
+
+def test_analyze_keeps_editable_protocol_templates_distinct(lab):
+    tcp = lab.compose("cmd-networking-002", {"part-02": "tcp://camera.local:9000"})
+    assert tcp["command"] == "vlc tcp://camera.local:9000"
+    assert lab.analyze(tcp["command"])["template_id"] == "cmd-networking-002"
+
+    with pytest.raises(CommandLabError, match="예시 구조"):
+        lab.compose("cmd-networking-002", {"part-02": "rtsp://camera.local:8554/stream1"})
+    with pytest.raises(CommandLabError, match="예시 구조"):
+        lab.compose("cmd-networking-002", {"part-02": "tcp://camera.local:not-a-port"})
+
+
+def test_ssid_placeholder_supports_a_quoted_space_without_changing_template(lab):
+    result = lab.compose("cmd-networking-008", {"part-06": "Home WiFi"})
+    assert result["command"] == "sudo nmcli dev wifi connect 'Home WiFi'"
+    analyzed = lab.analyze(result["command"])
+    assert analyzed["template_id"] == "cmd-networking-008"
+    assert analyzed["values"] == {"part-06": "Home WiFi"}
 
 
 def test_edit_ssh_and_analyze_roundtrip(lab):

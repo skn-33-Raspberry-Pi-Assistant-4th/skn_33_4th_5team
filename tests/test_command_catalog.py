@@ -5,6 +5,8 @@ import re
 from collections import Counter
 from pathlib import Path
 
+from document_pipeline.ingestion.build_command_catalog import build_catalog
+
 
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG_PATH = ROOT / "data" / "products" / "command_catalog.json"
@@ -66,3 +68,12 @@ def test_command_catalog_parts_and_evidence_match_v3_manifest() -> None:
             assert chunks[evidence_id]["chunk_checksum"] == checksum
             assert chunks[evidence_id]["official_verified"] is True
             assert chunks[evidence_id]["quality_status"] == "approved"
+
+
+def test_catalog_regeneration_preserves_all_final_approvals() -> None:
+    regenerated = build_catalog(MANIFEST_PATH, CATALOG_PATH)
+
+    assert regenerated["catalog_version"] == "2026-09-16-command-lab-v2.2"
+    assert len(regenerated["templates"]) == 100
+    assert all(item["review_status"] == "approved" for item in regenerated["templates"])
+    assert all(item["reviewed_by"] in {"A", "A: 최지흠"} for item in regenerated["templates"])

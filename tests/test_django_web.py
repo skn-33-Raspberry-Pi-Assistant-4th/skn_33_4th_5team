@@ -54,7 +54,8 @@ class DjangoPortalTests(TestCase):
     @patch("portal.views.get_runtime_readiness", return_value=SimpleNamespace(ready=True, message="ready"))
     def test_command_lab_api_exposes_only_approved_browser_payload(self, _readiness):
         templates = self.client.get("/api/lab/templates").json()["templates"]
-        self.assertEqual(len(templates), CommandLabService().audit()["approved"])
+        self.assertEqual(len(templates), 100)
+        self.assertEqual(CommandLabService().audit()["approved"], 100)
         self.assertNotIn("review_status", templates[0])
         self.assertNotIn("evidence_checksums", templates[0])
 
@@ -73,6 +74,8 @@ class DjangoPortalTests(TestCase):
         self.assertContains(page, "안전 모드 · 명령은 실행되지 않음")
         self.assertContains(page, "PiCare Command Lab")
         self.assertContains(page, "명령어 라이브러리")
+        self.assertContains(page, "100개")
+        self.assertContains(page, "명령어나 설명 검색")
         self.assertContains(page, "ssh learner@raspberrypi.local")
 
         saved = self.client.post(

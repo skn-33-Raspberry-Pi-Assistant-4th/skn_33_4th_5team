@@ -3,9 +3,10 @@ from __future__ import annotations
 from copy import deepcopy
 
 from src.services.command_review import (
-    CATALOG_PATH,
-    LEDGER_PATH,
     APPROVED_REVIEWER_LABEL,
+    CATALOG_PATH,
+    DATA_OWNER_REVIEWER_LABEL,
+    LEDGER_PATH,
     audit_review_ledger,
     load_json,
     sync_approved_reviews,
@@ -20,29 +21,54 @@ def _dual_approval(reviewed_at: str = "2026-09-16") -> dict:
     }
 
 
-def test_ledger_scopes_every_original_draft_and_starts_pending():
-    catalog, ledger = load_json(CATALOG_PATH), load_json(LEDGER_PATH)
-    original_drafts = {item["template_id"] for item in catalog["templates"] if item["review_status"] == "draft"}
+def _reset_candidates_to_draft(catalog: dict, ledger: dict) -> dict:
+    updated = deepcopy(catalog)
+    candidates = set(ledger["candidate_template_ids"])
+    for item in updated["templates"]:
+        if item["template_id"] in candidates:
+            item["review_status"] = "draft"
+            item["reviewed_by"] = None
+            item["reviewed_at"] = None
+    return updated
 
-    assert set(ledger["candidate_template_ids"]) == original_drafts
-    assert len(original_drafts) == 92
-    assert audit_review_ledger(catalog, ledger) == {
+
+def test_data_owner_approval_covers_every_original_candidate():
+    catalog, ledger = load_json(CATALOG_PATH), load_json(LEDGER_PATH)
+
+    assert len(ledger["candidate_template_ids"]) == 92
+    assert audit_review_ledger(catalog, ledger, strict_catalog_sync=True) == {
         "candidates": 92,
-        "pending": 92,
+        "pending": 0,
         "ready_to_approve": 0,
+        "approved_after_data_owner_review": 92,
         "approved_after_dual_review": 0,
         "held_as_draft": 0,
         "errors": [],
     }
+    candidates = set(ledger["candidate_template_ids"])
+    approved = [item for item in catalog["templates"] if item["template_id"] in candidates]
+    assert all(item["review_status"] == "approved" for item in approved)
+    assert all(item["reviewed_by"] == DATA_OWNER_REVIEWER_LABEL for item in approved)
+    assert all(item["reviewed_at"] == "2026-09-16" for item in approved)
 
 
-def test_completed_dual_approval_is_the_only_promotion_path():
-    catalog, ledger = load_json(CATALOG_PATH), load_json(LEDGER_PATH)
-    ledger = deepcopy(ledger)
+def test_data_owner_approval_count_must_match_fixed_scope():
+    catalog, ledger = load_json(CATALOG_PATH), deepcopy(load_json(LEDGER_PATH))
+    ledger["data_owner_approval"]["template_count"] = 91
+
+    audit = audit_review_ledger(catalog, ledger)
+    assert any("template_count" in error for error in audit["errors"])
+
+
+def test_dual_approval_remains_supported_for_individual_review():
+    catalog, ledger = load_json(CATALOG_PATH), deepcopy(load_json(LEDGER_PATH))
+    catalog = _reset_candidates_to_draft(catalog, ledger)
+    ledger.pop("data_owner_approval")
     template_id = ledger["candidate_template_ids"][0]
     ledger["reviews"][template_id] = _dual_approval()
 
     audit = audit_review_ledger(catalog, ledger)
+    assert audit["pending"] == 91
     assert audit["ready_to_approve"] == 1
     assert audit["errors"] == []
 
@@ -51,15 +77,11 @@ def test_completed_dual_approval_is_the_only_promotion_path():
     assert item["review_status"] == "approved"
     assert item["reviewed_by"] == APPROVED_REVIEWER_LABEL
     assert item["reviewed_at"] == "2026-09-16"
-    assert audit_review_ledger(synchronized, ledger, strict_catalog_sync=True)["errors"] == []
 
 
-def test_candidate_cannot_be_promoted_without_two_reviews():
-    catalog, ledger = load_json(CATALOG_PATH), load_json(LEDGER_PATH)
-    catalog = deepcopy(catalog)
-    template_id = ledger["candidate_template_ids"][0]
-    item = next(item for item in catalog["templates"] if item["template_id"] == template_id)
-    item["review_status"] = "approved"
+def test_candidate_cannot_remain_public_without_recorded_approval():
+    catalog, ledger = load_json(CATALOG_PATH), deepcopy(load_json(LEDGER_PATH))
+    ledger.pop("data_owner_approval")
 
     audit = audit_review_ledger(catalog, ledger)
-    assert any(template_id in error and "이중 검수 기록 없이 승인" in error for error in audit["errors"])
+    assert any("이중 검수 기록 없이 승인" in error for error in audit["errors"])
