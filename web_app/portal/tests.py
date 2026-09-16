@@ -10,7 +10,7 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from unittest.mock import Mock, patch
 
-from .models import Comment, DrawerItem, Post, PostLike, UserProfile, WrongNote
+from .models import Comment, DrawerItem, Post, PostLike, QuestionRecord, UserProfile, WrongNote
 from src.contracts import ChatCitation, ChatResponse, QuizChoice, QuizQuestion, QuizResponse
 from src.services.command_lab_service import CommandLabError, CommandLabService
 
@@ -206,6 +206,15 @@ class PortalModelTests(TestCase):
             evidence_ids=["C1"],
             supporting_quotes=["SSH is disabled by default on Raspberry Pi OS."],
         )
+        qa_record = QuestionRecord.objects.create(
+            owner=self.owner,
+            request_id="qa-model-test-001",
+            title="SSH 설정 질문",
+            question="SSH를 어떻게 설정하나요?",
+            answer="공식 문서를 확인해 설정하세요.",
+            status="answered",
+            response_payload={"schema_version": "1.2.0", "answer": "공식 문서를 확인해 설정하세요."},
+        )
 
         drawer.refresh_from_db()
         wrong_note.refresh_from_db()
@@ -213,8 +222,10 @@ class PortalModelTests(TestCase):
         self.assertEqual(wrong_note.choices, choices)
         self.assertEqual(wrong_note.evidence_ids, ["C1"])
         self.assertEqual(wrong_note.supporting_quotes, ["SSH is disabled by default on Raspberry Pi OS."])
+        self.assertEqual(qa_record.response_payload["schema_version"], "1.2.0")
         self.assertIn(self.owner.username, str(drawer))
         self.assertIn("generated_001", str(wrong_note))
+        self.assertIn(self.owner.username, str(qa_record))
 
     def test_cascade_deletes_post_children_and_user_owned_records(self):
         profile = UserProfile.objects.create(user=self.owner)
@@ -238,11 +249,21 @@ class PortalModelTests(TestCase):
             evidence_ids=[],
             supporting_quotes=[],
         )
+        qa_record = QuestionRecord.objects.create(
+            owner=self.owner,
+            request_id="qa-cascade-test-001",
+            title="질문 기록",
+            question="질문",
+            answer="답변",
+            status="answered",
+            response_payload={},
+        )
         self.owner.delete()
 
         self.assertFalse(UserProfile.objects.filter(pk=profile.pk).exists())
         self.assertFalse(DrawerItem.objects.filter(pk=drawer.pk).exists())
         self.assertFalse(WrongNote.objects.filter(pk=wrong_note.pk).exists())
+        self.assertFalse(QuestionRecord.objects.filter(pk=qa_record.pk).exists())
 
 
 class CommunityViewTests(TestCase):
@@ -792,6 +813,24 @@ class MyPageTests(TestCase):
             evidence_ids=["C2"],
             supporting_quotes=["다른 근거"],
         )
+        QuestionRecord.objects.create(
+            owner=self.owner,
+            request_id="mypage-owner-qa",
+            title="내 질문 기록",
+            question="내 질문",
+            answer="내 답변",
+            status="answered",
+            response_payload={},
+        )
+        QuestionRecord.objects.create(
+            owner=self.other_user,
+            request_id="mypage-other-qa",
+            title="다른 회원 질문 기록",
+            question="다른 질문",
+            answer="다른 답변",
+            status="answered",
+            response_payload={},
+        )
 
     def test_mypage_aggregates_only_the_current_users_activity(self):
         self.client.force_login(self.owner)
@@ -801,15 +840,17 @@ class MyPageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.context["activity_counts"],
-            {"posts": 1, "comments": 1, "likes": 1, "drawer_items": 1, "wrong_notes": 1},
+            {"posts": 1, "comments": 1, "likes": 1, "drawer_items": 1, "wrong_notes": 1, "qa_records": 1},
         )
         self.assertContains(response, "내 게시글")
         self.assertContains(response, "내 댓글")
         self.assertContains(response, "내 서랍 항목")
         self.assertContains(response, "내 오답노트 질문")
+        self.assertContains(response, "내 질문 기록")
         self.assertNotContains(response, "다른 회원 댓글")
         self.assertNotContains(response, "다른 회원 서랍 항목")
         self.assertNotContains(response, "다른 회원 오답노트 질문")
+        self.assertNotContains(response, "다른 회원 질문 기록")
 
     def test_activity_lists_are_owner_scoped_and_paginated(self):
         for index in range(10):
@@ -821,6 +862,7 @@ class MyPageTests(TestCase):
         likes_response = self.client.get(reverse("mypage_likes"))
         drawer_response = self.client.get(reverse("drawer_list"))
         wrong_notes_response = self.client.get(reverse("wrong_note_list"))
+        questions_response = self.client.get(reverse("mypage_questions"))
 
         self.assertEqual(posts_response.context["page_obj"].number, 2)
         self.assertEqual(len(posts_response.context["page_obj"].object_list), 1)
@@ -834,6 +876,8 @@ class MyPageTests(TestCase):
         self.assertNotContains(drawer_response, "다른 회원 서랍 항목")
         self.assertContains(wrong_notes_response, "내 오답노트 질문")
         self.assertNotContains(wrong_notes_response, "다른 회원 오답노트 질문")
+        self.assertContains(questions_response, "내 질문 기록")
+        self.assertNotContains(questions_response, "다른 회원 질문 기록")
 
     def test_mypage_shows_empty_activity_states(self):
         empty_user = get_user_model().objects.create_user(
@@ -847,16 +891,166 @@ class MyPageTests(TestCase):
 
         self.assertEqual(
             response.context["activity_counts"],
-            {"posts": 0, "comments": 0, "likes": 0, "drawer_items": 0, "wrong_notes": 0},
+            {"posts": 0, "comments": 0, "likes": 0, "drawer_items": 0, "wrong_notes": 0, "qa_records": 0},
         )
         self.assertContains(response, "작성한 게시글이 없습니다.")
         self.assertContains(response, "저장한 오답노트가 없습니다.")
+        self.assertContains(response, "저장한 질문 기록이 없습니다.")
 
     def test_mypage_and_activity_lists_require_login(self):
-        for url_name in ("mypage", "mypage_posts", "mypage_comments", "mypage_likes", "drawer_list", "wrong_note_list"):
+        for url_name in ("mypage", "mypage_posts", "mypage_comments", "mypage_likes", "mypage_questions", "drawer_list", "wrong_note_list"):
             url = reverse(url_name)
             response = self.client.get(url)
             self.assertRedirects(response, f"{reverse('login')}?next={url}")
+
+
+class QuestionRecordViewTests(TestCase):
+    def setUp(self):
+        self.owner = get_user_model().objects.create_user(
+            username="qa_owner",
+            email="qa-owner@example.com",
+            password="QaOwner123!",
+        )
+        self.other_user = get_user_model().objects.create_user(
+            username="qa_other",
+            email="qa-other@example.com",
+            password="QaOther123!",
+        )
+
+    @staticmethod
+    def _response(*, status: str = "answered") -> ChatResponse:
+        citations = []
+        answer = "공식 문서 근거가 부족합니다."
+        clarification_questions = []
+        if status == "answered":
+            answer = "Raspberry Pi OS에서 SSH는 기본적으로 비활성화되어 있습니다. [C1]"
+            citations = [
+                ChatCitation(
+                    citation_id="C1",
+                    document_id="rpi-doc-remote-access-ssh",
+                    chunk_id="rpi-doc-remote-access-ssh-001",
+                    title="Remote access",
+                    publisher="Raspberry Pi Ltd",
+                    section="SSH",
+                    source_url="https://www.raspberrypi.com/documentation/computers/remote-access.html",
+                    source_anchor=None,
+                    document_version=None,
+                    published_at=None,
+                    updated_at=None,
+                    collected_at=date(2026, 9, 12),
+                    license="CC BY-SA 4.0",
+                    quote="SSH is disabled by default on Raspberry Pi OS.",
+                )
+            ]
+        return ChatResponse(
+            schema_version="1.2.0",
+            request_id=f"qa-record-{status}",
+            status=status,
+            language="ko",
+            answer=answer,
+            conditions=None,
+            citations=citations,
+            products=[],
+            media=[],
+            clarification_questions=clarification_questions,
+            warnings=["internal record data"],
+        )
+
+    def _submit_qa(self, response: ChatResponse):
+        service = Mock()
+        service.answer.return_value = response
+        with (
+            patch("portal.views.get_runtime_readiness", return_value=SimpleNamespace(ready=True, message="ready")),
+            patch("portal.views.get_qa_service", return_value=service),
+            patch("portal.views.get_citation_presenter", return_value=None),
+        ):
+            return self.client.post(reverse("qa"), {"question": "SSH를 어떻게 설정하나요? 두 번째 문장입니다."})
+
+    def _record(self, *, owner=None, public=False) -> QuestionRecord:
+        response = self._response()
+        return QuestionRecord.objects.create(
+            owner=owner or self.owner,
+            request_id=response.request_id,
+            title="SSH를 어떻게 설정하나요?",
+            question="SSH를 어떻게 설정하나요?",
+            answer=response.answer,
+            status=response.status,
+            response_payload=response.model_dump(mode="json"),
+            is_public=public,
+        )
+
+    def test_logged_in_qa_saves_full_response_snapshot_and_guest_qa_does_not(self):
+        response = self._response()
+        self.client.force_login(self.owner)
+        saved_page = self._submit_qa(response)
+
+        record = QuestionRecord.objects.get()
+        self.assertEqual(record.owner, self.owner)
+        self.assertEqual(record.title, "SSH를 어떻게 설정하나요?")
+        self.assertEqual(record.status, "answered")
+        self.assertEqual(record.response_payload, response.model_dump(mode="json"))
+        self.assertContains(saved_page, "답변을 내 질문 기록에 저장했습니다")
+
+        self.client.logout()
+        self._submit_qa(self._response(status="insufficient_evidence"))
+        self.assertEqual(QuestionRecord.objects.count(), 1)
+
+    def test_non_answered_valid_response_is_saved_for_logged_in_user(self):
+        self.client.force_login(self.owner)
+        self._submit_qa(self._response(status="insufficient_evidence"))
+
+        record = QuestionRecord.objects.get()
+        self.assertEqual(record.status, "insufficient_evidence")
+        self.assertEqual(record.answer, "공식 문서 근거가 부족합니다.")
+
+    def test_private_records_are_owner_only_and_public_records_appear_in_archive(self):
+        record = self._record()
+        self.assertNotContains(self.client.get(reverse("questions")), record.title)
+        self.assertEqual(self.client.get(reverse("question_detail", args=[record.pk])).status_code, 404)
+
+        self.client.force_login(self.owner)
+        self.assertEqual(self.client.get(reverse("mypage_question_detail", args=[record.pk])).status_code, 200)
+        self.assertEqual(self.client.get(reverse("mypage_question_visibility", args=[record.pk])).status_code, 405)
+
+        self.client.force_login(self.other_user)
+        self.assertEqual(self.client.get(reverse("mypage_question_detail", args=[record.pk])).status_code, 404)
+        self.assertEqual(self.client.post(reverse("mypage_question_visibility", args=[record.pk])).status_code, 404)
+        self.assertEqual(self.client.post(reverse("mypage_question_delete", args=[record.pk])).status_code, 404)
+
+        self.client.force_login(self.owner)
+        toggle_response = self.client.post(reverse("mypage_question_visibility", args=[record.pk]))
+        self.assertRedirects(toggle_response, reverse("mypage_question_detail", args=[record.pk]))
+        record.refresh_from_db()
+        self.assertTrue(record.is_public)
+        self.assertIsNotNone(record.published_at)
+
+        public_list = self.client.get(reverse("questions"))
+        public_detail = self.client.get(reverse("question_detail", args=[record.pk]))
+        self.assertContains(public_list, record.title)
+        self.assertContains(public_detail, record.answer)
+        self.assertNotContains(public_detail, "internal record data")
+
+        for index in range(10):
+            QuestionRecord.objects.create(
+                owner=self.owner,
+                request_id=f"qa-public-page-{index}",
+                title=f"공개 질문 {index}",
+                question="질문",
+                answer="답변",
+                status="answered",
+                response_payload={},
+                is_public=True,
+                published_at=record.published_at,
+            )
+        first_page = self.client.get(reverse("questions"))
+        second_page = self.client.get(reverse("questions"), {"page": 2})
+        self.assertEqual(len(first_page.context["page_obj"]), 10)
+        self.assertEqual(second_page.context["page_obj"].number, 2)
+
+        delete_response = self.client.post(reverse("mypage_question_delete", args=[record.pk]))
+        self.assertRedirects(delete_response, reverse("mypage_questions"))
+        self.assertFalse(QuestionRecord.objects.filter(pk=record.pk).exists())
+        self.assertEqual(self.client.get(reverse("question_detail", args=[record.pk])).status_code, 404)
 
 
 class SecurityRegressionTests(TestCase):

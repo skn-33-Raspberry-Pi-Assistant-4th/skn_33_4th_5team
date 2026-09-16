@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import uuid
 
 from django.contrib import messages
@@ -14,6 +15,7 @@ from django.db.models import Count, Prefetch
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from src.condition_extraction.ui_input import RecommendationFormInput
@@ -29,7 +31,7 @@ from .forms import (
     RecommendationForm,
     SignUpForm,
 )
-from .models import Comment, DrawerItem, Post, PostLike, WrongNote
+from .models import Comment, DrawerItem, Post, PostLike, QuestionRecord, WrongNote
 from .services import (
     get_challenge_service,
     get_citation_presenter,
@@ -68,47 +70,6 @@ LAB_TOPIC_LABELS = {
 REMOTE_ACCESS_DOCUMENT_IDS = frozenset({"rpi-doc-remote-access-ssh"})
 OS_INSTALLATION_DOCUMENT_IDS = frozenset(
     {"rpi-doc-getting-started-install", "rpi-doc-getting-started-setting-up"}
-)
-
-# This is a display-only archive supplied by the existing frontend.  It does
-# not persist or expose a member's private data.
-QUESTION_ARCHIVE_PREVIEWS = (
-    {
-        "id": 1,
-        "topic": "원격 접속",
-        "title": "Raspberry Pi에서 SSH를 활성화하는 방법이 궁금해요.",
-        "question": "Raspberry Pi Imager로 OS를 설치할 때 SSH를 미리 켜는 방법과, 이미 설치한 뒤 설정하는 방법을 알고 싶어요.",
-        "summary": "OS 설치 전에는 Imager의 Customisation에서 Remote Access의 Enable SSH를 켜고, 설치 후에는 raspi-config에서도 설정할 수 있습니다.",
-        "author": "라즈베리 입문자",
-        "created_at": "2026. 09. 14",
-        "source_title": "Raspberry Pi Documentation",
-        "source_section": "Remote access > SSH",
-        "source_url": "https://www.raspberrypi.com/documentation/computers/remote-access.html",
-    },
-    {
-        "id": 2,
-        "topic": "OS 설치",
-        "title": "Raspberry Pi Imager에서 어떤 OS를 선택해야 하나요?",
-        "question": "처음 Raspberry Pi를 설정합니다. 데스크톱 환경과 홈 서버 용도 중 어떤 Raspberry Pi OS를 선택하면 좋을지 알고 싶어요.",
-        "summary": "화면을 연결해 사용하는 입문 환경에는 Desktop, 원격 접속 중심의 가벼운 서버 환경에는 Lite 선택을 먼저 비교해 보세요.",
-        "author": "초보 메이커",
-        "created_at": "2026. 09. 13",
-        "source_title": "Raspberry Pi Documentation",
-        "source_section": "Getting started > Install an operating system",
-        "source_url": "https://www.raspberrypi.com/documentation/computers/getting-started.html",
-    },
-    {
-        "id": 3,
-        "topic": "활용하기",
-        "title": "모니터 없이 Raspberry Pi를 처음 연결하려면 무엇이 필요한가요?",
-        "question": "집에서 작은 서버로 써 보고 싶습니다. 모니터 없이 처음 전원을 켤 때 준비할 것과 네트워크 연결 순서가 궁금해요.",
-        "summary": "Imager에서 네트워크와 원격 접속 정보를 미리 설정한 다음, 같은 네트워크에서 장치 주소를 확인해 접속하는 흐름으로 시작할 수 있습니다.",
-        "author": "홈서버 도전자",
-        "created_at": "2026. 09. 12",
-        "source_title": "Raspberry Pi Documentation",
-        "source_section": "Getting started > Set up your Raspberry Pi",
-        "source_url": "https://www.raspberrypi.com/documentation/computers/getting-started.html",
-    },
 )
 
 logger = logging.getLogger(__name__)
@@ -171,6 +132,62 @@ def _store_qa_response(request, response, question: str) -> bool:
     }
     request.session.pop(QUIZ_SESSION_KEY, None)
     return True
+
+
+def _qa_record_title(question: str) -> str:
+    """Build a stable archive title without asking a model to generate one."""
+
+    normalized = " ".join(question.split())
+    first_sentence = re.split(r"(?<=[.!?])\s+", normalized, maxsplit=1)[0]
+    return first_sentence[:200]
+
+
+def _save_question_record(request, response: ChatResponse, question: str) -> QuestionRecord | None:
+    """Persist only a server-built response for an authenticated member."""
+
+    if not request.user.is_authenticated:
+        return None
+    try:
+        return QuestionRecord.objects.create(
+            owner=request.user,
+            request_id=response.request_id,
+            title=_qa_record_title(question),
+            question=question,
+            answer=response.answer,
+            status=response.status,
+            response_payload=response.model_dump(mode="json"),
+        )
+    except Exception:
+        logger.exception("Failed to save Q&A record")
+        return None
+
+
+def _question_record_response(record: QuestionRecord) -> ChatResponse | None:
+    """Restore a saved response only when its immutable payload is still valid."""
+
+    try:
+        return ChatResponse.model_validate(record.response_payload)
+    except (TypeError, ValueError):
+        logger.warning("Question record %s has an invalid response payload", record.pk)
+        return None
+
+
+def _question_record_context(record: QuestionRecord) -> dict:
+    """Expose only user-facing response fields from a persisted snapshot."""
+
+    response = _question_record_response(record)
+    context = {
+        "question_record": record,
+        "saved_response": response,
+        "status_label": STATUS_LABELS.get(record.status, "저장된 답변"),
+        "is_blocked": record.status in BLOCKED_STATUSES,
+        "source_cards": [],
+        "images": [],
+        "videos": [],
+    }
+    if response is not None:
+        context.update(_response_context(response))
+    return context
 
 
 def _load_qa_response(request) -> tuple[ChatResponse, str] | None:
@@ -451,6 +468,11 @@ def qa(request):
                 request_id=str(uuid.uuid4()), question=question, retrieval_mode="hybrid", trace=True
             )
             context.update(_response_context(response))
+            saved_record = _save_question_record(request, response, question)
+            if saved_record is not None:
+                context["qa_record"] = saved_record
+            elif request.user.is_authenticated:
+                context["qa_record_save_error"] = True
             context["quiz_can_generate"] = _store_qa_response(request, response, question) and response.status == "answered" and bool(response.citations)
             topic = _inline_challenge_topic(response)
             if topic:
@@ -474,20 +496,20 @@ def qa(request):
 
 @require_http_methods(["GET"])
 def questions(request):
-    """Render the existing display-only question archive."""
+    """List only records their authors have explicitly made public."""
 
     context = _base_context(active_page="questions")
-    context["question_previews"] = QUESTION_ARCHIVE_PREVIEWS
+    records = QuestionRecord.objects.filter(is_public=True).select_related("owner").order_by("-published_at", "-id")
+    context["page_obj"] = Paginator(records, COMMUNITY_PAGE_SIZE).get_page(request.GET.get("page"))
     return render(request, "portal/questions.html", context)
 
 
 @require_http_methods(["GET"])
 def question_detail(request, question_id: int):
-    preview = next((item for item in QUESTION_ARCHIVE_PREVIEWS if item["id"] == question_id), None)
-    if preview is None:
-        raise Http404("질문을 찾을 수 없습니다.")
+    record = get_object_or_404(QuestionRecord.objects.select_related("owner"), pk=question_id, is_public=True)
     context = _base_context(active_page="questions")
-    context["question_post"] = preview
+    context.update(_question_record_context(record))
+    context["is_private_view"] = False
     return render(request, "portal/question_detail.html", context)
 
 
@@ -716,12 +738,14 @@ def mypage(request):
             "likes": PostLike.objects.filter(user=user).count(),
             "drawer_items": DrawerItem.objects.filter(owner=user).count(),
             "wrong_notes": WrongNote.objects.filter(owner=user).count(),
+            "qa_records": QuestionRecord.objects.filter(owner=user).count(),
         },
         "recent_posts": Post.objects.filter(author=user).select_related("author")[:MYPAGE_RECENT_LIMIT],
         "recent_comments": Comment.objects.filter(author=user).select_related("post")[:MYPAGE_RECENT_LIMIT],
         "recent_likes": PostLike.objects.filter(user=user).select_related("post", "post__author")[:MYPAGE_RECENT_LIMIT],
         "recent_drawer_items": DrawerItem.objects.filter(owner=user)[:MYPAGE_RECENT_LIMIT],
         "recent_wrong_notes": WrongNote.objects.filter(owner=user)[:MYPAGE_RECENT_LIMIT],
+        "recent_qa_records": QuestionRecord.objects.filter(owner=user)[:MYPAGE_RECENT_LIMIT],
         "active_page": "mypage",
     }
     return render(request, "portal/mypage.html", context)
@@ -763,6 +787,51 @@ def mypage_likes(request):
         "portal/mypage_likes.html",
         {"page_obj": _activity_page(request, likes), "active_page": "mypage"},
     )
+
+
+@login_required
+@require_GET
+def mypage_questions(request):
+    records = QuestionRecord.objects.filter(owner=request.user)
+    return render(
+        request,
+        "portal/mypage_questions.html",
+        {"page_obj": _activity_page(request, records), "active_page": "mypage"},
+    )
+
+
+@login_required
+@require_GET
+def mypage_question_detail(request, pk: int):
+    record = get_object_or_404(QuestionRecord.objects.select_related("owner"), pk=pk, owner=request.user)
+    context = _question_record_context(record)
+    context.update({"active_page": "mypage", "is_private_view": True})
+    return render(request, "portal/question_detail.html", context)
+
+
+@login_required
+@require_POST
+def mypage_question_visibility(request, pk: int):
+    record = get_object_or_404(QuestionRecord, pk=pk, owner=request.user)
+    if record.is_public:
+        record.is_public = False
+        record.published_at = None
+        messages.success(request, "질문 기록을 비공개로 전환했습니다.")
+    else:
+        record.is_public = True
+        record.published_at = timezone.now()
+        messages.success(request, "질문 기록을 공개 아카이브에 게시했습니다.")
+    record.save(update_fields=["is_public", "published_at", "updated_at"])
+    return redirect("mypage_question_detail", pk=record.pk)
+
+
+@login_required
+@require_POST
+def mypage_question_delete(request, pk: int):
+    record = get_object_or_404(QuestionRecord, pk=pk, owner=request.user)
+    record.delete()
+    messages.success(request, "질문 기록을 삭제했습니다.")
+    return redirect("mypage_questions")
 
 
 @require_GET

@@ -116,3 +116,27 @@ class WrongNote(TimestampedModel):
 
     def __str__(self) -> str:
         return f"{self.owner.get_username()}: {self.question_id}"
+
+
+class QuestionRecord(TimestampedModel):
+    """An immutable, user-owned snapshot of a completed Q&A response."""
+
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="qa_records")
+    request_id = models.CharField(max_length=100)
+    title = models.CharField(max_length=200)
+    question = models.TextField()
+    answer = models.TextField()
+    status = models.CharField(max_length=32)
+    response_payload = models.JSONField()
+    is_public = models.BooleanField(default=False)
+    published_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(fields=["owner", "-created_at"], name="portal_qa_owner_recent"),
+            models.Index(fields=["is_public", "-published_at"], name="portal_qa_public_recent"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.owner.get_username()}: {self.title}"

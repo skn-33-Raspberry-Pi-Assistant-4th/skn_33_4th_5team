@@ -1,0 +1,26 @@
+{% extends 'portal/base.html' %}
+
+{% block title %}PiCare | 내 질문 기록{% endblock %}
+
+{% block content %}
+<section class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+  <div><p class="eyebrow mb-1">MY Q&amp;A</p><h1 class="h2 mb-1">내 질문 기록</h1><p class="text-muted mb-0">로그인한 상태에서 받은 PiCare 답변을 저장합니다.</p></div>
+  <a class="btn btn-picare" href="{% url 'qa' %}">새 질문하기</a>
+</section>
+
+<section class="vstack gap-3">
+  {% for record in page_obj %}
+    <article class="lab-card form-card d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div>
+        <div class="d-flex gap-2 align-items-center mb-1"><span class="status-badge {% if record.status != 'answered' %}blocked{% endif %}">{{ record.status }}</span>{% if record.is_public %}<span class="badge text-bg-success">공개</span>{% else %}<span class="badge text-bg-secondary">비공개</span>{% endif %}</div>
+        <h2 class="h5 mb-1"><a class="text-decoration-none text-dark" href="{% url 'mypage_question_detail' record.pk %}">{{ record.title }}</a></h2>
+        <p class="small text-muted mb-0">{{ record.created_at|date:'Y.m.d H:i' }} · {{ record.answer|truncatechars:100 }}</p>
+      </div>
+      <a class="btn btn-sm btn-outline-picare" href="{% url 'mypage_question_detail' record.pk %}">관리</a>
+    </article>
+  {% empty %}
+    <div class="lab-card form-card text-center text-muted">저장된 질문 기록이 없습니다.</div>
+  {% endfor %}
+</section>
+{% include 'portal/pagination.html' %}
+{% endblock %}

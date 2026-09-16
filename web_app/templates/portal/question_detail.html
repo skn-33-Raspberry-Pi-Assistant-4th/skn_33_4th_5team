@@ -1,50 +1,57 @@
 {% extends 'portal/base.html' %}
 
-{% block title %}{{ question_post.title }} | PiCare{% endblock %}
+{% block title %}{{ question_record.title }} | PiCare{% endblock %}
 
 {% block content %}
 <nav class="archive-back" aria-label="이전 페이지">
-  <a href="{% url 'questions' %}"><span aria-hidden="true">←</span> 질문 아카이브로</a>
+  {% if is_private_view %}
+    <a href="{% url 'mypage_questions' %}"><span aria-hidden="true">←</span> 내 질문 기록으로</a>
+  {% else %}
+    <a href="{% url 'questions' %}"><span aria-hidden="true">←</span> 질문 아카이브로</a>
+  {% endif %}
 </nav>
 
 <article class="question-detail">
   <header class="question-detail-header">
-    <span class="question-topic">{{ question_post.topic }}</span>
-    <h1>{{ question_post.title }}</h1>
-    <p><span>👤 {{ question_post.author }}</span><span aria-hidden="true">·</span><time>{{ question_post.created_at }}</time></p>
+    <span class="question-topic">{{ status_label }}</span>
+    <h1>{{ question_record.title }}</h1>
+    <p><span>👤 {{ question_record.owner.username }}</span><span aria-hidden="true">·</span><time>{{ question_record.created_at|date:'Y.m.d H:i' }}</time></p>
   </header>
 
   <section class="detail-question-card" aria-labelledby="question-content-heading">
     <p class="card-kicker">QUESTION</p>
     <h2 id="question-content-heading">질문 내용</h2>
-    <p>{{ question_post.question }}</p>
+    <p>{{ question_record.question }}</p>
   </section>
 
-  <section class="detail-summary-card" aria-labelledby="ai-summary-heading">
+  <section class="detail-summary-card" aria-labelledby="ai-answer-heading">
     <div class="detail-card-heading">
       <span aria-hidden="true">🤖</span>
       <div>
         <p class="card-kicker">PICARE AI</p>
-        <h2 id="ai-summary-heading">AI 간단 요약</h2>
+        <h2 id="ai-answer-heading">PiCare 답변</h2>
       </div>
-      <span class="display-only-badge">화면 예시</span>
+      <span class="status-badge {% if is_blocked %}blocked{% endif %}">{{ status_label }}</span>
     </div>
-    <p>{{ question_post.summary }}</p>
-    <div class="detail-source">
-      <span aria-hidden="true">▣</span>
-      <div>
-        <small>참고한 공식 근거</small>
-        <a href="{{ question_post.source_url }}" target="_blank" rel="noopener noreferrer">{{ question_post.source_title }} · {{ question_post.source_section }} <span aria-hidden="true">↗</span></a>
-      </div>
-    </div>
+    <div class="answer-text">{{ question_record.answer|linebreaksbr }}</div>
+    {% if saved_response %}{% for clarification in saved_response.clarification_questions %}<div class="alert alert-info mt-3 mb-0">{{ clarification }}</div>{% endfor %}{% endif %}
   </section>
 
-  <aside class="archive-next-step">
-    <div>
-      <strong>내 환경에 맞는 설명이 더 필요하신가요?</strong>
-      <span>Q&A에서 상황을 적어 공식 문서 기반 답변을 받아보세요.</span>
-    </div>
-    <a class="btn btn-picare" href="{% url 'qa' %}">Q&A에서 이어서 질문 <span aria-hidden="true">→</span></a>
-  </aside>
+  {% if source_cards %}<section class="mt-4">{% include 'portal/source_cards.html' %}</section>{% endif %}
+
+  {% if saved_response.products %}<section class="lab-card form-card mt-4" aria-labelledby="saved-products-heading"><h2 class="h5" id="saved-products-heading">추천 제품</h2><ul class="mb-0">{% for product in saved_response.products %}<li><a href="{{ product.product_url }}" target="_blank" rel="noopener">{{ product.product_model }}</a> — {{ product.recommendation }}</li>{% endfor %}</ul></section>{% endif %}
+
+  {% if images or videos %}<section class="media-card mt-4"><h2 class="h5">인용 근거와 연결된 이미지·영상</h2><div class="row g-3">{% for image in images %}<div class="col-md-6"><img src="{{ image.url }}" alt="{{ image.alt_text|default:image.title }}" class="img-fluid rounded-4"><p class="small text-muted mt-2 mb-0">{{ image.title }} · {{ image.source_citation_id }}</p></div>{% endfor %}{% for video in videos %}<div class="col-md-6"><a class="video-link" href="{{ video.url }}" target="_blank" rel="noopener">▶ {{ video.title }} ↗</a></div>{% endfor %}</div></section>{% endif %}
+
+  {% if is_private_view %}
+    <section class="lab-card form-card mt-4" aria-labelledby="record-controls-heading">
+      <h2 class="h5" id="record-controls-heading">기록 공개 설정</h2>
+      <p class="text-muted">{% if question_record.is_public %}이 기록은 질문 아카이브에 사용자명과 함께 공개되어 있습니다.{% else %}이 기록은 나만 볼 수 있습니다.{% endif %}</p>
+      <div class="d-flex flex-wrap gap-2">
+        <form method="post" action="{% url 'mypage_question_visibility' question_record.pk %}">{% csrf_token %}<button class="btn btn-outline-picare" type="submit">{% if question_record.is_public %}비공개로 전환{% else %}질문 아카이브에 공개{% endif %}</button></form>
+        <form method="post" action="{% url 'mypage_question_delete' question_record.pk %}">{% csrf_token %}<button class="btn btn-outline-danger" type="submit">기록 삭제</button></form>
+      </div>
+    </section>
+  {% endif %}
 </article>
 {% endblock %}

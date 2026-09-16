@@ -84,16 +84,19 @@ TEMPLATES = [
 WSGI_APPLICATION = "picare_web.wsgi.application"
 ASGI_APPLICATION = "picare_web.asgi.application"
 
-# 개발 기본값은 저장소에 포함되지 않는 SQLite 파일이다. AWS 운영 환경에서는
-# DJANGO_DB_ENGINE과 연결 정보를 설정해 별도 DB 백엔드로 교체할 수 있다.
+# 개발 기본값은 저장소에 포함되지 않는 SQLite 파일이다. MySQL을 선택한 경우에는
+# Compose와 같은 ``MYSQL_*`` 값을 Django 연결 설정의 기본값으로 재사용한다.
+# ``DJANGO_DB_*`` 값이 있으면 그것이 우선하므로 운영 환경별 분리는 유지된다.
+_database_engine = os.getenv("DJANGO_DB_ENGINE", "django.db.backends.sqlite3")
+_is_mysql = _database_engine == "django.db.backends.mysql"
 DATABASES = {
     "default": {
-        "ENGINE": os.getenv("DJANGO_DB_ENGINE", "django.db.backends.sqlite3"),
-        "NAME": os.getenv("DJANGO_DB_NAME", str(WEB_APP_ROOT / "db.sqlite3")),
-        "USER": os.getenv("DJANGO_DB_USER", ""),
-        "PASSWORD": os.getenv("DJANGO_DB_PASSWORD", ""),
-        "HOST": os.getenv("DJANGO_DB_HOST", ""),
-        "PORT": os.getenv("DJANGO_DB_PORT", ""),
+        "ENGINE": _database_engine,
+        "NAME": os.getenv("DJANGO_DB_NAME") or (os.getenv("MYSQL_DATABASE", "picare") if _is_mysql else str(WEB_APP_ROOT / "db.sqlite3")),
+        "USER": os.getenv("DJANGO_DB_USER") or (os.getenv("MYSQL_USER", "") if _is_mysql else ""),
+        "PASSWORD": os.getenv("DJANGO_DB_PASSWORD") or (os.getenv("MYSQL_PASSWORD", "") if _is_mysql else ""),
+        "HOST": os.getenv("DJANGO_DB_HOST") or ("127.0.0.1" if _is_mysql else ""),
+        "PORT": os.getenv("DJANGO_DB_PORT") or (os.getenv("MYSQL_PORT", "3306") if _is_mysql else ""),
     }
 }
 

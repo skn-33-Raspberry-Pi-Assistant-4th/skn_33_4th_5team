@@ -38,18 +38,17 @@ def response(*, status: str = "answered", document_id: str = "rpi-doc-remote-acc
 class DjangoPortalTests(TestCase):
     @patch("portal.views.get_runtime_readiness", return_value=SimpleNamespace(ready=True, message="ready"))
     def test_public_pages_are_available(self, _readiness):
-        for path in ("/", "/recommend/", "/qa/", "/questions/", "/questions/1/", "/lab/", "/challenge/", "/health/"):
+        for path in ("/", "/recommend/", "/qa/", "/questions/", "/lab/", "/challenge/", "/health/"):
             result = self.client.get(path)
             self.assertEqual(result.status_code, 200)
 
     @patch("portal.views.get_runtime_readiness", return_value=SimpleNamespace(ready=True, message="ready"))
-    def test_question_archive_is_a_static_display_only_prototype(self, _readiness):
+    def test_question_archive_shows_only_the_public_empty_state_before_records_exist(self, _readiness):
         page = self.client.get("/questions/")
         self.assertContains(page, "질문 아카이브")
-        self.assertContains(page, "저장 및 AI 생성은 아직 연결하지 않았습니다")
-        detail = self.client.get("/questions/1/")
-        self.assertContains(detail, "질문 내용")
-        self.assertContains(detail, "AI 간단 요약")
+        self.assertContains(page, "아직 공개된 질문이 없습니다")
+        self.assertNotContains(page, "저장 및 AI 생성은 아직 연결하지 않았습니다")
+        self.assertEqual(self.client.get("/questions/1/").status_code, 404)
         self.assertEqual(self.client.get("/questions/999/").status_code, 404)
 
     @patch("portal.views.get_runtime_readiness", return_value=SimpleNamespace(ready=True, message="ready"))

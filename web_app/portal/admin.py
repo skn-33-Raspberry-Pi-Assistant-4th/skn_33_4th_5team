@@ -2,7 +2,7 @@
 
 from django.contrib import admin
 
-from .models import Comment, DrawerItem, Post, PostLike, UserProfile, WrongNote
+from .models import Comment, DrawerItem, Post, PostLike, QuestionRecord, UserProfile, WrongNote
 
 
 @admin.register(UserProfile)
@@ -61,3 +61,13 @@ class WrongNoteAdmin(admin.ModelAdmin):
     list_select_related = ("owner",)
     raw_id_fields = ("owner",)
     readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(QuestionRecord)
+class QuestionRecordAdmin(admin.ModelAdmin):
+    list_display = ("title", "owner", "status", "is_public", "created_at", "published_at")
+    list_filter = ("status", "is_public", "created_at")
+    search_fields = ("title", "question", "answer", "owner__username")
+    list_select_related = ("owner",)
+    raw_id_fields = ("owner",)
+    readonly_fields = ("created_at", "updated_at", "request_id", "response_payload")

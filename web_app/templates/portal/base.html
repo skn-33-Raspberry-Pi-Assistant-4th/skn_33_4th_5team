@@ -17,18 +17,13 @@
       </button>
       <div class="collapse navbar-collapse justify-content-end" id="mainNavigation">
         <ul class="navbar-nav nav-pills gap-lg-2 mt-3 mt-lg-0">
-          <li class="nav-item"><a class="nav-link {% if active_page == 'about' %}active{% endif %}" href="{% url 'about' %}">서비스 소개</a></li>
           <li class="nav-item"><a class="nav-link {% if active_page == 'recommend' %}active{% endif %}" href="{% url 'recommend' %}">제품 추천</a></li>
           <li class="nav-item"><a class="nav-link {% if active_page == 'qa' %}active{% endif %}" href="{% url 'qa' %}">질의응답</a></li>
           <li class="nav-item"><a class="nav-link {% if active_page == 'questions' %}active{% endif %}" href="{% url 'questions' %}">질문 아카이브</a></li>
           <li class="nav-item"><a class="nav-link {% if active_page == 'community' %}active{% endif %}" href="{% url 'community_list' %}">커뮤니티</a></li>
           <li class="nav-item"><a class="nav-link {% if active_page == 'lab' %}active{% endif %}" href="{% url 'lab' %}">명령어 실험실</a></li>
-          <li class="nav-item"><a class="nav-link {% if active_page == 'challenge' %}active{% endif %}" href="{% url 'challenge' %}">미니 챌린지</a></li>
           {% if request.user.is_authenticated %}
-            <li class="nav-item nav-user-name"><span class="nav-link disabled">{{ request.user.username }}님</span></li>
-            <li class="nav-item"><a class="nav-link {% if active_page == 'mypage' %}active{% endif %}" href="{% url 'mypage' %}">마이페이지</a></li>
-            <li class="nav-item"><a class="nav-link {% if active_page == 'drawer' %}active{% endif %}" href="{% url 'drawer_list' %}">내 서랍</a></li>
-            <li class="nav-item"><a class="nav-link {% if active_page == 'wrong_notes' %}active{% endif %}" href="{% url 'wrong_note_list' %}">오답노트</a></li>
+            <li class="nav-item nav-user-name"><a class="nav-link {% if active_page == 'mypage' %}active{% endif %}" href="{% url 'mypage' %}">{{ request.user.username }}님</a></li>
             <li class="nav-item"><form method="post" action="{% url 'accounts:logout' %}" class="d-inline">{% csrf_token %}<button class="nav-link nav-logout" type="submit">로그아웃</button></form></li>
           {% else %}
             <li class="nav-item"><a class="nav-link {% if active_page == 'accounts' %}active{% endif %}" href="{% url 'accounts:login' %}">로그인</a></li>
