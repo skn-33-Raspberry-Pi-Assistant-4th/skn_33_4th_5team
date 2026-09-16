@@ -6,7 +6,7 @@ RAG, 제품 추천 정책, 명령어 검증, 문제 채점 로직을 템플릿�
 
 ## 실행
 
-로컬 MySQL 및 회원가입 실행 방법은 [로컬 Django + MySQL 가이드](../docs/local-django-mysql-setup.md)를
+로컬 MySQL 및 회원가입 실행 방법은 [Django 실행 가이드](../docs/README_django_실행법.md)를
 따른다.
 
 처음 clone한 팀원은 아래 한 명령으로 `.env` 생성, `.venv` 생성, 의존성 설치, Docker MySQL

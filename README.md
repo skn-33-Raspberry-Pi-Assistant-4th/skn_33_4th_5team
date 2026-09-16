@@ -25,7 +25,7 @@ Raspberry Pi 입문자가 제품을 고르고 설정을 진행할 때 필요한 
 | 사용자 경험 | 회원가입·로그인, 커뮤니티, 마이페이지, 명령어 서랍, 오답노트를 추가했습니다. |
 | 학습·지원 | Q&A 연계형 Dynamic Mini Challenge와 승인 명령어 기반 Command Lab을 추가했습니다. |
 | 추천 입력 | 최대 입력 길이를 10,000자로 확장하고, 유선 LAN·최소 연결 수 등 추천 조건을 추가했습니다. |
-| 실행 환경 | SQLite 기본 개발 환경, Docker Compose MySQL, RunPod Qwen/QLoRA 실행 경로를 분리했습니다. |
+| 실행 환경 | Docker Compose MySQL을 Django 기본 DB로 사용하고, RunPod Qwen/QLoRA 실행 경로를 분리했습니다. |
 
 ## 서비스 구조
 
@@ -118,7 +118,7 @@ URL 요청 → View / Form 검증 → 도메인 서비스 호출 → Template �
 
 - Q&A, 추천, Command Lab, Quiz 생성·제출, 커뮤니티, 프로필, 서랍, 오답노트 라우팅이 구현돼 있습니다.
 - 가입·로그인·로그아웃과 DB 세션을 지원하고, 게시글·댓글·좋아요·저장 항목은 사용자 소유권 기준으로 조회·수정·삭제합니다.
-- 기본 DB는 SQLite이며, Compose는 MySQL 컨테이너를 제공합니다. MySQL 사용 시 Django DB 환경 변수와 migration 설정이 필요합니다.
+- Docker Compose MySQL 8.4를 Django 기본 DB로 사용합니다. `.env`를 준비한 뒤 MySQL 기동과 migration을 완료해야 합니다.
 
 ### Frontend
 
@@ -143,7 +143,7 @@ Q&A / 추천 입력 → 답변·출처 카드 → Quiz 또는 Command Lab 연계
 | Dynamic Mini Challenge | 부분 구현 | Django Q&A 화면의 생성·제출·채점·오답노트 흐름. 외부 프론트엔드용 Quiz JSON endpoint는 없음 |
 | 인증·커뮤니티 | 완료 | 가입·로그인·프로필, 게시글·댓글·좋아요·마이페이지 |
 | 질문 아카이브 | UI만 구현 | 정적 미리보기 목록·상세 화면 |
-| MySQL / Docker | 연동 필요 | MySQL Compose는 제공되며 Django는 기본 SQLite. 환경 변수 설정 후 migration 필요 |
+| MySQL / Docker | 완료 | Docker Compose MySQL을 Django 기본 DB로 사용하며, `.env` 설정 후 migration으로 초기화 |
 
 `*` 문서 manifest, Chroma 인덱스, 모델 환경이 준비된 경우에 실행됩니다.
 
@@ -152,7 +152,7 @@ Q&A / 추천 입력 → 답변·출처 카드 → Quiz 또는 Command Lab 연계
 | 영역 | 사용 기술 |
 | --- | --- |
 | Web | Python, Django, Django Templates, HTML/CSS/JavaScript |
-| DB | Django ORM, SQLite, MySQL 8.4, Docker Compose |
+| DB | Django ORM, MySQL 8.4, Docker Compose |
 | RAG | ChromaDB, sentence-transformers, rank-bm25, Hybrid Retrieval |
 | AI | Qwen3-4B-Instruct-2507, Transformers, QLoRA, PEFT, bitsandbytes |
 | Data | Raspberry Pi 공식 문서 manifest·chunk, 제품·명령어 카탈로그 |
@@ -186,9 +186,11 @@ Q&A / 추천 입력 → 답변·출처 카드 → Quiz 또는 Command Lab 연계
 
 ## 실행 환경
 
-### 로컬 Django
+### 로컬 Django + MySQL
 
 ```bash
+cp .env.example .env
+docker compose up -d --wait mysql
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -196,15 +198,7 @@ python web_app/manage.py migrate
 python web_app/manage.py runserver 8001
 ```
 
-로컬 초기화 스크립트는 8001 포트를 안내합니다. Django 기본 DB는 `web_app/db.sqlite3`입니다.
-
-### MySQL / Docker
-
-```bash
-docker compose up -d mysql
-```
-
-MySQL을 Django DB로 사용하려면 `.env`에 `DJANGO_DB_ENGINE`, `DJANGO_DB_NAME`, `DJANGO_DB_USER`, `DJANGO_DB_PASSWORD`, `DJANGO_DB_HOST`, `DJANGO_DB_PORT`를 설정한 뒤 migration을 실행합니다.
+`.env`에 MySQL 비밀번호와 Django Secret을 설정한 뒤 실행합니다. 자세한 환경 변수와 초기화 방법은 [Django 실행 가이드](docs/README_django_실행법.md)를 따릅니다. 처음 clone한 팀원은 `python scripts/init.py`로 같은 초기 설정을 자동화할 수 있습니다.
 
 ### RunPod Qwen / LoRA
 

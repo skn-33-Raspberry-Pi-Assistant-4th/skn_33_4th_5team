@@ -60,7 +60,7 @@ python web_app/manage.py runserver
 
 ## 3. 테스트
 
-자동 테스트는 실제 로컬 MySQL을 바꾸지 않도록 인메모리 SQLite를 사용한다.
+자동 테스트는 Django 테스트 러너가 만드는 별도 테스트 데이터베이스에서 실행한다.
 
 ```bash
 python web_app/manage.py test tests.test_django_auth tests.test_django_web
