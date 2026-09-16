@@ -15,7 +15,7 @@ def _safe_next(request, candidate: str | None) -> str:
     """Return an on-site redirect target and reject an external ``next`` URL."""
     if candidate and url_has_allowed_host_and_scheme(candidate, {request.get_host()}, request.is_secure()):
         return candidate
-    return reverse("profile_edit")
+    return reverse("about")
 
 
 @require_http_methods(["GET", "POST"])

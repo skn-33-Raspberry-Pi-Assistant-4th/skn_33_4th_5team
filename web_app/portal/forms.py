@@ -1,7 +1,6 @@
 """Django form boundaries for existing PiCare service inputs."""
 
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
 
 from src.contracts.input_limits import INPUT_LENGTH_HINT, MAX_INPUT_CHARS, validate_input_text
@@ -12,30 +11,6 @@ from .models import Comment, Post
 OPTIONAL_BOOLEAN_CHOICES = (("", "선택 안 함"), ("true", "예"), ("false", "아니요"))
 POST_CONTENT_MAX_LENGTH = 10_000
 COMMENT_CONTENT_MAX_LENGTH = 2_000
-
-
-class LoginForm(AuthenticationForm):
-    """Django 기본 인증 폼에 기존 화면의 입력 스타일만 적용한다."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for field in self.fields.values():
-            field.widget.attrs["class"] = "form-control"
-
-
-class SignUpForm(UserCreationForm):
-    """Django 기본 User 모델의 안전한 생성 폼."""
-
-    email = forms.EmailField(label="이메일", required=True)
-
-    class Meta(UserCreationForm.Meta):
-        model = User
-        fields = ("username", "email")
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for field in self.fields.values():
-            field.widget.attrs["class"] = "form-control"
 
 
 class ProfileUpdateForm(forms.ModelForm):
@@ -49,6 +24,13 @@ class ProfileUpdateForm(forms.ModelForm):
             "username": forms.TextInput(attrs={"class": "form-control"}),
             "email": forms.EmailInput(attrs={"class": "form-control"}),
         }
+
+    def clean_email(self) -> str:
+        """Normalize email and reject an address held by another user."""
+        email = self.cleaned_data["email"].strip().lower()
+        if email and User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError("이미 가입된 이메일입니다.")
+        return email
 
 
 class PostForm(forms.ModelForm):

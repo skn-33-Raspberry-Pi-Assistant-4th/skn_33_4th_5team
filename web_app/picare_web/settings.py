@@ -84,18 +84,39 @@ TEMPLATES = [
 WSGI_APPLICATION = "picare_web.wsgi.application"
 ASGI_APPLICATION = "picare_web.asgi.application"
 
-# 개발 기본값은 저장소에 포함되지 않는 SQLite 파일이다. AWS 운영 환경에서는
-# DJANGO_DB_ENGINE과 연결 정보를 설정해 별도 DB 백엔드로 교체할 수 있다.
-DATABASES = {
-    "default": {
-        "ENGINE": os.getenv("DJANGO_DB_ENGINE", "django.db.backends.sqlite3"),
-        "NAME": os.getenv("DJANGO_DB_NAME", str(WEB_APP_ROOT / "db.sqlite3")),
-        "USER": os.getenv("DJANGO_DB_USER", ""),
-        "PASSWORD": os.getenv("DJANGO_DB_PASSWORD", ""),
-        "HOST": os.getenv("DJANGO_DB_HOST", ""),
-        "PORT": os.getenv("DJANGO_DB_PORT", ""),
+# 개발 기본값은 저장소에 포함되지 않는 SQLite 파일이다. MySQL에서는
+# DJANGO_DB_* 값을 우선하고, 설정하지 않은 항목은 Docker와 공유하는 MYSQL_*를 사용한다.
+def _database_config() -> dict[str, str]:
+    engine = os.getenv("DJANGO_DB_ENGINE") or "django.db.backends.sqlite3"
+    django_values = {
+        "NAME": os.getenv("DJANGO_DB_NAME") or "",
+        "USER": os.getenv("DJANGO_DB_USER") or "",
+        "PASSWORD": os.getenv("DJANGO_DB_PASSWORD") or "",
+        "HOST": os.getenv("DJANGO_DB_HOST") or "",
+        "PORT": os.getenv("DJANGO_DB_PORT") or "",
     }
-}
+
+    if engine == "django.db.backends.sqlite3":
+        django_values["NAME"] = (
+            django_values["NAME"]
+            or os.getenv("DJANGO_SQLITE_PATH")
+            or str(WEB_APP_ROOT / "db.sqlite3")
+        )
+    else:
+        mysql_fallbacks = {
+            "NAME": "MYSQL_DATABASE",
+            "USER": "MYSQL_USER",
+            "PASSWORD": "MYSQL_PASSWORD",
+            "HOST": "MYSQL_HOST",
+            "PORT": "MYSQL_PORT",
+        }
+        for field, env_name in mysql_fallbacks.items():
+            django_values[field] = django_values[field] or os.getenv(env_name) or ""
+
+    return {"ENGINE": engine, **django_values}
+
+
+DATABASES = {"default": _database_config()}
 
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 SESSION_COOKIE_HTTPONLY = True

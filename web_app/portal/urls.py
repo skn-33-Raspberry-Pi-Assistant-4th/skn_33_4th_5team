@@ -1,8 +1,6 @@
-from django.contrib.auth import views as auth_views
 from django.urls import path
 
 from . import views
-from .forms import LoginForm
 
 
 urlpatterns = [
@@ -18,9 +16,6 @@ urlpatterns = [
     path("api/lab/analyze", views.lab_analyze_api, name="lab_analyze_api"),
     path("api/lab/compose", views.lab_compose_api, name="lab_compose_api"),
     path("health/", views.health, name="health"),
-    path("accounts/signup/", views.signup, name="signup"),
-    path("accounts/login/", auth_views.LoginView.as_view(authentication_form=LoginForm, redirect_authenticated_user=True), name="login"),
-    path("accounts/logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("accounts/profile/edit/", views.profile_edit, name="profile_edit"),
     path("mypage/", views.mypage, name="mypage"),
     path("mypage/posts/", views.mypage_posts, name="mypage_posts"),
