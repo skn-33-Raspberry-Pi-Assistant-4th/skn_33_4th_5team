@@ -50,15 +50,14 @@ analyzed = lab.analyze("ssh pi@192.168.0.12")
 `result`에는 재조합 명령, 부분별 설명, 사용 위치, 위험도·주의사항,
 공식 근거 청크 및 선택한 제품 정보가 포함된다. 모든 결과는 `execution_policy=display_only`다.
 명령 실행 함수는 없다. 알려진 템플릿에 일치하지 않으면 `CommandLabError`로 안내한다.
-ID는 A의 `cmd-{topic}-{번호}` 형식을 그대로 유지한다. 92개 draft는 목록·직접 ID 접근 모두 차단한다.
+ID는 A의 `cmd-{topic}-{번호}` 형식을 그대로 유지한다. 최종 검수된 100개 모두 목록·분석·재조합에 사용할 수 있다.
 
-## 92개 초안의 이중 검수·공개 절차
+## 100개 최종 검수·공개 기록
 
 `data/products/command_review_ledger.json`은 최초 draft 92개의 고정 검수 범위를 보관한다.
-검수자는 B(양원)와 C(나은)이며, 각각 공식 근거·명령 구조·주제·설명·위험 안내·편집값 안전성을
-독립적으로 `approve` 또는 `revise`로 판정한다. 두 사람 모두 `approve`일 때만 resolution을
-`approved`로 기록할 수 있다. 한 사람이라도 `revise`하거나 의견이 다르면 카탈로그는 `draft`로
-유지하고 보완 사유를 남긴 뒤 재검수한다.
+2026-09-16 데이터 담당 A(최지흠)가 명령 카탈로그 100개의 최종 검수 완료와 사용 승인을 전달했다.
+기존 승인 8개는 유지하고, 원장의 `data_owner_approval`이 최초 draft 92개 전체를 명시적으로 승인한다.
+개별 보완이 필요한 이후 변경에는 기존 B(양원)·C(나은) 이중 검수 경로도 계속 사용할 수 있다.
 
 검수 현황과 전체 대상 CSV는 다음 명령으로 확인한다. 이 명령들은 명령을 실행하지 않는다.
 
@@ -67,18 +66,22 @@ python -m scripts.command_review --audit
 python -m scripts.command_review --export-review-sheet > command-lab-review.csv
 ```
 
-두 승인 기록과 resolution이 완성된 항목만 아래 명령으로 카탈로그에 반영한다. 반영 시
-`reviewed_by`는 `B: 양원; C: 나은`이고 `reviewed_at`은 resolution의 날짜와 같아야 한다.
+승인 기록이 완성된 항목만 아래 명령으로 카탈로그에 반영한다. 데이터 담당자 일괄 승인 항목은
+`reviewed_by=A: 최지흠`, 개별 이중 검수 항목은 `reviewed_by=B: 양원; C: 나은`으로 기록한다.
 
-`reviews`에는 아래처럼 template ID별 판정을 기록한다. `reason`은 공식 근거·주제·안전성 중
-무엇을 확인했는지 명시하며, 한 명이라도 `revise`면 resolution은 반드시 `draft`다.
+데이터 담당자의 전체 승인 기록은 아래 형식이다. `template_count`는 고정 후보 수와 반드시 일치해야 하며,
+개별 `reviews`와 동시에 기록해 승인 근거를 중복시킬 수 없다.
 
 ```json
 {
-  "cmd-remote-access-008": {
-    "B": {"verdict": "approve", "reason": "공식 SSH 문서의 디렉터리 준비 절차와 일치", "reviewed_at": "2026-09-16"},
-    "C": {"verdict": "approve", "reason": "학습 설명과 위험 안내가 적절함", "reviewed_at": "2026-09-16"},
-    "resolution": {"status": "approved", "note": "B/C 독립 검수 모두 통과", "resolved_at": "2026-09-16"}
+  "data_owner_approval": {
+    "reviewer_role": "A",
+    "reviewer_name": "최지흠",
+    "verdict": "approve",
+    "reason": "명령 카탈로그 100개 최종 검수 완료 및 사용 승인",
+    "reviewed_at": "2026-09-16",
+    "scope": "all_candidates",
+    "template_count": 92
   }
 }
 ```
@@ -88,8 +91,7 @@ python -m scripts.command_review --sync-approved
 ```
 
 동기화 후에는 `python -m src.services.command_lab_cli --audit`과 Command Lab·Django 테스트를
-실행한다. 기존 8개 승인 항목은 이 절차 이전의 legacy 승인으로 유지하며, 이 ledger의 대상은
-당시 draft였던 92개로 한정한다.
+실행한다. 최종 상태는 `total=100`, `approved=100`, `draft=0`, `errors=[]`이어야 한다.
 
 HTTP API에서 E는 `CommandLabError`를 입력 오류 응답으로 변환한다. Django의 현재 경로는
 목록 `GET /api/lab/templates`, 분석 `POST /api/lab/analyze`, 재조합 `POST /api/lab/compose`다.
@@ -141,9 +143,9 @@ response = qa_service.answer(request_id=request_id, question=question,
 - 승인 명령의 일반적인 반복 설명을 구성 요소별 설명으로 보완했다.
 - 원격 접속용 `sudo raspi-config`의 근거를 NVMe 부팅 문단에서 SSH 활성화 문단으로 교정했다.
 - 새 문서 5개 및 카테고리 7개의 한국어 출처 라벨을 추가했다.
-- 승인 8개·초안 92개 상태와 기존 template ID를 유지했다. 수정 데이터 버전은 `2026-09-11-command-lab-v2.1`이다.
-- 초안에는 카메라 빌드 명령이 OS 설치 주제로 묶이거나 일반적인 설명이 남은 항목이 있으므로
-  구조 검증 통과를 의미 검수 완료로 간주하지 않는다. A 검수 후에만 승인해서 노출한다.
+- 데이터 담당자의 최종 검수 완료·사용 승인을 원장에 기록하고 100개를 모두 공개 상태로 동기화했다.
+- 수정 데이터 버전은 `2026-09-16-command-lab-v2.2`다.
+- 100개 전체에 대해 구성 요소 재조합, 공식 근거 checksum, display-only 정책과 서비스 분석을 검증한다.
 
 ## 재학습 판단
 
