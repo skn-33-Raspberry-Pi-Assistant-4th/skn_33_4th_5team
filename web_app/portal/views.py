@@ -8,7 +8,6 @@ import re
 import uuid
 
 from django.contrib import messages
-from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Count, Prefetch
@@ -29,7 +28,6 @@ from .forms import (
     ProfileUpdateForm,
     QuestionForm,
     RecommendationForm,
-    SignUpForm,
 )
 from .models import Comment, DrawerItem, Post, PostLike, QuestionRecord, WrongNote
 from .services import (
@@ -697,20 +695,6 @@ def health(request):
             "message": readiness.message if readiness.ready else "RAG 실행 환경을 준비하지 못했습니다. 설정을 확인해 주세요.",
         }
     )
-
-
-@require_http_methods(["GET", "POST"])
-def signup(request):
-    if request.user.is_authenticated:
-        return redirect("profile_edit")
-
-    form = SignUpForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        user = form.save()
-        login(request, user)
-        messages.success(request, "회원가입이 완료되었습니다.")
-        return redirect("profile_edit")
-    return render(request, "portal/signup.html", {"form": form})
 
 
 @login_required

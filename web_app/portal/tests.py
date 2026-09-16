@@ -25,7 +25,7 @@ class AccountFlowTests(TestCase):
 
     def test_signup_creates_and_authenticates_user(self):
         response = self.client.post(
-            reverse("signup"),
+            reverse("accounts:signup"),
             {
                 "username": "new_user",
                 "email": "new@example.com",
@@ -34,7 +34,7 @@ class AccountFlowTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, reverse("profile_edit"))
+        self.assertRedirects(response, reverse("about"))
         user = get_user_model().objects.get(username="new_user")
         self.assertEqual(user.email, "new@example.com")
         self.assertTrue(user.check_password("SignupPass123!"))
@@ -42,7 +42,7 @@ class AccountFlowTests(TestCase):
 
     def test_signup_rejects_invalid_password(self):
         response = self.client.post(
-            reverse("signup"),
+            reverse("accounts:signup"),
             {
                 "username": "invalid_password_user",
                 "email": "invalid@example.com",
@@ -58,7 +58,7 @@ class AccountFlowTests(TestCase):
     def test_signup_requires_csrf_token(self):
         csrf_client = Client(enforce_csrf_checks=True)
         response = csrf_client.post(
-            reverse("signup"),
+            reverse("accounts:signup"),
             {
                 "username": "csrf_user",
                 "email": "csrf@example.com",
@@ -72,7 +72,7 @@ class AccountFlowTests(TestCase):
 
     def test_signup_rejects_duplicate_username(self):
         response = self.client.post(
-            reverse("signup"),
+            reverse("accounts:signup"),
             {
                 "username": self.user.username,
                 "email": "another@example.com",
@@ -87,16 +87,16 @@ class AccountFlowTests(TestCase):
 
     def test_login_succeeds_with_valid_credentials(self):
         response = self.client.post(
-            reverse("login"),
+            reverse("accounts:login"),
             {"username": self.user.username, "password": "ExistingPass123!"},
         )
 
-        self.assertRedirects(response, reverse("profile_edit"))
+        self.assertRedirects(response, reverse("about"))
         self.assertEqual(self.client.get(reverse("profile_edit")).status_code, 200)
 
     def test_login_rejects_invalid_credentials(self):
         response = self.client.post(
-            reverse("login"),
+            reverse("accounts:login"),
             {"username": self.user.username, "password": "wrong-password"},
         )
 
@@ -106,12 +106,12 @@ class AccountFlowTests(TestCase):
     def test_logout_requires_post_and_ends_session(self):
         self.client.force_login(self.user)
 
-        self.assertEqual(self.client.get(reverse("logout")).status_code, 405)
-        response = self.client.post(reverse("logout"))
+        self.assertEqual(self.client.get(reverse("accounts:logout")).status_code, 405)
+        response = self.client.post(reverse("accounts:logout"))
 
         self.assertRedirects(response, reverse("about"))
         protected_response = self.client.get(reverse("profile_edit"))
-        self.assertRedirects(protected_response, f"{reverse('login')}?next={reverse('profile_edit')}")
+        self.assertRedirects(protected_response, f"{reverse('accounts:login')}?next={reverse('profile_edit')}")
 
     def test_profile_edit_updates_only_basic_account_fields(self):
         self.client.force_login(self.user)
@@ -126,10 +126,41 @@ class AccountFlowTests(TestCase):
         self.assertEqual(self.user.email, "updated@example.com")
         self.assertTrue(self.user.check_password("ExistingPass123!"))
 
+    def test_profile_edit_allows_current_users_email_case_insensitively(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("profile_edit"),
+            {"username": self.user.username, "email": "EXISTING@EXAMPLE.COM"},
+        )
+
+        self.assertRedirects(response, reverse("profile_edit"))
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, "existing@example.com")
+
+    def test_profile_edit_rejects_another_users_email_case_insensitively(self):
+        get_user_model().objects.create_user(
+            username="another_user",
+            email="another@example.com",
+            password="AnotherPass123!",
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("profile_edit"),
+            {"username": "changed_user", "email": "ANOTHER@EXAMPLE.COM"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("email", response.context["form"].errors)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.username, "existing_user")
+        self.assertEqual(self.user.email, "existing@example.com")
+
     def test_profile_edit_redirects_anonymous_users_to_login(self):
         response = self.client.get(reverse("profile_edit"))
 
-        self.assertRedirects(response, f"{reverse('login')}?next={reverse('profile_edit')}")
+        self.assertRedirects(response, f"{reverse('accounts:login')}?next={reverse('profile_edit')}")
 
 
 class PortalModelTests(TestCase):
@@ -370,9 +401,9 @@ class CommunityViewTests(TestCase):
         comment_url = reverse("community_comment_create", args=[self.post.pk])
         like_url = reverse("community_post_like", args=[self.post.pk])
 
-        self.assertRedirects(self.client.get(create_url), f"{reverse('login')}?next={create_url}")
-        self.assertRedirects(self.client.post(comment_url, {"content": "댓글"}), f"{reverse('login')}?next={comment_url}")
-        self.assertRedirects(self.client.post(like_url), f"{reverse('login')}?next={like_url}")
+        self.assertRedirects(self.client.get(create_url), f"{reverse('accounts:login')}?next={create_url}")
+        self.assertRedirects(self.client.post(comment_url, {"content": "댓글"}), f"{reverse('accounts:login')}?next={comment_url}")
+        self.assertRedirects(self.client.post(like_url), f"{reverse('accounts:login')}?next={like_url}")
         self.assertEqual(Comment.objects.count(), 0)
         self.assertEqual(PostLike.objects.count(), 0)
 
@@ -553,10 +584,10 @@ class CommandLabAndDrawerTests(TestCase):
         self.assertTrue(DrawerItem.objects.filter(pk=item.pk).exists())
 
     def test_drawer_requires_login_and_returns_reconfirmation_state_when_changed(self):
-        self.assertRedirects(self.client.get(reverse("drawer_list")), f"{reverse('login')}?next={reverse('drawer_list')}")
+        self.assertRedirects(self.client.get(reverse("drawer_list")), f"{reverse('accounts:login')}?next={reverse('drawer_list')}")
         self.assertRedirects(
             self.client.post(reverse("drawer_save"), {"template_id": FakeCommandLabService.template_id}),
-            f"{reverse('login')}?next={reverse('drawer_save')}",
+            f"{reverse('accounts:login')}?next={reverse('drawer_save')}",
         )
 
         payload = self.service.drawer_payload(FakeCommandLabService.template_id, {"part-02": "pi@owner"})
@@ -901,7 +932,7 @@ class MyPageTests(TestCase):
         for url_name in ("mypage", "mypage_posts", "mypage_comments", "mypage_likes", "mypage_questions", "drawer_list", "wrong_note_list"):
             url = reverse(url_name)
             response = self.client.get(url)
-            self.assertRedirects(response, f"{reverse('login')}?next={url}")
+            self.assertRedirects(response, f"{reverse('accounts:login')}?next={url}")
 
 
 class QuestionRecordViewTests(TestCase):
@@ -1088,7 +1119,7 @@ class SecurityRegressionTests(TestCase):
     def test_state_changing_endpoints_require_post_and_csrf(self):
         self.client.force_login(self.owner)
         post_only_urls = (
-            reverse("logout"),
+            reverse("accounts:logout"),
             reverse("community_post_delete", args=[self.post.pk]),
             reverse("community_comment_delete", args=[self.post.pk, self.comment.pk]),
             reverse("community_post_like", args=[self.post.pk]),
@@ -1104,18 +1135,22 @@ class SecurityRegressionTests(TestCase):
         csrf_client.force_login(self.owner)
         self.assertEqual(csrf_client.post(reverse("profile_edit"), {"username": "changed", "email": "changed@example.com"}).status_code, 403)
         self.assertEqual(csrf_client.post(reverse("community_post_like", args=[self.post.pk])).status_code, 403)
-        self.assertEqual(csrf_client.post(reverse("logout")).status_code, 403)
+        self.assertEqual(csrf_client.post(reverse("accounts:logout")).status_code, 403)
         self.owner.refresh_from_db()
         self.assertEqual(self.owner.username, "security_owner")
         self.assertEqual(PostLike.objects.filter(post=self.post, user=self.owner).count(), 0)
 
     def test_login_does_not_follow_an_external_next_url(self):
         response = self.client.post(
-            f"{reverse('login')}?next=https://attacker.example/steal-session",
-            {"username": self.owner.username, "password": "SecurityOwner123!"},
+            reverse("accounts:login"),
+            {
+                "username": self.owner.username,
+                "password": "SecurityOwner123!",
+                "next": "https://attacker.example/steal-session",
+            },
         )
 
-        self.assertRedirects(response, reverse("profile_edit"))
+        self.assertRedirects(response, reverse("about"))
 
     def test_community_forms_reject_overlong_content(self):
         self.client.force_login(self.owner)
