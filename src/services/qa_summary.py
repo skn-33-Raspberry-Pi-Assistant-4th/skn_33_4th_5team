@@ -69,15 +69,27 @@ class QaSummaryService:
         if self._text_generator is None:
             return self._answer_result(None, "unsupported")
 
-        try:
-            raw_output = self._text_generator.generate(
-                build_answer_summary_messages(normalized_question, response.answer)
-            )
-            summary = parse_answer_summary(raw_output, response)
-        except Exception as exc:
-            logger.warning("Answer summary generation failed: %s", type(exc).__name__)
-            return self._answer_result(None, "generation_failed")
-        return self._answer_result(summary, "available")
+        for retry in (False, True):
+            try:
+                raw_output = self._text_generator.generate(
+                    build_answer_summary_messages(normalized_question, response.answer, retry=retry)
+                )
+            except Exception as exc:
+                logger.warning("Answer summary generation failed: %s", type(exc).__name__)
+                return self._answer_result(None, "generation_failed")
+            try:
+                summary = parse_answer_summary(raw_output, response)
+            except QaSummaryOutputError as exc:
+                logger.warning("Answer summary output rejected: %s", exc)
+                if retry:
+                    return self._answer_result(None, "generation_failed")
+                continue
+            except Exception as exc:
+                logger.warning("Answer summary validation failed: %s", type(exc).__name__)
+                return self._answer_result(None, "generation_failed")
+            return self._answer_result(summary, "available")
+
+        return self._answer_result(None, "generation_failed")
 
     def generate(self, question: str, response: ChatResponse) -> QaSummaryResult:
         """Run both independent calls and preserve either successful outcome."""

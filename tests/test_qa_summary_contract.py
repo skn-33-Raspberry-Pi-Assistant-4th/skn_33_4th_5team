@@ -112,6 +112,28 @@ def test_parsers_accept_separate_valid_json_outputs() -> None:
     assert summary == "SSH는 기본적으로 비활성화되어 있습니다. [C1]"
 
 
+def test_answer_summary_accepts_valid_single_line_prose_from_qwen() -> None:
+    assert (
+        parse_answer_summary("SSH는 기본적으로 비활성화되어 있습니다. [C1]", _response())
+        == "SSH는 기본적으로 비활성화되어 있습니다. [C1]"
+    )
+
+
+@pytest.mark.parametrize(
+    "raw_output",
+    [
+        "설명:\nSSH는 기본적으로 비활성화되어 있습니다. [C1]",
+        '설명 {"answer_summary":"SSH는 비활성화되어 있습니다. [C1]"}',
+        "```json {SSH는 기본적으로 비활성화되어 있습니다. [C1]}```",
+        "```SSH는 기본적으로 비활성화되어 있습니다. [C1]```",
+        "첫 문장.둘째 문장.셋째 문장. [C1]",
+    ],
+)
+def test_answer_summary_rejects_unsafe_or_long_plain_output(raw_output: str) -> None:
+    with pytest.raises(QaSummaryOutputError):
+        parse_answer_summary(raw_output, _response())
+
+
 @pytest.mark.parametrize(
     ("raw_output", "field_name"),
     [
@@ -174,6 +196,18 @@ def test_sentence_count_ignores_decimal_and_ascii_identifier_dots() -> None:
     summary = "Python 3.11에서 host.local에 접속하세요. [C1]"
 
     assert parse_answer_summary(json.dumps({"answer_summary": summary}), _response()) == summary
+
+
+@pytest.mark.parametrize(
+    ("summary", "reason"),
+    [
+        ("SSH는 가장 간편한 방법입니다. [C1]", "단정 표현"),
+        ("SSH는 5.1V 이하에서만 가능합니다. [C1]", "수치 조건"),
+    ],
+)
+def test_answer_summary_rejects_new_claim_strength(summary: str, reason: str) -> None:
+    with pytest.raises(QaSummaryOutputError, match=reason):
+        parse_answer_summary(json.dumps({"answer_summary": summary}), _response())
 
 
 def test_summary_contract_rejects_undeclared_fields() -> None:

@@ -127,12 +127,44 @@ def test_non_answered_response_skips_answer_summary_call(status: str) -> None:
 
 
 def test_answer_summary_rejects_invalid_citation_without_losing_title() -> None:
-    generator = SequenceTextGenerator([_title(), _summary("SSH를 활성화하세요. [C2]")])
+    generator = SequenceTextGenerator([
+        _title(),
+        _summary("SSH를 활성화하세요. [C2]"),
+        _summary("SSH를 활성화하세요. [C2]"),
+    ])
 
     result = QaSummaryService(generator).generate("SSH 설정 방법은?", _response())
 
     assert result.question_title_status == "available"
     assert result.answer_summary_status == "generation_failed"
+    assert len(generator.calls) == 3
+
+
+def test_answer_summary_retries_once_after_missing_citation() -> None:
+    generator = SequenceTextGenerator([
+        _title(),
+        _summary("SSH는 기본적으로 비활성화되어 있습니다."),
+        _summary(),
+    ])
+
+    result = QaSummaryService(generator).generate("SSH 설정 방법은?", _response())
+
+    assert result.question_title_status == "available"
+    assert result.answer_summary_status == "available"
+    assert result.answer_summary == "SSH는 기본적으로 비활성화되어 있습니다. [C1]"
+    assert len(generator.calls) == 3
+    assert "<allowed_citation_ids>C1</allowed_citation_ids>" in generator.calls[1][1]["content"]
+    assert "이전 출력이 형식 또는 인용 검사를 통과하지 못했습니다" in generator.calls[2][0]["content"]
+
+
+def test_answer_summary_does_not_retry_model_error() -> None:
+    generator = SequenceTextGenerator([_title(), RuntimeError("model unavailable")])
+
+    result = QaSummaryService(generator).generate("SSH 설정 방법은?", _response())
+
+    assert result.question_title_status == "available"
+    assert result.answer_summary_status == "generation_failed"
+    assert len(generator.calls) == 2
 
 
 def test_missing_generator_is_unsupported_for_answered_response() -> None:
