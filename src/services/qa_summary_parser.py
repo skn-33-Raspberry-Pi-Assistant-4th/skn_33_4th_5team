@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 from pydantic import ValidationError
 
@@ -52,7 +53,15 @@ def parse_answer_summary(raw_output: str, response: ChatResponse) -> str:
     """Parse a summary without accepting citations absent from the final answer."""
 
     value = _parse_field(raw_output, "answer_summary")
-    if not extract_citation_ids(value).issubset(extract_citation_ids(response.answer)):
+    cited_ids = extract_citation_ids(value)
+    if not cited_ids:
+        raise QaSummaryOutputError("답변 요약에는 원래 답변의 인용 ID가 필요합니다.", raw_output)
+    # Any other square-bracketed marker, including malformed [C0] or [C01],
+    # must not pass merely because the valid-ID extractor ignores it.
+    uncited_text = re.sub(r"\[C[1-9][0-9]*\]", "", value)
+    if "[" in uncited_text or "]" in uncited_text:
+        raise QaSummaryOutputError("답변 요약에 잘못된 인용 표기가 있습니다.", raw_output)
+    if not cited_ids.issubset(extract_citation_ids(response.answer)):
         raise QaSummaryOutputError("답변 요약에 원래 답변에 없는 인용 ID가 있습니다.", raw_output)
     return value
 

@@ -140,6 +140,29 @@ def test_answer_summary_rejects_citation_not_used_by_final_answer() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    "summary",
+    [
+        "인용 없이 SSH를 활성화하세요.",
+        "SSH를 활성화하세요. [C0]",
+        "SSH를 활성화하세요. [C01]",
+        "SSH를 활성화하세요. [C1] [C0]",
+        "SSH를 활성화하세요. [C1] [C2,C3]",
+    ],
+)
+def test_answer_summary_requires_only_valid_original_citations(summary: str) -> None:
+    with pytest.raises(QaSummaryOutputError):
+        parse_answer_summary(json.dumps({"answer_summary": summary}), _response())
+
+
+def test_answer_summary_rejects_more_than_two_sentences() -> None:
+    with pytest.raises(QaSummaryOutputError, match="결과 계약"):
+        parse_answer_summary(
+            json.dumps({"answer_summary": "첫 문장. 둘째 문장. 셋째 문장. [C1]"}),
+            _response(),
+        )
+
+
 def test_summary_contract_rejects_undeclared_fields() -> None:
     with pytest.raises(ValidationError):
         QaSummaryResult(

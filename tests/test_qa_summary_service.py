@@ -9,6 +9,7 @@ from datetime import date
 import pytest
 
 from src.contracts import ChatCitation, ChatResponse
+from src.rag_to_llm import EvidenceTemplateGenerator
 from src.services.qa_summary import QaSummaryService
 
 
@@ -139,6 +140,24 @@ def test_missing_generator_is_unsupported_for_answered_response() -> None:
 
     assert result.question_title_status == "unsupported"
     assert result.answer_summary_status == "unsupported"
+
+
+def test_direct_template_generator_is_unsupported() -> None:
+    result = QaSummaryService(EvidenceTemplateGenerator()).generate("SSH 설정 방법은?", _response())
+
+    assert result.question_title_status == "unsupported"
+    assert result.answer_summary_status == "unsupported"
+
+
+@pytest.mark.parametrize("question", [None, 123, []])
+def test_non_string_question_does_not_break_either_summary(question: object) -> None:
+    generator = SequenceTextGenerator([])
+
+    result = QaSummaryService(generator).generate(question, _response())
+
+    assert result.question_title_status == "not_applicable"
+    assert result.answer_summary_status == "not_applicable"
+    assert generator.calls == []
 
 
 def test_answer_summary_prompt_treats_question_and_answer_as_data() -> None:

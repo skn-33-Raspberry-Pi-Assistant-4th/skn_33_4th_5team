@@ -8,6 +8,7 @@ from typing import Literal
 from src.contracts import ChatResponse, QaSummaryResult
 from src.contracts.input_limits import validate_input_text
 from src.lang import build_answer_summary_messages, build_question_title_messages
+from src.rag_to_llm.answer_generator import EvidenceTemplateGenerator
 from src.services.qa_summary_parser import (
     QaSummaryOutputError,
     parse_answer_summary,
@@ -24,11 +25,17 @@ class QaSummaryService:
     """Generate title and answer summary independently of web storage flows."""
 
     def __init__(self, text_generator: QuizTextGenerator | None):
-        self._text_generator = text_generator
+        # A QA template generator does not implement the one-argument structured
+        # text boundary, even when passed here without the adapter factory.
+        self._text_generator = (
+            None if isinstance(text_generator, EvidenceTemplateGenerator) else text_generator
+        )
 
     def generate_question_title(self, question: str) -> QaSummaryResult:
         """Return one title outcome; answer-summary remains independently unset."""
 
+        if not isinstance(question, str):
+            return self._title_result(None, "not_applicable")
         try:
             normalized_question = validate_input_text(question)
         except ValueError:
@@ -52,6 +59,8 @@ class QaSummaryService:
         """Summarize only an answered response, without affecting its title."""
 
         if response.status != "answered":
+            return self._answer_result(None, "not_applicable")
+        if not isinstance(question, str):
             return self._answer_result(None, "not_applicable")
         try:
             normalized_question = validate_input_text(question)

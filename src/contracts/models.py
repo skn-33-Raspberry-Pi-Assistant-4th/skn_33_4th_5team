@@ -198,6 +198,12 @@ class QaSummaryResult(StrictContract):
             limit = 200 if field_name == "question_title" else 500
             if len(value) > limit:
                 raise ValueError(f"{field_name} exceeds {limit} characters")
+            if field_name == "answer_summary":
+                # Inline citations come after sentence punctuation, so remove
+                # them before counting sentence boundaries.
+                prose = re.sub(r"\[C[1-9][0-9]*\]", "", value)
+                if len(re.findall(r"[.!?。！？](?=\s|$)", prose)) > 2:
+                    raise ValueError("answer_summary must contain at most two sentences")
         return self
 
 

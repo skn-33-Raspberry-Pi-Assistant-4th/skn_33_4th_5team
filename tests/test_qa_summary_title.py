@@ -37,8 +37,8 @@ def test_question_title_generation_returns_only_title_result() -> None:
     assert "SSH를 어떻게 설정하나요?" in generator.calls[0][1]["content"]
 
 
-@pytest.mark.parametrize("question", ["", " \n\t ", "가" * 10_001])
-def test_invalid_question_does_not_call_model(question: str) -> None:
+@pytest.mark.parametrize("question", ["", " \n\t ", "가" * 10_001, None, 123, []])
+def test_invalid_question_does_not_call_model(question: object) -> None:
     generator = FakeTextGenerator(json.dumps({"question_title": "제목"}))
 
     result = QaSummaryService(generator).generate_question_title(question)
