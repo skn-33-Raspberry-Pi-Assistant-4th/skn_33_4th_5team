@@ -169,6 +169,46 @@ class QuizResponse(StrictContract):
         return self
 
 
+SummaryStatus = Literal["available", "generation_failed", "not_applicable", "unsupported"]
+
+
+class QaSummaryResult(StrictContract):
+    """Independent title and answer-summary outcomes for one completed Q&A."""
+
+    question_title: str | None
+    question_title_status: SummaryStatus
+    answer_summary: str | None
+    answer_summary_status: SummaryStatus
+
+    @model_validator(mode="after")
+    def validate_status_text_pairs(self) -> "QaSummaryResult":
+        for field_name, status in (
+            ("question_title", self.question_title_status),
+            ("answer_summary", self.answer_summary_status),
+        ):
+            value = getattr(self, field_name)
+            if status != "available":
+                if value is not None:
+                    raise ValueError(f"{field_name} must be null unless available")
+                continue
+            if value is None or not value.strip():
+                raise ValueError(f"available {field_name} must not be blank")
+            if value != value.strip() or "\n" in value or "\r" in value:
+                raise ValueError(f"{field_name} must be one trimmed line")
+            limit = 200 if field_name == "question_title" else 500
+            if len(value) > limit:
+                raise ValueError(f"{field_name} exceeds {limit} characters")
+            if field_name == "answer_summary":
+                # Inline citations come after sentence punctuation, so remove
+                # them before counting sentence boundaries.
+                prose = re.sub(r"\[C[1-9][0-9]*\]", "", value)
+                # A Korean sentence can start immediately after punctuation.
+                # Keep dots inside decimal numbers and ASCII identifiers intact.
+                if len(re.findall(r"[.!?。！？](?![A-Za-z0-9])", prose)) > 2:
+                    raise ValueError("answer_summary must contain at most two sentences")
+        return self
+
+
 class ConditionPayload(StrictContract):
     """Complete sLLM condition output; unmentioned user constraints are null."""
 

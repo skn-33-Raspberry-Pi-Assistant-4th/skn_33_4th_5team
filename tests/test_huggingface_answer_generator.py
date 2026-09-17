@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
+from threading import Event
 from unittest.mock import Mock
 
 import pytest
@@ -10,6 +11,7 @@ import pytest
 from src.lang import PromptEvidence
 from src.rag_to_llm import HuggingFaceAnswerGenerator
 from src.rag_to_llm.answer_generator import AnswerGenerationError
+from src.rag_to_llm.cancellation import GenerationCancelled
 
 
 class FakeInputIds:
@@ -145,6 +147,53 @@ def test_huggingface_generator_structured_path_returns_raw_json_once(monkeypatch
     generator.generate_structured(_messages(), max_new_tokens=1024)
     assert load_calls == 1
     assert model.generate_kwargs["max_new_tokens"] == 1024
+    assert "stopping_criteria" not in model.generate_kwargs
+
+
+def test_structured_cancellation_before_load_skips_model(monkeypatch) -> None:
+    generator = HuggingFaceAnswerGenerator(model_id="Qwen/test")
+    load = Mock(side_effect=AssertionError("model load must be skipped"))
+    monkeypatch.setattr(generator, "_load_model", load)
+    cancellation = Event()
+    cancellation.set()
+
+    with pytest.raises(GenerationCancelled):
+        generator.generate_structured(
+            _messages(), max_new_tokens=64, cancel_requested=cancellation.is_set
+        )
+
+    load.assert_not_called()
+
+
+def test_structured_cancellation_stops_during_generation(monkeypatch) -> None:
+    generator = HuggingFaceAnswerGenerator(model_id="Qwen/test")
+    cancellation = Event()
+    tokenizer = FakeTokenizer()
+
+    class CancellingModel(FakeModel):
+        def generate(self, **kwargs):
+            self.generate_kwargs = kwargs
+            cancellation.set()
+            assert kwargs["stopping_criteria"][0]([[1, 2, 3, 7]], None) is True
+            cancellation.clear()  # A non-sticky callback must not expose partial output.
+            return [[1, 2, 3, 7, 8]]
+
+    model = CancellingModel()
+
+    def fake_load_model() -> None:
+        generator._tokenizer = tokenizer
+        generator._model = model
+        generator._torch = FakeTorch()
+
+    monkeypatch.setattr(generator, "_load_model", fake_load_model)
+
+    with pytest.raises(GenerationCancelled):
+        generator.generate_structured(
+            _messages(), max_new_tokens=64, cancel_requested=cancellation.is_set
+        )
+
+    assert model.generate_kwargs["max_new_tokens"] == 64
+    assert generator._model is model
 
 
 @pytest.mark.parametrize("max_new_tokens", [0, 1025])

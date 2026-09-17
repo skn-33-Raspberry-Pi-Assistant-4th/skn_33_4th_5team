@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
+from collections.abc import Callable
 from dataclasses import dataclass
 import re
 from time import perf_counter
@@ -16,6 +17,7 @@ from src.lang.safety import (
     validate_grounded_answer,
 )
 from src.model_runtime import InferenceDeviceError, resolve_inference_runtime
+from .cancellation import GenerationCancelled, raise_if_cancelled
 
 
 class AnswerGenerationError(RuntimeError):
@@ -289,6 +291,7 @@ class HuggingFaceAnswerGenerator:
         messages: Sequence[Mapping[str, str]],
         *,
         max_new_tokens: int,
+        cancel_requested: Callable[[], bool] | None = None,
     ) -> GenerationResult:
         """Generate one raw structured response without QA answer validation.
 
@@ -306,8 +309,17 @@ class HuggingFaceAnswerGenerator:
             )
 
         started_at = perf_counter()
+        raise_if_cancelled(cancel_requested)
         self._load_model()
-        text = self._generate_text(messages, max_new_tokens=max_new_tokens)
+        raise_if_cancelled(cancel_requested)
+        if cancel_requested is None:
+            text = self._generate_text(messages, max_new_tokens=max_new_tokens)
+        else:
+            text = self._generate_text(
+                messages,
+                max_new_tokens=max_new_tokens,
+                cancel_requested=cancel_requested,
+            )
         return GenerationResult(
             text=text,
             provider=self.provider,
@@ -320,12 +332,14 @@ class HuggingFaceAnswerGenerator:
         messages: Sequence[Mapping[str, str]],
         *,
         max_new_tokens: int | None = None,
+        cancel_requested: Callable[[], bool] | None = None,
     ) -> str:
         """신규 토큰만 decode한다. 재시도에서도 같은 모델·생성 설정을 사용한다."""
 
         assert self._model is not None
         assert self._tokenizer is not None
         assert self._torch is not None
+        raise_if_cancelled(cancel_requested)
 
         encoded = self._tokenizer.apply_chat_template(
             list(messages),
@@ -341,6 +355,35 @@ class HuggingFaceAnswerGenerator:
         prompt_length = self._prompt_length(encoded["input_ids"])
         inference_mode = getattr(self._torch, "inference_mode", None)
         context = inference_mode() if callable(inference_mode) else nullcontext()
+        if cancel_requested is not None:
+            from transformers import StoppingCriteria, StoppingCriteriaList
+
+            class CancelWhenRequested(StoppingCriteria):
+                cancelled = False
+
+                def __call__(self, input_ids, scores, **kwargs) -> bool:
+                    self.cancelled = self.cancelled or cancel_requested()
+                    return self.cancelled
+
+            cancellation_criterion = CancelWhenRequested()
+            raise_if_cancelled(cancel_requested)
+            with context:
+                cancellable_output_ids = self._model.generate(
+                    **encoded,
+                    max_new_tokens=max_new_tokens or self.max_new_tokens,
+                    do_sample=False,
+                    pad_token_id=self._tokenizer.pad_token_id,
+                    eos_token_id=self._tokenizer.eos_token_id,
+                    stopping_criteria=StoppingCriteriaList([cancellation_criterion]),
+                )
+            if cancellation_criterion.cancelled:
+                raise GenerationCancelled("요약 생성이 취소됐습니다.")
+            raise_if_cancelled(cancel_requested)
+            return self._tokenizer.decode(
+                self._completion_ids(cancellable_output_ids, prompt_length),
+                skip_special_tokens=True,
+            ).strip()
+
         with context:
             output_ids = self._model.generate(
                 **encoded,
