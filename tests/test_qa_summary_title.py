@@ -21,6 +21,8 @@ class FakeTextGenerator:
         self.calls.append([dict(message) for message in messages])
         if self.error is not None:
             raise self.error
+        if '"valid":true' in messages[0]["content"]:
+            return '{"valid":true}'
         return self.output
 
 
@@ -33,7 +35,7 @@ def test_question_title_generation_returns_only_title_result() -> None:
     assert result.question_title_status == "available"
     assert result.answer_summary is None
     assert result.answer_summary_status == "not_applicable"
-    assert len(generator.calls) == 1
+    assert len(generator.calls) == 2
     assert "SSH를 어떻게 설정하나요?" in generator.calls[0][1]["content"]
 
 

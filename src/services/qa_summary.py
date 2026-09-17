@@ -7,12 +7,18 @@ from typing import Literal
 
 from src.contracts import ChatResponse, QaSummaryResult
 from src.contracts.input_limits import validate_input_text
-from src.lang import build_answer_summary_messages, build_question_title_messages
+from src.lang import (
+    build_answer_summary_messages,
+    build_answer_summary_review_messages,
+    build_question_title_messages,
+    build_question_title_review_messages,
+)
 from src.rag_to_llm.answer_generator import EvidenceTemplateGenerator
 from src.services.qa_summary_parser import (
     QaSummaryOutputError,
     parse_answer_summary,
     parse_question_title,
+    parse_summary_review,
 )
 from src.services.quiz_generator import QuizTextGenerator
 
@@ -50,6 +56,11 @@ class QaSummaryService:
             title = parse_question_title(raw_output)
             if len(title) > MAX_GENERATED_TITLE_CHARS:
                 raise QaSummaryOutputError("생성된 질문 제목이 너무 깁니다.", raw_output)
+            review = self._text_generator.generate(
+                build_question_title_review_messages(normalized_question, title)
+            )
+            if not parse_summary_review(review):
+                raise QaSummaryOutputError("질문 제목 검수를 통과하지 못했습니다.", review)
         except Exception as exc:
             logger.warning("Question title generation failed: %s", type(exc).__name__)
             return self._title_result(None, "generation_failed")
@@ -78,7 +89,12 @@ class QaSummaryService:
                 logger.warning("Answer summary generation failed: %s", type(exc).__name__)
                 return self._answer_result(None, "generation_failed")
             try:
-                summary = parse_answer_summary(raw_output, response)
+                summary = parse_answer_summary(raw_output, response, normalized_question)
+                review = self._text_generator.generate(
+                    build_answer_summary_review_messages(normalized_question, response, summary)
+                )
+                if not parse_summary_review(review):
+                    raise QaSummaryOutputError("답변 요약 검수를 통과하지 못했습니다.", review)
             except QaSummaryOutputError as exc:
                 logger.warning("Answer summary output rejected: %s", exc)
                 if retry:

@@ -49,7 +49,87 @@ def parse_question_title(raw_output: str) -> str:
     return _parse_field(raw_output, "question_title")
 
 
-def parse_answer_summary(raw_output: str, response: ChatResponse) -> str:
+def parse_summary_review(raw_output: str) -> bool:
+    """Accept only an explicit boolean decision; uncertain output fails closed."""
+
+    try:
+        payload = json.loads(raw_output.strip())
+    except (ValueError, AttributeError) as exc:
+        raise QaSummaryOutputError("요약 검수 출력이 유효한 JSON이 아닙니다.", raw_output) from exc
+    if not isinstance(payload, dict) or set(payload) != {"valid"} or type(payload["valid"]) is not bool:
+        raise QaSummaryOutputError("요약 검수 출력이 계약과 일치하지 않습니다.", raw_output)
+    return payload["valid"]
+
+
+_COORDINATED_FACETS = re.compile(
+    r"([A-Za-z0-9가-힣+.-]{2,})\s*(?:와|과|이나|또는|및)\s+([A-Za-z0-9가-힣+.-]+)"
+)
+_FACET_SUFFIXES = ("에서는", "에서", "에게", "으로", "에는", "에도", "은", "는", "이", "가", "을", "를", "에", "의", "도")
+
+
+def _explicit_question_facets(question: str) -> set[str]:
+    """Find clearly coordinated terms; require coverage rather than guessing synonyms."""
+
+    facets: set[str] = set()
+    for left, right in _COORDINATED_FACETS.findall(question):
+        for term in (left, right):
+            for suffix in _FACET_SUFFIXES:
+                if len(term) > len(suffix) + 1 and term.endswith(suffix):
+                    term = term[: -len(suffix)]
+                    break
+            facets.add(term.casefold())
+    return facets
+
+
+def _validate_cited_code(value: str, answer: str, raw_output: str) -> None:
+    """An inline command must keep the ID of the original answer span containing it."""
+
+    answer_spans: dict[str, list[str]] = {}
+    pieces = re.split(r"(\[C[1-9][0-9]*\])", answer)
+    last_span = ""
+    for index in range(1, len(pieces), 2):
+        span = pieces[index - 1]
+        if span.strip():
+            last_span = span
+        answer_spans.setdefault(pieces[index][1:-1], []).append(
+            span if span.strip() else last_span
+        )
+    for match in re.finditer(r"`([^`]+)`", value):
+        citation = re.search(r"\[C[1-9][0-9]*\]", value[match.end():])
+        if citation is None:
+            raise QaSummaryOutputError("명령어의 인용 ID가 없습니다.", raw_output)
+        citation_id = citation.group()[1:-1]
+        if not any(match.group(1) in span for span in answer_spans.get(citation_id, [])):
+            raise QaSummaryOutputError("명령어의 인용 ID가 원답변과 다릅니다.", raw_output)
+
+
+def _one_inner_edit(left: str, right: str) -> bool:
+    """Detect a likely transcription error inside a long Korean token."""
+
+    if abs(len(left) - len(right)) > 1:
+        return False
+    if len(left) == len(right):
+        differences = [index for index, (a, b) in enumerate(zip(left, right)) if a != b]
+        return len(differences) == 1 and differences[0] < len(left) - 2
+    longer, shorter = (left, right) if len(left) > len(right) else (right, left)
+    return any(
+        longer[:index] + longer[index + 1:] == shorter
+        for index in range(max(0, len(longer) - 2))
+    )
+
+
+def _validate_transcription(value: str, question: str, answer: str, raw_output: str) -> None:
+    source_terms = set(re.findall(r"[가-힣]{5,}", question + " " + answer))
+    for term in set(re.findall(r"[가-힣]{5,}", value)):
+        if term not in source_terms and any(
+            _one_inner_edit(term, source) for source in source_terms
+        ):
+            raise QaSummaryOutputError("질문 또는 원답변의 용어 철자가 바뀌었습니다.", raw_output)
+
+
+def parse_answer_summary(
+    raw_output: str, response: ChatResponse, question: str | None = None
+) -> str:
     """Parse a summary without accepting citations absent from the final answer."""
 
     try:
@@ -81,6 +161,13 @@ def parse_answer_summary(raw_output: str, response: ChatResponse) -> str:
         raise QaSummaryOutputError("답변 요약에 잘못된 인용 표기가 있습니다.", raw_output)
     if not cited_ids.issubset(extract_citation_ids(response.answer)):
         raise QaSummaryOutputError("답변 요약에 원래 답변에 없는 인용 ID가 있습니다.", raw_output)
+    _validate_cited_code(value, response.answer, raw_output)
+    if question is not None:
+        _validate_transcription(value, question, response.answer, raw_output)
+        normalized_summary = re.sub(r"\s+", "", value).casefold()
+        missing = {term for term in _explicit_question_facets(question) if term not in normalized_summary}
+        if missing:
+            raise QaSummaryOutputError("질문의 명시적 항목이 답변 요약에서 누락됐습니다.", raw_output)
     # These terms materially strengthen a claim. An unsupported qualifier is
     # more dangerous than an unavailable summary, so fail closed and let the
     # summary service request one fresh candidate from the original answer.
@@ -94,4 +181,4 @@ def parse_answer_summary(raw_output: str, response: ChatResponse) -> str:
     return value
 
 
-__all__ = ["QaSummaryOutputError", "parse_answer_summary", "parse_question_title"]
+__all__ = ["QaSummaryOutputError", "parse_answer_summary", "parse_question_title", "parse_summary_review"]

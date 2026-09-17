@@ -13,6 +13,7 @@ from src.services.qa_summary_parser import (
     QaSummaryOutputError,
     parse_answer_summary,
     parse_question_title,
+    parse_summary_review,
 )
 
 
@@ -218,4 +219,63 @@ def test_summary_contract_rejects_undeclared_fields() -> None:
             answer_summary=None,
             answer_summary_status="not_applicable",
             status="available",
+        )
+
+
+def test_review_parser_requires_exact_boolean_json() -> None:
+    assert parse_summary_review('{"valid":true}') is True
+    assert parse_summary_review('{"valid":false}') is False
+    for raw in ('{"valid":"true"}', '{"valid":true,"reason":"ok"}', "true", "잘됨"):
+        with pytest.raises(QaSummaryOutputError):
+            parse_summary_review(raw)
+
+
+def test_summary_rejects_missing_explicit_question_facet() -> None:
+    response = _response().model_copy(
+        update={"answer": "저장장치는 M.2 SSD입니다. [C1]"}
+    )
+    with pytest.raises(QaSummaryOutputError, match="항목"):
+        parse_answer_summary(
+            json.dumps({"answer_summary": "저장장치는 M.2 SSD입니다. [C1]"}),
+            response,
+            "저장장치와 키보드에서 무엇이 다른가요?",
+        )
+    with pytest.raises(QaSummaryOutputError, match="항목"):
+        parse_answer_summary(
+            json.dumps({"answer_summary": "저장장치는 M.2 SSD입니다. [C1]"}),
+            response,
+            "저장장치 및 키보드 차이는 무엇인가요?",
+        )
+
+
+def test_summary_rejects_command_with_wrong_original_citation() -> None:
+    response = _response().model_copy(
+        update={"answer": "`vcgencmd measure_temp`로 확인합니다. [C1] 팬이 냉각합니다. [C2]"}
+    )
+    with pytest.raises(QaSummaryOutputError, match="명령어의 인용"):
+        parse_answer_summary(
+            json.dumps({"answer_summary": "`vcgencmd measure_temp`로 확인하며 팬이 냉각합니다. [C2]"}),
+            response,
+        )
+
+
+def test_summary_accepts_command_with_consecutive_original_citations() -> None:
+    response = _response().model_copy(
+        update={"answer": "`vcgencmd measure_temp`로 확인합니다. [C1][C2]"}
+    )
+    assert parse_answer_summary(
+        json.dumps({"answer_summary": "`vcgencmd measure_temp`로 확인합니다. [C2]"}),
+        response,
+    )
+
+
+def test_summary_rejects_likely_transcription_error() -> None:
+    response = _response().model_copy(
+        update={"answer": "라즈베리파이에서 SSH를 설정합니다. [C1]"}
+    )
+    with pytest.raises(QaSummaryOutputError, match="철자"):
+        parse_answer_summary(
+            json.dumps({"answer_summary": "라즈베이리파이에서 SSH를 설정합니다. [C1]"}),
+            response,
+            "라즈베리파이에서 SSH를 어떻게 설정하나요?",
         )
