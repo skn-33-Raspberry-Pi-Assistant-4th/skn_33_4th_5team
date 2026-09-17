@@ -155,12 +155,25 @@ def test_answer_summary_requires_only_valid_original_citations(summary: str) -> 
         parse_answer_summary(json.dumps({"answer_summary": summary}), _response())
 
 
-def test_answer_summary_rejects_more_than_two_sentences() -> None:
+@pytest.mark.parametrize(
+    "summary",
+    [
+        "첫 문장. 둘째 문장. 셋째 문장. [C1]",
+        "첫 문장.둘째 문장.셋째 문장. [C1]",
+    ],
+)
+def test_answer_summary_rejects_more_than_two_sentences(summary: str) -> None:
     with pytest.raises(QaSummaryOutputError, match="결과 계약"):
         parse_answer_summary(
-            json.dumps({"answer_summary": "첫 문장. 둘째 문장. 셋째 문장. [C1]"}),
+            json.dumps({"answer_summary": summary}),
             _response(),
         )
+
+
+def test_sentence_count_ignores_decimal_and_ascii_identifier_dots() -> None:
+    summary = "Python 3.11에서 host.local에 접속하세요. [C1]"
+
+    assert parse_answer_summary(json.dumps({"answer_summary": summary}), _response()) == summary
 
 
 def test_summary_contract_rejects_undeclared_fields() -> None:
