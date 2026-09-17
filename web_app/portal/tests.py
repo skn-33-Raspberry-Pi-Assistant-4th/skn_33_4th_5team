@@ -104,6 +104,13 @@ class AccountFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["form"].non_field_errors())
 
+    def test_login_uses_the_same_styled_inputs_as_signup(self):
+        response = self.client.get(reverse("accounts:login"))
+
+        self.assertContains(response, 'class="form-control"', count=2)
+        self.assertContains(response, 'placeholder="아이디"')
+        self.assertContains(response, 'placeholder="비밀번호"')
+
     def test_logout_requires_post_and_ends_session(self):
         self.client.force_login(self.user)
 
@@ -535,6 +542,8 @@ class CommandLabAndDrawerTests(TestCase):
             {"action": "compose", "template_id": FakeCommandLabService.template_id, "value_part-02": "pi@host"},
         )
         self.assertContains(lab_response, "ssh pi@host")
+        self.assertEqual(lab_response.context["feature_result"].feature, "command_lab")
+        self.assertEqual(lab_response.context["feature_result"].question, "ssh pi@host")
 
     def test_unknown_commands_and_draft_templates_return_4xx(self):
         unknown_response = self.client.post(
@@ -611,6 +620,55 @@ class CommandLabAndDrawerTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["execution_policy"], "display_only")
+
+
+class RecommendationFeatureResultTests(TestCase):
+    def setUp(self):
+        self.readiness_patch = patch(
+            "portal.views.get_runtime_readiness",
+            return_value=SimpleNamespace(ready=True, message="ready"),
+        )
+        self.presenter_patch = patch("portal.views.get_citation_presenter", return_value=None)
+        self.readiness_patch.start()
+        self.presenter_patch.start()
+        self.addCleanup(self.readiness_patch.stop)
+        self.addCleanup(self.presenter_patch.stop)
+
+    def test_recommendation_page_keeps_the_original_response_in_a_feature_result(self):
+        response = ChatResponse(
+            schema_version="1.2.0",
+            request_id="recommend-test-001",
+            status="insufficient_evidence",
+            language="ko",
+            answer="공식 문서 근거가 부족합니다.",
+            conditions=None,
+            citations=[],
+            products=[],
+            media=[],
+            clarification_questions=[],
+            warnings=[],
+        )
+        service = Mock()
+        service.answer_form.return_value = response
+        with patch("portal.views.get_recommendation_service", return_value=service):
+            result = self.client.post(
+                reverse("recommend"),
+                {
+                    "purpose": "홈 서버로 사용하고 싶어요.",
+                    "user_level": "선택 안 함",
+                    "performance": "선택 안 함",
+                    "wifi": "",
+                    "camera": "",
+                    "gpio": "",
+                    "monitor_absent": "",
+                },
+            )
+
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.context["feature_result"].feature, "recommendation")
+        self.assertEqual(result.context["feature_result"].question, "홈 서버로 사용하고 싶어요.")
+        self.assertIs(result.context["feature_result"].result, response)
+        service.answer_form.assert_called_once()
 
 
 class DynamicQuizAndWrongNoteTests(TestCase):
@@ -714,6 +772,9 @@ class DynamicQuizAndWrongNoteTests(TestCase):
         chat_response = self._chat_response()
         qa_result = self._submit_qa(chat_response)
         self.assertContains(qa_result, "DYNAMIC MINI CHALLENGE")
+        self.assertEqual(qa_result.context["feature_result"].feature, "qa")
+        self.assertEqual(qa_result.context["feature_result"].question, "SSH 기본 상태가 무엇인가요?")
+        self.assertEqual(qa_result.context["feature_result"].answer, chat_response.answer)
 
         result, task = self._start_job(task_id=str(uuid.uuid4()))
 
@@ -756,6 +817,11 @@ class DynamicQuizAndWrongNoteTests(TestCase):
         self.assertFalse(submission["is_correct"])
         self.assertEqual(submission["correct_choice_id"], "A")
         self.assertIn("explanation", submission)
+        self.assertEqual(submission["feature"], "challenge")
+        self.assertEqual(submission["question"], self.quiz_question.question)
+        self.assertIn("선택한 답: 기본적으로 활성화", submission["answer"])
+        self.assertEqual(submission["status"], "incorrect")
+        self.assertEqual(submission["payload"]["input"]["selected_choice_id"], "B")
         save_result = self.client.post(
             reverse("wrong_note_save", args=[quiz_id]),
             {

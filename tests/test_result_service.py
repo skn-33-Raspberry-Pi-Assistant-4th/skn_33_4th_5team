@@ -104,39 +104,34 @@ def test_get_command_lab_result_calls_compose_when_template_is_given():
     )
 
 
-def test_get_challenge_result_returns_prompt_selection_and_explanation():
-    state = {"current_index": 0}
+def test_get_challenge_result_returns_dynamic_quiz_question_and_submission_explanation():
     question = {
         "question_id": "ssh-01",
-        "prompt": "SSH의 기본 상태는 무엇인가요?",
+        "question": "SSH의 기본 상태는 무엇인가요?",
         "choices": [
-            {"choice_id": "A", "text": "활성화"},
-            {"choice_id": "B", "text": "비활성화"},
+            {"id": "A", "text": "활성화"},
+            {"id": "B", "text": "비활성화"},
         ],
     }
-    outcome = {
-        "correct": True,
+    submission = {
+        "is_correct": True,
         "selected_choice_id": "B",
         "correct_choice_id": "B",
-        "choice_feedback": "맞았습니다.",
-        "rationale_ko": "기본적으로 비활성화되어 있습니다.",
+        "explanation": "기본적으로 비활성화되어 있습니다.",
     }
-    service = Mock()
-    service.current_question.return_value = question
-    service.submit.return_value = outcome
 
     returned = get_challenge_result(
-        service,
-        state=state,
-        question_id="ssh-01",
-        choice_id="B",
+        question=question,
+        selected_choice_id="B",
+        submission=submission,
+        request_id="challenge-1",
     )
 
     assert returned.feature == "challenge"
-    assert returned.question == question["prompt"]
+    assert returned.request_id == "challenge-1"
+    assert returned.question == question["question"]
     assert returned.status == "correct"
     assert "선택한 답: 비활성화" in returned.answer
     assert "기본적으로 비활성화" in returned.answer
-    assert returned.result is outcome
-    service.current_question.assert_called_once_with(state)
-    service.submit.assert_called_once_with(state, question_id="ssh-01", choice_id="B")
+    assert returned.result is submission
+    assert returned.to_dict()["payload"]["input"]["selected_choice_id"] == "B"

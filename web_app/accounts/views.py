@@ -2,13 +2,12 @@
 
 from django.contrib import messages
 from django.contrib.auth import login, logout
-from django.contrib.auth.forms import AuthenticationForm
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .forms import SignupForm
+from .forms import LoginForm, SignupForm
 
 
 def _safe_next(request, candidate: str | None) -> str:
@@ -37,7 +36,7 @@ def login_view(request):
     """Authenticate a member with Django's form and create a DB-backed session."""
     if request.user.is_authenticated:
         return redirect("about")
-    form = AuthenticationForm(request, data=request.POST or None)
+    form = LoginForm(request, data=request.POST or None)
     if request.method == "POST" and form.is_valid():
         login(request, form.get_user())
         messages.success(request, "로그인했습니다.")

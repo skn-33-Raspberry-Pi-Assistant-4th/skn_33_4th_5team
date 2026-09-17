@@ -118,6 +118,36 @@ class WrongNote(TimestampedModel):
         return f"{self.owner.get_username()}: {self.question_id}"
 
 
+class RecommendationRecord(TimestampedModel):
+    """A member's recommendation snapshot, independent of the live catalog.
+
+    input_payload holds RecommendationFormInput.model_dump(mode="json");
+    response_payload holds the original ChatResponse.model_dump(mode="json").
+    Explicit UI values (including None versus False) and extracted conditions
+    are retained separately so the original recommendation can be reproduced.
+    """
+
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="recommendation_records"
+    )
+    request_id = models.CharField(max_length=120, db_index=True)
+    title = models.CharField(max_length=200)
+    question = models.TextField()
+    answer = models.TextField()
+    status = models.CharField(max_length=32)
+    input_payload = models.JSONField()
+    response_payload = models.JSONField()
+
+    class Meta:
+        ordering = ["-created_at", "-id"]
+        indexes = [
+            models.Index(fields=["owner", "-created_at", "-id"], name="portal_rec_owner_recent"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.owner.get_username()}: {self.title}"
+
+
 class QuestionRecord(TimestampedModel):
     """An immutable, user-owned snapshot of a completed Q&A response."""
 

@@ -8,7 +8,7 @@
 <section class="vstack gap-3">
   {% for post in page_obj %}
     <article class="lab-card form-card">
-      <div class="d-flex justify-content-between gap-3"><div><h2 class="h5 mb-1"><a class="text-decoration-none text-dark" href="{% url 'community_post_detail' post.pk %}">{{ post.title }}</a></h2><p class="small text-muted mb-0">{{ post.author.username }} · {{ post.created_at|date:'Y.m.d H:i' }}</p></div><span class="status-badge">추천 {{ post.like_count }}</span></div>
+      <div class="d-flex justify-content-between gap-3"><div><h2 class="h5 mb-1"><a class="text-decoration-none text-dark" href="{% url 'community_post_detail' post.pk %}">{{ post.title }}</a></h2><p class="small text-muted mb-0">{{ post.author.username }} · {{ post.created_at|date:'Y.m.d H:i' }}</p></div><span class="status-badge community-like-count">추천 {{ post.like_count }}</span></div>
     </article>
   {% empty %}
     <div class="lab-card form-card text-center text-muted">아직 작성된 게시글이 없습니다.</div>

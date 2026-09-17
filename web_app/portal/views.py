@@ -30,6 +30,12 @@ from .forms import (
     RecommendationForm,
 )
 from .models import Comment, DrawerItem, Post, PostLike, QuestionRecord, WrongNote
+from .result_service import (
+    get_challenge_result,
+    get_command_lab_result,
+    get_qa_result,
+    get_recommendation_result,
+)
 from .services import (
     get_citation_presenter,
     get_command_lab_service,
@@ -451,7 +457,9 @@ def recommend(request):
                 gpio_required=RecommendationForm.as_optional_boolean(data["gpio"]),
                 monitor_absent=RecommendationForm.as_optional_boolean(data["monitor_absent"]),
             )
-            response = get_recommendation_service().answer_form(form=request_form, trace=True)
+            feature_result = get_recommendation_result(get_recommendation_service(), form=request_form, trace=True)
+            response = feature_result.result
+            context["feature_result"] = feature_result
             context.update(_response_context(response))
         except Exception:
             logger.error("Recommendation service failed while processing a form request")
@@ -468,10 +476,15 @@ def qa(request):
         question = form.cleaned_data["question"]
         context["question"] = question
         try:
-            qa_service = get_qa_service()
-            response = qa_service.answer(
-                request_id=str(uuid.uuid4()), question=question, retrieval_mode="hybrid", trace=True
+            feature_result = get_qa_result(
+                get_qa_service(),
+                request_id=str(uuid.uuid4()),
+                question=question,
+                retrieval_mode="hybrid",
+                trace=True,
             )
+            response = feature_result.result
+            context["feature_result"] = feature_result
             context.update(_response_context(response))
             saved_record = _save_question_record(request, response, question)
             if saved_record is not None:
@@ -639,6 +652,12 @@ def mini_challenge_submit_api(request, quiz_id):
         "evidence": _quiz_evidence_cards(response, question),
         "authenticated": request.user.is_authenticated,
     }
+    feature_result = get_challenge_result(
+        question=question,
+        selected_choice_id=selected_choice_id,
+        submission=payload,
+    )
+    payload.update(feature_result.to_dict())
     if not is_correct and request.user.is_authenticated:
         payload["wrong_note_url"] = reverse("wrong_note_save", args=[quiz_id])
     return JsonResponse(payload)
@@ -679,11 +698,15 @@ def lab(request):
 
     service = get_command_lab_service()
     selected_result = None
+    feature_result = None
     if request.method == "POST":
         action = request.POST.get("action")
         try:
             if action == "analyze" and context["analysis_form"].is_valid():
-                selected_result = _lab_payload(service.analyze(context["analysis_form"].cleaned_data["command"]))
+                feature_result = get_command_lab_result(
+                    service, command=context["analysis_form"].cleaned_data["command"]
+                )
+                selected_result = _lab_payload(feature_result.result)
             elif action in {"compose", "save_drawer"}:
                 template_id = request.POST.get("template_id", "")
                 item = service._item(template_id)
@@ -692,7 +715,10 @@ def lab(request):
                     for field in item["editable_fields"]
                 }
                 product_id = request.POST.get("product_id") or None
-                selected_result = _lab_payload(service.compose(template_id, values, product_id=product_id))
+                feature_result = get_command_lab_result(
+                    service, template_id=template_id, values=values, product_id=product_id
+                )
+                selected_result = _lab_payload(feature_result.result)
                 context["analysis_form"] = CommandInputForm(initial={"command": selected_result["command"]})
                 if action == "save_drawer":
                     payload = service.drawer_payload(template_id, values, product_id=product_id)
@@ -718,9 +744,11 @@ def lab(request):
             context["lab_error"] = "명령어 실험실을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요."
     elif context["lab_mode"] == "examples" and context["lab_templates"]:
         preferred = _selected_template(context["lab_templates"], "cmd-remote-access-004") or context["lab_templates"][0]
-        selected_result = _lab_payload(service.compose(preferred["template_id"]))
+        feature_result = get_command_lab_result(service, template_id=preferred["template_id"])
+        selected_result = _lab_payload(feature_result.result)
 
     if selected_result:
+        context["feature_result"] = feature_result
         context["lab_result"] = selected_result
         context["selected_template"] = _selected_template(context["lab_templates"], selected_result["template_id"])
         context["lab_editable_fields"] = _editable_fields(context["selected_template"], selected_result["values"])
@@ -751,7 +779,8 @@ def lab_templates_api(request):
 @require_POST
 def lab_analyze_api(request):
     try:
-        return JsonResponse(_lab_payload(get_command_lab_service().analyze(_json_body(request).get("command"))))
+        feature_result = get_command_lab_result(get_command_lab_service(), command=_json_body(request).get("command"))
+        return JsonResponse(_lab_payload(feature_result.result))
     except ValueError as exc:
         return JsonResponse({"error": str(exc)}, status=400)
     except Exception:
@@ -762,10 +791,13 @@ def lab_analyze_api(request):
 def lab_compose_api(request):
     try:
         body = _json_body(request)
-        result = get_command_lab_service().compose(
-            body.get("template_id"), body.get("values"), product_id=body.get("product_id")
+        feature_result = get_command_lab_result(
+            get_command_lab_service(),
+            template_id=body.get("template_id"),
+            values=body.get("values"),
+            product_id=body.get("product_id"),
         )
-        return JsonResponse(_lab_payload(result))
+        return JsonResponse(_lab_payload(feature_result.result))
     except ValueError as exc:
         return JsonResponse({"error": str(exc)}, status=400)
     except Exception:
@@ -1048,7 +1080,8 @@ def api_lab_analyze(request):
     if error_response is not None:
         return error_response
     try:
-        return JsonResponse(get_command_lab_service().analyze(data.get("command")))
+        feature_result = get_command_lab_result(get_command_lab_service(), command=data.get("command"))
+        return JsonResponse(feature_result.result)
     except CommandLabError as error:
         return _command_lab_error_response(error)
     except Exception:
@@ -1062,11 +1095,13 @@ def api_lab_compose(request):
     if error_response is not None:
         return error_response
     try:
-        return JsonResponse(
-            get_command_lab_service().compose(
-                data.get("template_id"), data.get("values"), product_id=data.get("product_id")
-            )
+        feature_result = get_command_lab_result(
+            get_command_lab_service(),
+            template_id=data.get("template_id"),
+            values=data.get("values"),
+            product_id=data.get("product_id"),
         )
+        return JsonResponse(feature_result.result)
     except CommandLabError as error:
         return _command_lab_error_response(error)
     except Exception:
@@ -1084,10 +1119,16 @@ def command_lab(request):
         if request.method == "POST":
             action = request.POST.get("action")
             if action == "analyze" and form.is_valid():
-                context["result"] = service.analyze(form.cleaned_data["command"])
+                feature_result = get_command_lab_result(service, command=form.cleaned_data["command"])
+                context["feature_result"] = feature_result
+                context["result"] = feature_result.result
             elif action == "compose":
                 template_id, values, product_id = _form_compose_arguments(service, request.POST)
-                context["result"] = service.compose(template_id, values, product_id=product_id)
+                feature_result = get_command_lab_result(
+                    service, template_id=template_id, values=values, product_id=product_id
+                )
+                context["feature_result"] = feature_result
+                context["result"] = feature_result.result
             elif action not in {"analyze", "compose"}:
                 context["lab_error"] = "지원하지 않는 요청입니다."
     except CommandLabError as error:

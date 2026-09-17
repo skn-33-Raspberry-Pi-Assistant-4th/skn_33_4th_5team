@@ -150,48 +150,60 @@ def get_command_lab_result(
     )
 
 
-def get_challenge_result(
-    service: Any,
-    *,
-    state: dict[str, Any],
-    question_id: str,
-    choice_id: str,
-    inline: bool = False,
-) -> FeatureResult[dict[str, Any]]:
-    """Grade a challenge and return the prompt together with its explanation."""
+def _value(item: Any, key: str, default: Any = None) -> Any:
+    """Read the same public field from a Pydantic model or a legacy mapping."""
 
-    question = service.current_inline_question(state) if inline else service.current_question(state)
-    result = (
-        service.submit_inline(state, question_id=question_id, choice_id=choice_id)
-        if inline
-        else service.submit(state, question_id=question_id, choice_id=choice_id)
-    )
-    choices = {item["choice_id"]: item["text"] for item in question["choices"]}
-    selected_text = choices.get(result["selected_choice_id"], result["selected_choice_id"])
-    correct_text = choices.get(result["correct_choice_id"], result["correct_choice_id"])
+    return item.get(key, default) if isinstance(item, dict) else getattr(item, key, default)
+
+
+def get_challenge_result(
+    *,
+    question: Any,
+    selected_choice_id: str,
+    submission: dict[str, Any],
+    request_id: str | None = None,
+) -> FeatureResult[dict[str, Any]]:
+    """Normalize one submitted dynamic Mini Challenge answer.
+
+    Quiz creation and answer-key protection remain owned by the Q&A session API.
+    This function is deliberately called only after the server has graded a choice.
+    """
+
+    choices = {
+        str(_value(item, "id", _value(item, "choice_id"))): str(_value(item, "text", ""))
+        for item in (_value(question, "choices", []) or [])
+    }
+    selected_id = str(submission.get("selected_choice_id", selected_choice_id))
+    correct_id = str(submission["correct_choice_id"])
+    selected_text = choices.get(selected_id, selected_id)
+    correct_text = choices.get(correct_id, correct_id)
+    is_correct = bool(submission.get("is_correct", submission.get("correct", False)))
+    feedback = submission.get("choice_feedback") or ("정답입니다." if is_correct else "오답입니다.")
+    explanation = submission.get("explanation") or submission.get("rationale_ko") or ""
     answer = "\n".join(
-        (
+        line
+        for line in (
             f"선택한 답: {selected_text}",
             f"정답: {correct_text}",
-            str(result["choice_feedback"]),
-            str(result["rationale_ko"]),
+            str(feedback),
+            str(explanation),
         )
+        if line
     )
     return FeatureResult(
         feature="challenge",
-        request_id=str(uuid4()),
-        question=str(question["prompt"]),
+        request_id=request_id or str(uuid4()),
+        question=str(_value(question, "question", _value(question, "prompt", ""))),
         answer=answer,
-        status="correct" if result["correct"] else "incorrect",
+        status="correct" if is_correct else "incorrect",
         payload={
             "input": {
                 "question": _json_payload(question),
-                "selected_choice_id": choice_id,
-                "inline": inline,
+                "selected_choice_id": selected_id,
             },
-            "result": _json_payload(result),
+            "result": _json_payload(submission),
         },
-        result=result,
+        result=submission,
     )
 
 

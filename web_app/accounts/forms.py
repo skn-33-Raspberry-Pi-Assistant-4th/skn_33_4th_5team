@@ -1,8 +1,23 @@
 """Signup form built on Django's default User model and password validators."""
 
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
+
+
+class LoginForm(AuthenticationForm):
+    """Apply the same PiCare input treatment used by the signup form."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["username"].label = "아이디"
+        self.fields["username"].widget.attrs.update(
+            {"class": "form-control", "autocomplete": "username", "placeholder": "아이디"}
+        )
+        self.fields["password"].label = "비밀번호"
+        self.fields["password"].widget.attrs.update(
+            {"class": "form-control", "autocomplete": "current-password", "placeholder": "비밀번호"}
+        )
 
 
 class SignupForm(UserCreationForm):
