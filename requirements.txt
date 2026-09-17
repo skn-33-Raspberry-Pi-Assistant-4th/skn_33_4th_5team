@@ -9,6 +9,8 @@
 # --- 화면·계약·설정 ---
 # Django는 현재 기본 사용자 UI이며, Streamlit은 기존 화면 호환용으로 유지한다.
 Django>=5.1,<6
+# Dynamic Mini Challenge generation runs in a separately cancellable worker.
+celery[redis]>=5.4,<6
 # MySQL 드라이버. C 컴파일 환경 없이 로컬·RunPod에서 Django MySQL 백엔드를 사용한다.
 PyMySQL>=1.1,<2
 # st.container(key=...)와 st-key-* CSS 선택자는 Streamlit 1.41부터 지원한다.

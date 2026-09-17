@@ -98,16 +98,3 @@ def get_command_lab_service() -> Any:
     from src.services.command_lab_service import CommandLabService
 
     return CommandLabService(PROJECT_ROOT)
-
-
-@lru_cache(maxsize=1)
-def get_challenge_service() -> Any:
-    """Build and cache the reviewed question-bank service for web challenges.
-
-    The service keeps answer keys and rationale server-side until a submitted
-    choice is validated, for both three-question and Q&A inline challenges.
-    """
-
-    from src.services.challenge_service import ChallengeService
-
-    return ChallengeService(PROJECT_ROOT)

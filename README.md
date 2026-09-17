@@ -140,7 +140,7 @@ Q&A / 추천 입력 → 답변·출처 카드 → Quiz 또는 Command Lab 연계
 | RAG Q&A | 완료* | Hybrid Retrieval, 근거 기반 답변, citation·미디어 연결 |
 | 제품 추천 | 완료* | 조건 추출, 카탈로그 후보 선택, 후보 범위 RAG, 추천 응답 |
 | Command Lab | 완료 | 승인 템플릿 분석·조합, 안전 정책, 근거 검증, 서랍 저장 |
-| Dynamic Mini Challenge | 부분 구현 | Django Q&A 화면의 생성·제출·채점·오답노트 흐름. 외부 프론트엔드용 Quiz JSON endpoint는 없음 |
+| Dynamic Mini Challenge | 완료* | Q&A 완료 뒤 Celery GPU worker가 Quiz를 생성하고, 상태 조회·취소·서버 채점·오답노트 흐름을 제공 |
 | 인증·커뮤니티 | 완료 | 가입·로그인·프로필, 게시글·댓글·좋아요·마이페이지 |
 | 질문 아카이브 | UI만 구현 | 정적 미리보기 목록·상세 화면 |
 | MySQL / Docker | 완료 | Docker Compose MySQL을 Django 기본 DB로 사용하며, `.env` 설정 후 migration으로 초기화 |
@@ -180,7 +180,7 @@ Q&A / 추천 입력 → 답변·출처 카드 → Quiz 또는 Command Lab 연계
 ├── eval/                       # Q&A·Quiz 평가 fixture와 결과
 ├── tests/                      # 단위·통합·Django·GPU smoke 테스트
 ├── docs/                       # 계약·가이드·검증 문서
-├── compose.yaml                # MySQL 컨테이너
+├── compose.yaml                # MySQL·Redis·Django·GPU Quiz worker 컨테이너
 └── requirements*.txt           # 기본·GPU·학습 의존성
 ```
 
@@ -206,11 +206,16 @@ python web_app/manage.py runserver 8001
 - 4-bit Qwen 추론·LoRA 조건 추출: `requirements-gpu.txt`
 - QLoRA 학습: `requirements-training.txt`
 
-RunPod에서는 모델 자동 재로딩을 피하기 위해 다음 실행 방식을 사용합니다.
+RunPod에서 Q&A와 취소 가능한 동적 Quiz를 함께 실행할 때는 Docker와 NVIDIA Container
+Toolkit을 준비한 뒤 Compose를 사용합니다. Q&A web과 Quiz worker가 각각 Qwen을 적재하므로
+GPU 메모리 여유가 필요합니다.
 
 ```bash
-python web_app/manage.py runserver 0.0.0.0:8000 --noreload
+docker compose up --build
 ```
+
+Q&A만 점검하는 직접 실행은 `python web_app/manage.py runserver 0.0.0.0:8000 --noreload`를
+사용할 수 있지만, 이 방식만으로는 비동기 Quiz worker와 실제 취소를 제공하지 않습니다.
 
 ## 역할 분담
 

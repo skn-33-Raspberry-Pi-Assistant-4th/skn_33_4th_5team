@@ -19,5 +19,55 @@ services:
       retries: 20
       start_period: 20s
 
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - picare_redis_data:/data
+
+  web:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MYSQL_HOST: mysql
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      HF_HOME: /root/.cache/huggingface
+    command: sh -c "python web_app/manage.py migrate && python web_app/manage.py runserver 0.0.0.0:8000 --noreload"
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    gpus: all
+    volumes:
+      - .:/app
+      - ${HF_CACHE_DIR:-./.hf-cache}:/root/.cache/huggingface
+
+  quiz-worker:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MYSQL_HOST: mysql
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      HF_HOME: /root/.cache/huggingface
+    command: celery -A picare_web.celery worker --loglevel=INFO --pool=prefork --concurrency=1
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    gpus: all
+    volumes:
+      - .:/app
+      - ${HF_CACHE_DIR:-./.hf-cache}:/root/.cache/huggingface
+
 volumes:
   picare_mysql_data:
+  picare_redis_data:

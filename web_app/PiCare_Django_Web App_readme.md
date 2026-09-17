@@ -48,13 +48,12 @@ python web_app/manage.py runserver 8001
 | `/recommend/` | `recommend()` | `get_recommendation_service().answer_form()` | sLLM 조건 추출 → 제품 카탈로그 후보 선정 → Hybrid RAG 근거 검색 → 추천 답변을 처리한다. |
 | `/qa/` | `qa()` | `get_qa_service().answer()` | 입력 안전성 검사, Hybrid RAG 검색, 인용 검증, 근거 기반 Q&A 답변 생성을 처리한다. |
 | `/qa/` 출처 카드 | `_response_context()` | `get_citation_presenter().present()` | 팀 RAG 결과의 인용을 문서명·섹션·태그가 포함된 화면용 카드 데이터로 변환한다. |
-| `/qa/` Mini Challenge | `qa()` | `get_challenge_service().start_inline()` | Q&A 인용의 `document_id`가 SSH 또는 OS 설치일 때만 검수 문제 1개를 시작한다. |
-| `/api/qa/mini-challenge/submit` | `inline_challenge_submit_api()` | `ChallengeService.submit_inline()` | 서버에서 정답을 채점한 뒤에만 해설과 공식 근거를 반환한다. |
+| `/qa/` Dynamic Mini Challenge | `mini_challenge_start_api()` | Celery `generate_dynamic_quiz()` | 최신 Q&A 답변과 실제 citation으로 C Quiz를 비동기 생성한다. |
+| `/api/qa/mini-challenge/jobs/<task_id>` | `mini_challenge_job_api()` / `cancelAPI()` | Celery result backend | 생성 상태를 조회하고 실행 중인 GPU worker task를 취소한다. |
+| `/api/qa/mini-challenge/quizzes/<quiz_id>/submit` | `mini_challenge_submit_api()` | session Quiz | 서버에서 정답을 채점한 뒤에만 해설과 공식 근거를 반환한다. |
 | `/lab/` | `lab()` | `CommandLabService.list_templates()` | 검수 완료된 명령 템플릿만 라이브러리에 표시한다. |
 | `/lab/` | `lab()` | `CommandLabService.analyze()` | 직접 입력한 명령이 승인된 템플릿과 일치하는지 검사하고 분석한다. 실제 실행은 하지 않는다. |
 | `/lab/` | `lab()` | `CommandLabService.compose()` | 허용된 편집 값만 반영해 명령을 재조합하고 근거·주의사항을 반환한다. |
-| `/challenge/` | `challenge()` | `ChallengeService.start()` | 승인된 문제은행에서 3문제를 무작위로 시작한다. 최초 응답에는 정답·해설을 넣지 않는다. |
-| `/challenge/` | `challenge()` | `ChallengeService.submit()` | 현재 문제만 서버에서 채점하고, 제출 후 해설·공식 근거를 반환한다. |
 | `/health/` | `health()` | `get_runtime_readiness()` | `.env`, Chroma 색인 등 RAG 런타임의 최소 준비 상태를 확인한다. |
 
 ## 서비스 조립 함수
@@ -68,7 +67,6 @@ python web_app/manage.py runserver 8001
 | `get_recommendation_service()` | `streamlit_app.runtime.build_recommendation_service()` | `RecommendationRagService`를 조립해 제품 추천 화면에 제공한다. |
 | `get_citation_presenter()` | `src.presentation.load_citation_presenter()` | 인용 메타데이터의 표시 이름과 태그를 만든다. 실패해도 원본 인용은 표시한다. |
 | `get_command_lab_service()` | `src.services.command_lab_service.CommandLabService` | 명령어 카탈로그 검증·분석·재조합 기능을 제공한다. |
-| `get_challenge_service()` | `src.services.challenge_service.ChallengeService` | 문제은행 검증·문제 출제·채점 기능을 제공한다. |
 
 ## Django가 담당하는 부분
 
@@ -81,9 +79,9 @@ python web_app/manage.py runserver 8001
 ## 안전 경계
 
 - 명령어 실험실은 `CommandLabService`의 승인된 템플릿만 사용하며, 명령을 실행하지 않는다.
-- 챌린지는 시작 HTML과 세션에 정답·해설을 저장하지 않고, 제출 후에만 반환한다.
+- 동적 Quiz는 생성 응답에 정답·해설을 넣지 않고, 서버 채점 뒤에만 반환한다.
 - 공식 근거는 제목·섹션·URL만 화면에 전달하며 checksum은 노출하지 않는다.
-- 로그아웃과 인라인 챌린지 제출은 CSRF 보호 POST 요청만 허용한다.
+- 로그아웃과 동적 Quiz 생성·취소·제출은 CSRF 보호 POST 요청만 허용한다.
 
 ## 새 기능 연결 방법
 

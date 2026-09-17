@@ -126,3 +126,11 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATICFILES_DIRS = [WEB_APP_ROOT / "static"]
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Dynamic Mini Challenge generation is isolated in a GPU Celery worker so an
+# in-flight Qwen call can be terminated without stopping Django itself.
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://127.0.0.1:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", CELERY_BROKER_URL)
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_ACKS_LATE = False
+CELERY_RESULT_EXPIRES = 60 * 30

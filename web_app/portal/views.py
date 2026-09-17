@@ -31,7 +31,6 @@ from .forms import (
 )
 from .models import Comment, DrawerItem, Post, PostLike, QuestionRecord, WrongNote
 from .services import (
-    get_challenge_service,
     get_citation_presenter,
     get_command_lab_service,
     get_qa_service,
@@ -39,7 +38,6 @@ from .services import (
     get_runtime_readiness,
 )
 from src.services.command_lab_service import CommandLabError, CommandLabService
-from src.services.quiz_generator import QuizGenerator
 
 
 STATUS_LABELS = {
@@ -56,19 +54,9 @@ ACTIVITY_PAGE_SIZE = 10
 MYPAGE_RECENT_LIMIT = 5
 QA_SESSION_KEY = "latest_qa_response"
 QUIZ_SESSION_KEY = "mini_challenge"
-CHALLENGE_SESSION_KEY = "picare_challenge"
-INLINE_CHALLENGE_SESSION_KEY = "picare_inline_challenge"
+QUIZ_JOB_SESSION_KEY = "mini_challenge_job"
 LAB_DRAWER_SESSION_KEY = "picare_command_lab_drawer"
 LAB_DRAWER_LIMIT = 10
-
-LAB_TOPIC_LABELS = {
-    "remote_access": "원격 접속",
-    "os_installation": "OS 설치",
-}
-REMOTE_ACCESS_DOCUMENT_IDS = frozenset({"rpi-doc-remote-access-ssh"})
-OS_INSTALLATION_DOCUMENT_IDS = frozenset(
-    {"rpi-doc-getting-started-install", "rpi-doc-getting-started-setting-up"}
-)
 
 logger = logging.getLogger(__name__)
 
@@ -107,16 +95,35 @@ def _form_compose_arguments(service: CommandLabService, data) -> tuple[str, dict
     return template_id, values, product_id
 
 
-def get_quiz_generator(qa_service) -> QuizGenerator:
-    """Wrap the already assembled QA answer generator; never create another model."""
+def get_quiz_generation_task():
+    """Load Celery only when the asynchronous Quiz API is used."""
 
-    answer_generator = getattr(qa_service, "answer_generator", None)
-    if answer_generator is None or not hasattr(answer_generator, "generate_structured"):
-        raise RuntimeError("현재 Q&A 생성기는 퀴즈 structured generation을 지원하지 않습니다.")
+    from .tasks import generate_dynamic_quiz
 
-    from src.rag_to_llm.quiz_text_generator import HuggingFaceQuizTextGenerator
+    return generate_dynamic_quiz
 
-    return QuizGenerator(HuggingFaceQuizTextGenerator(answer_generator))
+
+def get_quiz_async_result(task_id: str):
+    """Look up an asynchronous task without loading Celery during normal Q&A."""
+
+    from celery.result import AsyncResult
+
+    return AsyncResult(task_id)
+
+
+def _cancel_active_quiz_job(request) -> None:
+    """Stop an older Quiz task before replacing the session's Q&A result."""
+
+    job = request.session.get(QUIZ_JOB_SESSION_KEY)
+    if not isinstance(job, dict) or not job.get("task_id") or job.get("status") == "cancelled":
+        request.session.pop(QUIZ_JOB_SESSION_KEY, None)
+        return
+    job["status"] = "cancelled"
+    request.session[QUIZ_JOB_SESSION_KEY] = job
+    try:
+        get_quiz_async_result(str(job["task_id"])).revoke(terminate=True, signal="SIGTERM")
+    except Exception:
+        logger.warning("Unable to revoke stale Quiz task %s", job["task_id"], exc_info=True)
 
 
 def _store_qa_response(request, response, question: str) -> bool:
@@ -124,6 +131,7 @@ def _store_qa_response(request, response, question: str) -> bool:
 
     if not isinstance(response, ChatResponse):
         return False
+    _cancel_active_quiz_job(request)
     request.session[QA_SESSION_KEY] = {
         "response": response.model_dump(mode="json"),
         "question": question,
@@ -215,6 +223,40 @@ def _store_quiz_response(request, quiz_response: QuizResponse) -> str:
     return quiz_id
 
 
+def _public_quiz_payload(quiz_response: QuizResponse) -> dict:
+    """Expose only questions and choices until a user submits an answer."""
+
+    return {
+        "status": quiz_response.status,
+        "questions": [
+            {
+                "question_id": question.question_id,
+                "question": question.question,
+                "choices": [{"id": choice.id, "text": choice.text} for choice in question.choices],
+            }
+            for question in quiz_response.questions
+        ],
+    }
+
+
+def _quiz_evidence_cards(response: ChatResponse, question) -> list[dict[str, str]]:
+    citations = {citation.citation_id: citation for citation in response.citations}
+    cards = []
+    for citation_id in question.evidence_ids:
+        citation = citations.get(citation_id)
+        if citation is None:
+            continue
+        cards.append(
+            {
+                "title": citation.title,
+                "section": citation.section,
+                "url": str(citation.source_url),
+                "quote": citation.quote,
+            }
+        )
+    return cards
+
+
 def _load_quiz_response(request, quiz_id: str) -> tuple[QuizResponse, dict] | None:
     saved = request.session.get(QUIZ_SESSION_KEY)
     if not isinstance(saved, dict) or saved.get("quiz_id") != str(quiz_id) or not isinstance(saved.get("response"), dict):
@@ -224,15 +266,6 @@ def _load_quiz_response(request, quiz_id: str) -> tuple[QuizResponse, dict] | No
     except (TypeError, ValueError):
         request.session.pop(QUIZ_SESSION_KEY, None)
         return None
-
-
-def _quiz_context(quiz_id: str, quiz_response: QuizResponse, *, submission: dict | None = None) -> dict:
-    return {
-        "quiz_id": quiz_id,
-        "quiz_response": quiz_response,
-        "quiz_status": quiz_response.status,
-        "quiz_submission": submission,
-    }
 
 
 def _question_or_none(quiz_response: QuizResponse, question_id: str | None):
@@ -278,32 +311,6 @@ def _response_context(response: ChatResponse) -> dict:
         "source_cards": _source_cards(response, preferred_use_case=preferred_use_case),
         "images": [item for item in response.media if item.media_type == "image"],
         "videos": [item for item in response.media if item.media_type != "image"],
-    }
-
-
-def _inline_challenge_topic(response: ChatResponse) -> str | None:
-    """Select an inline challenge only from cited, approved document IDs."""
-
-    if response.status != "answered":
-        return None
-    document_ids = {getattr(citation, "document_id", "") for citation in response.citations}
-    if document_ids & REMOTE_ACCESS_DOCUMENT_IDS:
-        return "remote_access"
-    if document_ids & OS_INSTALLATION_DOCUMENT_IDS:
-        return "os_installation"
-    return None
-
-
-def _inline_challenge_payload(result: dict) -> dict:
-    """Return the reviewed grading result without exposing server session state."""
-
-    return {
-        "correct": result["correct"],
-        "selected_choice_id": result["selected_choice_id"],
-        "correct_choice_id": result["correct_choice_id"],
-        "rationale_ko": result["rationale_ko"],
-        "choice_feedback": result["choice_feedback"],
-        "evidence": result["evidence"],
     }
 
 
@@ -471,25 +478,170 @@ def qa(request):
                 context["qa_record"] = saved_record
             elif request.user.is_authenticated:
                 context["qa_record_save_error"] = True
-            context["quiz_can_generate"] = _store_qa_response(request, response, question) and response.status == "answered" and bool(response.citations)
-            topic = _inline_challenge_topic(response)
-            if topic:
-                try:
-                    started = get_challenge_service().start_inline(topic)
-                    request.session[INLINE_CHALLENGE_SESSION_KEY] = started["state"]
-                    context["inline_challenge"] = {
-                        "topic": topic,
-                        "topic_label": LAB_TOPIC_LABELS[topic],
-                        "question": started["question"],
-                        "submit_url": reverse("inline_challenge_submit_api"),
-                        "challenge_url": f"{reverse('challenge')}?topic={topic}",
-                    }
-                except ValueError:
-                    context["inline_challenge_error"] = "미니 챌린지 근거를 확인하지 못했습니다. 전체 학습에서 다시 시도해 주세요."
+            context["quiz_auto_start"] = (
+                _store_qa_response(request, response, question)
+                and response.status == "answered"
+                and bool(response.citations)
+            )
         except Exception:
             logger.error("Q&A service failed while processing a question")
             context["service_error"] = "Q&A 서비스를 일시적으로 이용할 수 없습니다. 잠시 후 다시 시도해 주세요."
     return render(request, "portal/qa.html", context)
+
+
+def _quiz_api_error(code: str, message: str, status: int) -> JsonResponse:
+    return JsonResponse({"error": {"code": code, "message": message}}, status=status)
+
+
+@require_POST
+def mini_challenge_start_api(request):
+    """Queue C's Quiz generation from the latest server-created Q&A response."""
+
+    data, error = _json_request_data(request)
+    if error is not None:
+        return error
+    max_questions = data.get("max_questions", 3)
+    if max_questions != 3:
+        return _quiz_api_error("invalid_request", "현재 미니 챌린지는 최대 3문항으로 생성합니다.", 400)
+
+    loaded_qa = _load_qa_response(request)
+    if loaded_qa is None:
+        return _quiz_api_error("qa_response_not_found", "먼저 질문을 제출해 주세요.", 404)
+    response, _ = loaded_qa
+    if response.status != "answered" or not response.citations:
+        return JsonResponse({"status": "insufficient_content", "quiz": {"status": "insufficient_content", "questions": []}})
+
+    existing = request.session.get(QUIZ_JOB_SESSION_KEY)
+    if isinstance(existing, dict) and existing.get("status") in {"pending", "running"}:
+        return _quiz_api_error("generation_in_progress", "이미 미니 챌린지를 생성하고 있습니다.", 409)
+
+    try:
+        task = get_quiz_generation_task().delay(response.model_dump(mode="json"), max_questions=3)
+    except Exception:
+        logger.exception("Unable to queue dynamic Quiz generation")
+        return _quiz_api_error("queue_unavailable", "미니 챌린지를 준비하지 못했습니다. 잠시 후 다시 시도해 주세요.", 503)
+
+    request.session[QUIZ_JOB_SESSION_KEY] = {
+        "task_id": str(task.id),
+        "qa_request_id": response.request_id,
+        "status": "pending",
+    }
+    return JsonResponse({"task_id": str(task.id), "status": "pending"}, status=202)
+
+
+@require_GET
+def mini_challenge_job_api(request, task_id):
+    """Return only the session owner's current Quiz generation status."""
+
+    job = request.session.get(QUIZ_JOB_SESSION_KEY)
+    loaded_qa = _load_qa_response(request)
+    if not isinstance(job, dict) or str(job.get("task_id")) != str(task_id) or loaded_qa is None:
+        return _quiz_api_error("job_not_found", "미니 챌린지 생성 정보를 찾을 수 없습니다.", 404)
+    response, _ = loaded_qa
+    if job.get("qa_request_id") != response.request_id:
+        return _quiz_api_error("job_not_found", "이전 질문의 미니 챌린지입니다.", 404)
+    if job.get("status") == "cancelled":
+        return JsonResponse({"task_id": str(task_id), "status": "cancelled"})
+
+    try:
+        task = get_quiz_async_result(str(task_id))
+        task_state = task.state
+    except Exception:
+        logger.exception("Unable to inspect dynamic Quiz task %s", task_id)
+        return _quiz_api_error("queue_unavailable", "미니 챌린지 상태를 확인하지 못했습니다.", 503)
+
+    if task_state in {"PENDING", "RECEIVED", "STARTED", "RETRY"}:
+        job["status"] = "running" if task_state == "STARTED" else "pending"
+        request.session[QUIZ_JOB_SESSION_KEY] = job
+        return JsonResponse({"task_id": str(task_id), "status": job["status"]}, status=202)
+    if task_state == "REVOKED":
+        job["status"] = "cancelled"
+        request.session[QUIZ_JOB_SESSION_KEY] = job
+        return JsonResponse({"task_id": str(task_id), "status": "cancelled"})
+    if task_state != "SUCCESS":
+        job["status"] = "generation_failed"
+        request.session[QUIZ_JOB_SESSION_KEY] = job
+        return JsonResponse({"task_id": str(task_id), "status": "generation_failed"})
+
+    try:
+        quiz_response = QuizResponse.model_validate(task.result)
+    except (TypeError, ValueError):
+        logger.error("Dynamic Quiz task %s returned an invalid result", task_id)
+        job["status"] = "generation_failed"
+        request.session[QUIZ_JOB_SESSION_KEY] = job
+        return JsonResponse({"task_id": str(task_id), "status": "generation_failed"})
+
+    job["status"] = quiz_response.status
+    if quiz_response.status == "available":
+        quiz_id = _store_quiz_response(request, quiz_response)
+        job["quiz_id"] = quiz_id
+    request.session[QUIZ_JOB_SESSION_KEY] = job
+    payload = {"task_id": str(task_id), "status": quiz_response.status, "quiz": _public_quiz_payload(quiz_response)}
+    if job.get("quiz_id"):
+        payload["quiz_id"] = job["quiz_id"]
+    return JsonResponse(payload)
+
+
+@require_POST
+def cancelAPI(request, task_id):
+    """Terminate the caller's active Celery Quiz worker task."""
+
+    job = request.session.get(QUIZ_JOB_SESSION_KEY)
+    if not isinstance(job, dict) or str(job.get("task_id")) != str(task_id):
+        return _quiz_api_error("job_not_found", "미니 챌린지 생성 정보를 찾을 수 없습니다.", 404)
+    if job.get("status") == "cancelled":
+        return JsonResponse({"task_id": str(task_id), "status": "cancelled"})
+
+    # Persist cancellation first: a result that wins the race must never be exposed.
+    job["status"] = "cancelled"
+    request.session[QUIZ_JOB_SESSION_KEY] = job
+    try:
+        get_quiz_async_result(str(task_id)).revoke(terminate=True, signal="SIGTERM")
+    except Exception:
+        logger.exception("Unable to terminate dynamic Quiz task %s", task_id)
+        return _quiz_api_error("cancel_unavailable", "생성 작업을 취소하지 못했습니다.", 503)
+    return JsonResponse({"task_id": str(task_id), "status": "cancelled"}, status=202)
+
+
+@require_POST
+def mini_challenge_submit_api(request, quiz_id):
+    """Grade one dynamic Quiz answer without trusting client-provided answer keys."""
+
+    data, error = _json_request_data(request)
+    if error is not None:
+        return error
+    loaded_qa = _load_qa_response(request)
+    loaded_quiz = _load_quiz_response(request, str(quiz_id))
+    if loaded_qa is None or loaded_quiz is None:
+        return _quiz_api_error("quiz_not_found", "퀴즈가 만료되었습니다. Q&A에서 다시 시작해 주세요.", 404)
+
+    response, _ = loaded_qa
+    quiz_response, saved_quiz = loaded_quiz
+    question = _question_or_none(quiz_response, data.get("question_id"))
+    selected_choice_id = data.get("selected_choice_id")
+    if question is None or selected_choice_id not in {choice.id for choice in question.choices}:
+        return _quiz_api_error("invalid_answer", "유효한 선택지를 골라 주세요.", 400)
+
+    submissions = saved_quiz.setdefault("submissions", {})
+    if question.question_id in submissions:
+        return _quiz_api_error("already_submitted", "이미 제출한 문제입니다.", 409)
+    submissions[question.question_id] = selected_choice_id
+    request.session[QUIZ_SESSION_KEY] = saved_quiz
+
+    is_correct = selected_choice_id == question.correct_choice_id
+    payload = {
+        "question_id": question.question_id,
+        "selected_choice_id": selected_choice_id,
+        "correct_choice_id": question.correct_choice_id,
+        "is_correct": is_correct,
+        "explanation": question.explanation,
+        "supporting_quotes": question.supporting_quotes,
+        "evidence": _quiz_evidence_cards(response, question),
+        "authenticated": request.user.is_authenticated,
+    }
+    if not is_correct and request.user.is_authenticated:
+        payload["wrong_note_url"] = reverse("wrong_note_save", args=[quiz_id])
+    return JsonResponse(payload)
 
 
 @require_http_methods(["GET"])
@@ -575,71 +727,6 @@ def lab(request):
     context["drawer_items"] = _drawer_items(request, service)
     context["drawer_count"] = len(context["drawer_items"])
     return render(request, "portal/lab.html", context)
-
-
-@require_http_methods(["GET", "POST"])
-def challenge(request):
-    """Run the existing reviewed three-question challenge in the session."""
-
-    context = _base_context(active_page="challenge")
-    try:
-        service = get_challenge_service()
-        context["challenge_topics"] = service.topics()
-        requested_topic = request.GET.get("topic", "")
-        if requested_topic in {topic["id"] for topic in context["challenge_topics"]}:
-            context["selected_challenge_topic"] = requested_topic
-        state = request.session.get(CHALLENGE_SESSION_KEY)
-        if request.method == "POST":
-            action = request.POST.get("action")
-            if action == "start":
-                started = service.start(request.POST.get("topic", ""))
-                request.session[CHALLENGE_SESSION_KEY] = started["state"]
-                context["challenge_question"] = started["question"]
-            elif action == "submit":
-                outcome = service.submit(
-                    state,
-                    question_id=request.POST.get("question_id", ""),
-                    choice_id=request.POST.get("choice_id", ""),
-                )
-                context["challenge_result"] = outcome
-                if outcome["completed"]:
-                    request.session.pop(CHALLENGE_SESSION_KEY, None)
-                else:
-                    request.session[CHALLENGE_SESSION_KEY] = outcome["state"]
-            elif action == "continue":
-                context["challenge_question"] = service.current_question(state)
-            elif action == "reset":
-                request.session.pop(CHALLENGE_SESSION_KEY, None)
-            else:
-                context["challenge_error"] = "요청을 확인하지 못했습니다."
-        elif state:
-            context["challenge_question"] = service.current_question(state)
-    except ValueError as exc:
-        context["challenge_error"] = str(exc)
-    except Exception:
-        context["challenge_error"] = "미니 챌린지를 준비하지 못했습니다. 잠시 후 다시 시도해 주세요."
-    return render(request, "portal/challenge.html", context)
-
-
-@require_POST
-def inline_challenge_submit_api(request):
-    """Grade the existing Q&A follow-up with normal Django CSRF protection."""
-
-    try:
-        state = request.session.get(INLINE_CHALLENGE_SESSION_KEY)
-        if not state:
-            raise ValueError("새 질문에 연결된 미니 챌린지를 다시 시작해 주세요.")
-        outcome = get_challenge_service().submit_inline(
-            state,
-            question_id=request.POST.get("question_id", ""),
-            choice_id=request.POST.get("choice_id", ""),
-        )
-        request.session.pop(INLINE_CHALLENGE_SESSION_KEY, None)
-        return JsonResponse(_inline_challenge_payload(outcome))
-    except ValueError as exc:
-        return JsonResponse({"error": str(exc)}, status=400)
-    except Exception:
-        return JsonResponse({"error": "미니 챌린지를 채점하지 못했습니다. 잠시 후 다시 시도해 주세요."}, status=503)
 
 
 def _json_body(request) -> dict:
@@ -1073,61 +1160,6 @@ def drawer_delete(request, pk: int):
     item.delete()
     messages.success(request, "서랍장 항목을 삭제했습니다.")
     return redirect("drawer_list")
-
-
-@require_POST
-def quiz_generate(request):
-    loaded_qa = _load_qa_response(request)
-    if loaded_qa is None:
-        messages.warning(request, "퀴즈를 만들 Q&A 결과가 없습니다. 먼저 질문을 제출해 주세요.")
-        return redirect("qa")
-
-    response, question = loaded_qa
-    context = _qa_result_context(response, question)
-    if response.status != "answered" or not response.citations:
-        quiz_response = QuizResponse(status="insufficient_content", questions=[])
-    else:
-        try:
-            # This reuses the cached Q&A service's answer generator and never calls qa_service.answer().
-            quiz_response = get_quiz_generator(get_qa_service()).generate_from_chat_response(response, max_questions=3)
-        except Exception:
-            quiz_response = QuizResponse(status="generation_failed", questions=[])
-
-    quiz_id = _store_quiz_response(request, quiz_response)
-    context.update(_quiz_context(quiz_id, quiz_response))
-    return render(request, "portal/qa.html", context)
-
-
-@require_POST
-def quiz_submit(request, quiz_id):
-    loaded_qa = _load_qa_response(request)
-    loaded_quiz = _load_quiz_response(request, str(quiz_id))
-    if loaded_qa is None or loaded_quiz is None:
-        messages.warning(request, "퀴즈가 만료되었습니다. Q&A 결과에서 다시 시작해 주세요.")
-        return redirect("qa")
-
-    response, question_text = loaded_qa
-    quiz_response, saved_quiz = loaded_quiz
-    question = _question_or_none(quiz_response, request.POST.get("question_id"))
-    selected_choice_id = request.POST.get("selected_choice_id")
-    if question is None or selected_choice_id not in {choice.id for choice in question.choices}:
-        messages.warning(request, "유효한 선택지를 골라 주세요.")
-        context = _qa_result_context(response, question_text)
-        context.update(_quiz_context(str(quiz_id), quiz_response))
-        return render(request, "portal/qa.html", context)
-
-    submissions = saved_quiz.setdefault("submissions", {})
-    submissions[question.question_id] = selected_choice_id
-    request.session[QUIZ_SESSION_KEY] = saved_quiz
-    submission = {
-        "question_id": question.question_id,
-        "selected_choice_id": selected_choice_id,
-        "correct_choice_id": question.correct_choice_id,
-        "is_correct": selected_choice_id == question.correct_choice_id,
-    }
-    context = _qa_result_context(response, question_text)
-    context.update(_quiz_context(str(quiz_id), quiz_response, submission=submission))
-    return render(request, "portal/qa.html", context)
 
 
 @login_required

@@ -1,6 +1,7 @@
 """Authentication flow tests for the Django presentation layer."""
 
 import json
+import uuid
 from copy import deepcopy
 from datetime import date
 from types import SimpleNamespace
@@ -612,7 +613,7 @@ class CommandLabAndDrawerTests(TestCase):
         self.assertEqual(response.json()["execution_policy"], "display_only")
 
 
-class QuizAndWrongNoteTests(TestCase):
+class DynamicQuizAndWrongNoteTests(TestCase):
     def setUp(self):
         self.owner = get_user_model().objects.create_user(
             username="quiz_owner",
@@ -638,25 +639,17 @@ class QuizAndWrongNoteTests(TestCase):
             evidence_ids=["C1"],
             supporting_quotes=["SSH is disabled by default on Raspberry Pi OS."],
         )
-        self.quiz_generator = Mock()
-        self.quiz_generator.generate_from_chat_response.return_value = QuizResponse(
-            status="available", questions=[self.quiz_question]
-        )
         self.qa_service = Mock()
-        self.qa_service.answer_generator = Mock()
         self.qa_patch = patch("portal.views.get_qa_service", return_value=self.qa_service)
-        self.quiz_patch = patch("portal.views.get_quiz_generator", return_value=self.quiz_generator)
         self.readiness_patch = patch(
             "portal.views.get_runtime_readiness",
             return_value=SimpleNamespace(ready=True, message="ready"),
         )
         self.presenter_patch = patch("portal.views.get_citation_presenter", return_value=None)
         self.qa_patch.start()
-        self.quiz_patch.start()
         self.readiness_patch.start()
         self.presenter_patch.start()
         self.addCleanup(self.qa_patch.stop)
-        self.addCleanup(self.quiz_patch.stop)
         self.addCleanup(self.readiness_patch.stop)
         self.addCleanup(self.presenter_patch.stop)
 
@@ -704,61 +697,65 @@ class QuizAndWrongNoteTests(TestCase):
         self.assertEqual(result.status_code, 200)
         return result
 
-    def _generate_available_quiz(self) -> str:
-        self._submit_qa(self._chat_response())
-        result = self.client.post(reverse("quiz_generate"))
-        self.assertEqual(result.status_code, 200)
-        self.assertEqual(result.context["quiz_status"], "available")
-        return result.context["quiz_id"]
+    def _start_job(self, *, task_id: str):
+        task = Mock()
+        task.delay.return_value = SimpleNamespace(id=task_id)
+        task_patch = patch("portal.views.get_quiz_generation_task", return_value=task)
+        task_patch.start()
+        self.addCleanup(task_patch.stop)
+        result = self.client.post(
+            reverse("mini_challenge_start_api"),
+            data=json.dumps({"max_questions": 3}),
+            content_type="application/json",
+        )
+        return result, task
 
-    def test_answered_response_with_citation_generates_from_same_response_once(self):
+    def test_answered_response_queues_the_same_session_response(self):
         chat_response = self._chat_response()
-        self._submit_qa(chat_response)
+        qa_result = self._submit_qa(chat_response)
+        self.assertContains(qa_result, "DYNAMIC MINI CHALLENGE")
 
-        result = self.client.post(reverse("quiz_generate"))
+        result, task = self._start_job(task_id=str(uuid.uuid4()))
 
-        self.assertEqual(result.context["quiz_status"], "available")
-        self.quiz_generator.generate_from_chat_response.assert_called_once_with(chat_response, max_questions=3)
-        self.assertEqual(self.qa_service.answer.call_count, 1)
+        self.assertEqual(result.status_code, 202)
+        self.assertEqual(result.json()["status"], "pending")
+        task.delay.assert_called_once_with(chat_response.model_dump(mode="json"), max_questions=3)
 
-    def test_response_without_citation_skips_quiz_generator(self):
-        self._submit_qa(self._chat_response(answered=False, with_citation=False))
+    def test_response_without_citation_does_not_queue_a_task(self):
+        qa_result = self._submit_qa(self._chat_response(answered=False, with_citation=False))
+        self.assertNotContains(qa_result, "DYNAMIC MINI CHALLENGE")
 
-        result = self.client.post(reverse("quiz_generate"))
+        result, task = self._start_job(task_id=str(uuid.uuid4()))
 
-        self.assertEqual(result.context["quiz_status"], "insufficient_content")
-        self.quiz_generator.generate_from_chat_response.assert_not_called()
-        self.assertEqual(self.qa_service.answer.call_count, 1)
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.json()["status"], "insufficient_content")
+        task.delay.assert_not_called()
 
-    def test_insufficient_content_and_generation_failed_leave_qa_visible(self):
-        self.quiz_generator.generate_from_chat_response.return_value = QuizResponse(status="insufficient_content", questions=[])
-        self._submit_qa(self._chat_response())
-        insufficient_result = self.client.post(reverse("quiz_generate"))
-        self.assertEqual(insufficient_result.context["quiz_status"], "insufficient_content")
-        self.assertContains(insufficient_result, "Raspberry Pi OS에서 SSH는 기본적으로 비활성화")
-
-        self.quiz_generator.generate_from_chat_response.return_value = QuizResponse(status="generation_failed", questions=[])
-        self._submit_qa(self._chat_response())
-        failed_result = self.client.post(reverse("quiz_generate"))
-        self.assertEqual(failed_result.context["quiz_status"], "generation_failed")
-        self.assertContains(failed_result, "Q&A 답변은 정상적으로 이용할 수 있습니다")
-        self.assertEqual(self.qa_service.answer.call_count, 2)
-
-    def test_server_side_answer_check_and_wrong_note_save(self):
+    def test_status_hides_answer_key_then_submit_reveals_it_and_saves_wrong_note(self):
         self.client.force_login(self.owner)
-        quiz_id = self._generate_available_quiz()
+        self._submit_qa(self._chat_response())
+        task_id = str(uuid.uuid4())
+        started, _ = self._start_job(task_id=task_id)
+        self.assertEqual(started.status_code, 202)
+        async_result = Mock(state="SUCCESS", result=QuizResponse(status="available", questions=[self.quiz_question]).model_dump(mode="json"))
+        with patch("portal.views.get_quiz_async_result", return_value=async_result):
+            status_result = self.client.get(reverse("mini_challenge_job_api", args=[task_id]))
+
+        self.assertEqual(status_result.status_code, 200)
+        public_question = status_result.json()["quiz"]["questions"][0]
+        self.assertNotIn("correct_choice_id", public_question)
+        self.assertNotIn("explanation", public_question)
+        quiz_id = status_result.json()["quiz_id"]
         submit_result = self.client.post(
-            reverse("quiz_submit", args=[quiz_id]),
-            {
-                "question_id": self.quiz_question.question_id,
-                "selected_choice_id": "B",
-                "correct_choice_id": "B",
-            },
+            reverse("mini_challenge_submit_api", args=[quiz_id]),
+            data=json.dumps({"question_id": self.quiz_question.question_id, "selected_choice_id": "B"}),
+            content_type="application/json",
         )
 
-        submission = submit_result.context["quiz_submission"]
+        submission = submit_result.json()
         self.assertFalse(submission["is_correct"])
         self.assertEqual(submission["correct_choice_id"], "A")
+        self.assertIn("explanation", submission)
         save_result = self.client.post(
             reverse("wrong_note_save", args=[quiz_id]),
             {
@@ -777,6 +774,36 @@ class QuizAndWrongNoteTests(TestCase):
         self.assertEqual(note.correct_choice_id, "A")
         self.assertEqual(note.evidence_ids, ["C1"])
         self.assertEqual(note.supporting_quotes, ["SSH is disabled by default on Raspberry Pi OS."])
+
+    def test_cancel_api_revokes_only_the_session_task_and_discards_late_result(self):
+        self._submit_qa(self._chat_response())
+        task_id = str(uuid.uuid4())
+        self._start_job(task_id=task_id)
+        async_result = Mock()
+
+        with patch("portal.views.get_quiz_async_result", return_value=async_result):
+            cancelled = self.client.post(reverse("mini_challenge_cancel_api", args=[task_id]))
+            late_status = self.client.get(reverse("mini_challenge_job_api", args=[task_id]))
+
+        self.assertEqual(cancelled.status_code, 202)
+        async_result.revoke.assert_called_once_with(terminate=True, signal="SIGTERM")
+        self.assertEqual(late_status.json()["status"], "cancelled")
+
+    def test_job_owner_scope_and_csrf_protection(self):
+        self._submit_qa(self._chat_response())
+        task_id = str(uuid.uuid4())
+        self._start_job(task_id=task_id)
+        self.assertEqual(Client().get(reverse("mini_challenge_job_api", args=[task_id])).status_code, 404)
+
+        csrf_client = Client(enforce_csrf_checks=True)
+        self.assertEqual(
+            csrf_client.post(
+                reverse("mini_challenge_start_api"),
+                data=json.dumps({"max_questions": 3}),
+                content_type="application/json",
+            ).status_code,
+            403,
+        )
 
     def test_wrong_note_owner_scope_and_delete(self):
         note = WrongNote.objects.create(
@@ -1126,7 +1153,7 @@ class SecurityRegressionTests(TestCase):
             reverse("drawer_save"),
             reverse("drawer_delete", args=[self.drawer_item.pk]),
             reverse("wrong_note_delete", args=[self.wrong_note.pk]),
-            reverse("quiz_generate"),
+            reverse("mini_challenge_start_api"),
         )
         for url in post_only_urls:
             self.assertEqual(self.client.get(url).status_code, 405)

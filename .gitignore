@@ -112,6 +112,7 @@ COMMIT_MSG*
 # ── 비밀 ──────────────────────────────────────────────────
 .env
 .env.*
+.env_copy
 !.env.example
 *.pem
 *.key

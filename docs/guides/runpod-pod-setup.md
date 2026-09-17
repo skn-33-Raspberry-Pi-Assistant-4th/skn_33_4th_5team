@@ -54,9 +54,8 @@ E5_MODEL_NAME=intfloat/multilingual-e5-base
 DENSE_MAX_DISTANCE=0.48
 TOP_K=5
 
-# Django 명령어 실험실·미니 챌린지 데이터 경로
+# Django 명령어 실험실 데이터 경로
 COMMAND_CATALOG=data/products/command_catalog.json
-CHALLENGE_BANK=data/products/challenge_bank.json
 
 # 제품 추천 조건 추출기: 학습 완료 QLoRA adapter를 사용한다.
 CONDITION_EXTRACTOR=lora
