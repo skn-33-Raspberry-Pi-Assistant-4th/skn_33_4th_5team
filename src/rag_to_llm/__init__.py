@@ -14,6 +14,10 @@ from .answer_generator import (
     HuggingFaceAnswerGenerator,
 )
 from .factory import build_answer_generator
+from .qa_summary_text_generator import (
+    HuggingFaceQaSummaryTextGenerator,
+    build_qa_summary_text_generator,
+)
 from .quiz_text_generator import HuggingFaceQuizTextGenerator
 from .settings import AnswerGeneratorSettings, AnswerGeneratorSettingsError
 
@@ -26,5 +30,7 @@ __all__ = [
     "GenerationResult",
     "HuggingFaceAnswerGenerator",
     "HuggingFaceQuizTextGenerator",
+    "HuggingFaceQaSummaryTextGenerator",
+    "build_qa_summary_text_generator",
     "build_answer_generator",
 ]
