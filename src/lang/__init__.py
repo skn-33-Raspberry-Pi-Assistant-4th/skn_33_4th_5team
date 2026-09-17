@@ -19,6 +19,7 @@ from .quiz_prompts import (
     QUIZ_GENERATION_SYSTEM_PROMPT,
     build_quiz_generation_messages,
 )
+from .qa_summary_prompts import QUESTION_TITLE_SYSTEM_PROMPT, build_question_title_messages
 from .safety import (
     INSUFFICIENT_EVIDENCE_MARKER,
     AnswerSafetyError,
@@ -36,6 +37,7 @@ __all__ = [
     "GROUNDED_ANSWER_SYSTEM_PROMPT",
     "RECOMMENDATION_ANSWER_SYSTEM_PROMPT",
     "QUIZ_GENERATION_SYSTEM_PROMPT",
+    "QUESTION_TITLE_SYSTEM_PROMPT",
     "PromptBuildError",
     "PromptEvidence",
     "build_citation_repair_messages",
@@ -43,6 +45,7 @@ __all__ = [
     "build_grounded_answer_messages",
     "build_recommendation_answer_messages",
     "build_quiz_generation_messages",
+    "build_question_title_messages",
     "evaluate_request",
     "extract_citation_ids",
     "has_korean_prose",
