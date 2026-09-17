@@ -14,6 +14,7 @@ from .answer_generator import (
     HuggingFaceAnswerGenerator,
 )
 from .factory import build_answer_generator
+from .cancellation import GenerationCancelled
 from .qa_summary_text_generator import (
     HuggingFaceQaSummaryTextGenerator,
     build_qa_summary_text_generator,
@@ -28,6 +29,7 @@ __all__ = [
     "AnswerGeneratorSettingsError",
     "EvidenceTemplateGenerator",
     "GenerationResult",
+    "GenerationCancelled",
     "HuggingFaceAnswerGenerator",
     "HuggingFaceQuizTextGenerator",
     "HuggingFaceQaSummaryTextGenerator",

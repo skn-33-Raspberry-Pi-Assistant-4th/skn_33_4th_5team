@@ -14,17 +14,23 @@ Q&A가 완료된 뒤 원문 질문을 아카이브 목록용 제목 한 줄로, 
 
 ```python
 from src.rag_to_llm.qa_summary_text_generator import build_qa_summary_text_generator
+from src.rag_to_llm import GenerationCancelled
 from src.services.qa_summary import QaSummaryService
+from threading import Event
 
 # answer_generator: 현재 Q&A에 사용한 기존 생성기 인스턴스
 # chat_response: 해당 질문의 최종 ChatResponse
 text_generator = build_qa_summary_text_generator(answer_generator)
-summary = QaSummaryService(text_generator).generate(
-    question=original_question,
-    response=chat_response,
-)
-
-# 필요한 경우 summary.model_dump()로 API/저장용 dict를 얻는다.
+cancel_event = Event()  # Q&A 건마다 별도로 생성
+try:
+    summary = QaSummaryService(
+        text_generator,
+        cancel_requested=cancel_event.is_set,
+    ).generate(question=original_question, response=chat_response)
+    # 필요한 경우 summary.model_dump()로 API/저장용 dict를 얻는다.
+except GenerationCancelled:
+    # 요약 작업을 cancelled로 기록하고, 원래 ChatResponse는 그대로 유지
+    ...
 ```
 
 생성기를 새로 만들지 말고 기존 Q&A의 인스턴스를 전달해야 로드된 Qwen을 재사용한다. 요약은 검색을 다시 실행하지 않는다. 두 결과가 첫 시도에 성공하면 제목 생성·제목 검수·답변 요약 생성·답변 요약 검수로 **Qwen 호출이 네 번** 추가된다. 답변 요약의 형식·내용 검증 오류에는 답변 요약만 최대 한 번 재시도하며, 재시도 시 검수 호출도 추가될 수 있다. 모델 호출 오류에는 재시도하지 않는다. 호출은 현재 동기식이며, 각 결과가 나온 즉시 반환하는 스트리밍 인터페이스는 없다.
@@ -70,7 +76,9 @@ summary = QaSummaryService(text_generator).generate(
 
 실행 결과: `artifacts/validation/2026-09-17/final/qa_summary_20_results.json`, `artifacts/validation/2026-09-17/final/qa_summary_20_results.csv`. **`artifacts/`는 Git에서 제외**되므로 팀에 이 결과가 필요하면 파일을 별도로 전달해야 한다.
 
-현재 로컬 요약 관련 테스트는 82개 통과, Django 테스트를 제외한 pytest는 492개 통과·1개 건너뜀이다. 전체 pytest는 요약 코드가 아닌 기존 Django 설정의 `_database_config` 가져오기 오류로 수집 단계에서 중단된다. 이번 작업은 `settings.py`와 `views.py`를 수정하지 않았다.
+현재 로컬 요약·생성기 관련 테스트는 103개 통과, Django 테스트를 제외한 pytest는 500개 통과·1개 건너뜀이다. 전체 pytest는 이 로컬 환경에 Django가 없어 Django 테스트를 수집하지 못했다. 이번 작업은 `settings.py`와 `views.py`를 수정하지 않았다.
+
+취소 기능은 RunPod A40의 실제 Qwen에서 확인했다. 별도 스레드의 `Event`를 추론 중 설정하자 `GenerationCancelled`가 전파됐고, 요약 서비스에서 시작한 제목 생성도 같은 방식으로 중단됐다. 두 번의 취소 뒤 같은 로드된 모델 인스턴스로 제목 생성에 성공했다. 이 검증은 요약 코드의 취소 경계를 확인한 것이며, 프론트 취소 버튼과 백엔드 작업 상태의 연결은 아직 검증하지 않았다.
 
 인용 검증은 원답변의 인용 ID 존재 여부, 명령어와 인용의 대응, 질문에 명시적으로 나열된 항목, 일부 형식·수치 표현을 검사한다. Qwen 검수는 원답변의 인용 근거도 함께 읽지만, 모든 문장의 의미나 인용 관계를 완벽히 판정할 수는 없다. 불확실하거나 거절된 결과는 `generation_failed`로 반환할 수 있다. 원답변 자체의 오류도 요약 서비스가 고치지 않는다. 20건 중 11번 원답변의 `raspistill` 설명 모순과 16번 원답변의 `BOOT_ORDER` 설명 오류는 별도 Q&A 품질 과제로 남아 있다.
 
@@ -78,6 +86,6 @@ summary = QaSummaryService(text_generator).generate(
 
 1. 백엔드: 최종 `ChatResponse` 이후 서비스 호출, 결과 저장, API 응답, 기존 Q&A와 동일 건 매핑 및 실패 처리.
 2. 프론트: QnA 요약 토글, 아카이브 목록·상세 표시, 상태별 대체 표시와 원답변 citation 연결.
-3. 취소: 현재 요약 서비스와 Qwen 생성 경로에는 요청 취소 신호가 없다. 프론트에서 화면 요청을 취소해도 진행 중인 Qwen 추론은 계속될 수 있다. 단계 사이 취소와 추론 중 취소는 백엔드의 취소 신호 전달을 포함해 별도로 구현해야 한다.
+3. 취소 연결: 요약 서비스는 `cancel_requested` 콜백을 받아 제목·검수·답변 요약 호출 사이에 확인한다. 요약용 Qwen 호출 중에도 Transformers의 중단 조건으로 토큰 생성 단계마다 확인한다. 취소 시 `GenerationCancelled` 예외가 전파되며, `QaSummaryResult`의 `generation_failed`로 바뀌지 않는다. 취소 신호를 넘기지 않는 기존 Q&A `generate()`와 Mini Challenge 호출에는 중단 조건이 추가되지 않는다. 모델 로딩이나 이미 실행 중인 GPU 연산 한 단계는 즉시 끊을 수 없고 다음 확인 지점에서 멈춘다. **프론트 취소 버튼 또는 API 요청 중단을 해당 콜백의 상태에 연결하는 백엔드 작업은 남아 있다.** 같은 프로세스의 `Event`를 쓸 경우 백엔드는 생성 중에도 다른 실행 흐름에서 `set()`을 호출할 수 있어야 한다. 다른 프로세스의 작업이라면 해당 작업에 맞는 취소 신호 저장소가 필요하다.
 
 코드 진입점은 `src/services/qa_summary.py`, `src/rag_to_llm/qa_summary_text_generator.py`, `src/contracts/models.py`의 `QaSummaryResult`다. 검증 규칙은 `src/services/qa_summary_parser.py`, 프롬프트는 `src/lang/qa_summary_prompts.py`를 참조한다.

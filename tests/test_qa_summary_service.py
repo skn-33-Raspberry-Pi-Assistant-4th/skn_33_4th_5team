@@ -5,22 +5,38 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping, Sequence
 from datetime import date
+from threading import Event
+from typing import Callable
 
 import pytest
 
 from src.contracts import ChatCitation, ChatResponse
 from src.rag_to_llm import EvidenceTemplateGenerator
+from src.rag_to_llm.cancellation import GenerationCancelled
 from src.services.qa_summary import QaSummaryService
 
 
 class SequenceTextGenerator:
-    def __init__(self, outputs: list[str | Exception], reviews: list[str | Exception] | None = None):
+    def __init__(
+        self,
+        outputs: list[str | Exception],
+        reviews: list[str | Exception] | None = None,
+        on_call: Callable[[int], None] | None = None,
+    ):
         self.outputs = outputs
         self.reviews = reviews
+        self.on_call = on_call
         self.calls: list[list[dict[str, str]]] = []
 
-    def generate(self, messages: Sequence[Mapping[str, str]]) -> str:
+    def generate(
+        self,
+        messages: Sequence[Mapping[str, str]],
+        *,
+        cancel_requested: Callable[[], bool] | None = None,
+    ) -> str:
         self.calls.append([dict(message) for message in messages])
+        if self.on_call is not None:
+            self.on_call(len(self.calls))
         if '"valid":true' in messages[0]["content"]:
             outcome = self.reviews.pop(0) if self.reviews is not None else '{"valid":true}'
         else:
@@ -228,3 +244,58 @@ def test_answer_review_failure_retries_only_summary() -> None:
     assert result.question_title_status == "available"
     assert result.answer_summary_status == "available"
     assert len(generator.calls) == 6
+
+
+def test_cancel_before_title_skips_all_model_calls() -> None:
+    cancellation = Event()
+    cancellation.set()
+    generator = SequenceTextGenerator([])
+
+    with pytest.raises(GenerationCancelled):
+        QaSummaryService(generator, cancel_requested=cancellation.is_set).generate(
+            "SSH 설정 방법은?", _response()
+        )
+
+    assert generator.calls == []
+
+
+def test_cancel_between_title_and_review_skips_remaining_calls() -> None:
+    cancellation = Event()
+    generator = SequenceTextGenerator([_title()], on_call=lambda index: cancellation.set())
+
+    with pytest.raises(GenerationCancelled):
+        QaSummaryService(generator, cancel_requested=cancellation.is_set).generate(
+            "SSH 설정 방법은?", _response()
+        )
+
+    assert len(generator.calls) == 1
+
+
+def test_cancel_after_title_review_skips_answer_summary() -> None:
+    cancellation = Event()
+    generator = SequenceTextGenerator(
+        [_title()],
+        on_call=lambda index: cancellation.set() if index == 2 else None,
+    )
+
+    with pytest.raises(GenerationCancelled):
+        QaSummaryService(generator, cancel_requested=cancellation.is_set).generate(
+            "SSH 설정 방법은?", _response()
+        )
+
+    assert len(generator.calls) == 2
+
+
+def test_cancel_during_answer_review_is_not_generation_failure() -> None:
+    cancellation = Event()
+    generator = SequenceTextGenerator(
+        [_title(), _summary()],
+        on_call=lambda index: cancellation.set() if index == 4 else None,
+    )
+
+    with pytest.raises(GenerationCancelled):
+        QaSummaryService(generator, cancel_requested=cancellation.is_set).generate(
+            "SSH 설정 방법은?", _response()
+        )
+
+    assert len(generator.calls) == 4

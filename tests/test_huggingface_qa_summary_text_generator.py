@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from threading import Event
 from unittest.mock import Mock
+
+import pytest
 
 from src.rag_to_llm import (
     EvidenceTemplateGenerator,
@@ -11,6 +14,7 @@ from src.rag_to_llm import (
     HuggingFaceQaSummaryTextGenerator,
     build_qa_summary_text_generator,
 )
+from src.rag_to_llm.cancellation import GenerationCancelled
 
 
 def test_summary_adapter_reuses_the_injected_qwen_for_each_call() -> None:
@@ -39,3 +43,35 @@ def test_adapter_factory_supports_qwen_and_rejects_template() -> None:
     assert isinstance(adapter, HuggingFaceQaSummaryTextGenerator)
     assert adapter._answer_generator is answer_generator
     assert build_qa_summary_text_generator(EvidenceTemplateGenerator()) is None
+
+
+def test_summary_adapter_forwards_optional_cancellation_only_to_summary_call() -> None:
+    answer_generator = Mock(spec=HuggingFaceAnswerGenerator)
+    answer_generator.generate_structured.return_value = GenerationResult(
+        '{"question_title":"SSH 설정"}', "huggingface", "Qwen/test", 10.0
+    )
+    adapter = HuggingFaceQaSummaryTextGenerator(answer_generator)
+    cancellation = Event()
+    messages = [{"role": "user", "content": "title"}]
+
+    adapter.generate(messages, cancel_requested=cancellation.is_set)
+
+    answer_generator.generate_structured.assert_called_once_with(
+        messages, max_new_tokens=256, cancel_requested=cancellation.is_set
+    )
+
+
+def test_cancelled_summary_adapter_does_not_expose_previous_result() -> None:
+    answer_generator = Mock(spec=HuggingFaceAnswerGenerator)
+    answer_generator.generate_structured.side_effect = [
+        GenerationResult('{"question_title":"SSH 설정"}', "huggingface", "Qwen/test", 10.0),
+        GenerationCancelled("cancelled"),
+    ]
+    adapter = HuggingFaceQaSummaryTextGenerator(answer_generator)
+    messages = [{"role": "user", "content": "title"}]
+    adapter.generate(messages)
+
+    with pytest.raises(GenerationCancelled):
+        adapter.generate(messages, cancel_requested=Event().is_set)
+
+    assert adapter.last_result is None
