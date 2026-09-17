@@ -1,0 +1,25 @@
+{% extends 'portal/base.html' %}
+{% block title %}{{ record.title }} | PiCare{% endblock %}
+{% block content %}
+<nav class="archive-back"><a href="{% url 'mypage_recommendations' %}">← 내 제품추천 기록으로</a></nav>
+<header class="mb-4">
+  <p class="eyebrow mb-1">MY RECOMMENDATION</p><h1 class="h2">{{ record.title }}</h1>
+  <p class="text-muted">{{ record.created_at|date:'Y.m.d H:i' }} · 본인만 볼 수 있는 기록입니다.</p>
+</header>
+<section class="lab-card form-card">
+  <h2 class="h5">질문 내용</h2><p>{{ record.question|linebreaksbr }}</p>
+  <h2 class="h5 mt-4">선택 당시 입력 조건</h2>
+  {% if input_conditions %}<dl class="row mb-0">{% for label, value in input_conditions %}<dt class="col-sm-4">{{ label }}</dt><dd class="col-sm-8">{{ value }}</dd>{% endfor %}</dl>
+  {% else %}<p class="text-muted mb-0">저장된 입력 조건을 복원할 수 없습니다.</p>{% endif %}
+</section>
+{% if snapshot_error %}<div class="alert alert-warning mt-3">저장된 상세 결과 일부를 복원하지 못했습니다. 기본 질문과 답변은 아래에서 확인할 수 있습니다.</div>{% endif %}
+{% if response %}
+<section class="mt-4"><h2 class="h4 mb-3">추천 제품 {{ response.products|length }}개</h2>
+  {% include 'portal/recommendation_products.html' %}
+  {% include 'portal/response_details.html' %}
+</section>
+{% else %}
+<section class="answer-card mt-4"><h2 class="h5">PiCare 추천 안내</h2><span class="status-badge {% if is_blocked %}blocked{% endif %}">{{ status_label }}</span><div class="answer-text mt-3">{{ record.answer|linebreaksbr }}</div></section>
+{% endif %}
+<form method="post" action="{% url 'mypage_recommendation_delete' record.pk %}" class="mt-4">{% csrf_token %}<button type="submit" class="btn btn-outline-danger">기록 삭제</button></form>
+{% endblock %}

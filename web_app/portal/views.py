@@ -8,8 +8,10 @@ import re
 import uuid
 
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Count, Prefetch
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -17,7 +19,11 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
-from src.condition_extraction.ui_input import RecommendationFormInput
+from src.condition_extraction.ui_input import (
+    PERFORMANCE_PRIORITY_LABELS,
+    USER_LEVEL_LABELS,
+    RecommendationFormInput,
+)
 from src.contracts import ChatResponse, QuizResponse
 
 from .forms import (
@@ -29,7 +35,7 @@ from .forms import (
     QuestionForm,
     RecommendationForm,
 )
-from .models import Comment, DrawerItem, Post, PostLike, QuestionRecord, WrongNote
+from .models import Comment, DrawerItem, Post, PostLike, QuestionRecord, RecommendationRecord, WrongNote
 from .result_service import (
     get_challenge_result,
     get_command_lab_result,
@@ -59,6 +65,7 @@ COMMUNITY_PAGE_SIZE = 10
 ACTIVITY_PAGE_SIZE = 10
 MYPAGE_RECENT_LIMIT = 5
 QA_SESSION_KEY = "latest_qa_response"
+RECOMMENDATION_SESSION_KEY = "pending_recommendation"
 QUIZ_SESSION_KEY = "mini_challenge"
 QUIZ_JOB_SESSION_KEY = "mini_challenge_job"
 LAB_DRAWER_SESSION_KEY = "picare_command_lab_drawer"
@@ -182,6 +189,77 @@ def _question_record_response(record: QuestionRecord) -> ChatResponse | None:
     except (TypeError, ValueError):
         logger.warning("Question record %s has an invalid response payload", record.pk)
         return None
+
+
+def _save_recommendation_record(
+    request, request_form: RecommendationFormInput, response: ChatResponse
+) -> RecommendationRecord | None:
+    """Persist a validated server snapshot without hiding results on DB failure."""
+
+    if not request.user.is_authenticated:
+        return None
+    try:
+        validated_input = RecommendationFormInput.model_validate(request_form.model_dump(mode="json"))
+        validated_response = ChatResponse.model_validate(response.model_dump(mode="json"))
+        with transaction.atomic():
+            # Serialize saves per member so double clicks cannot create duplicates.
+            get_user_model().objects.select_for_update().get(pk=request.user.pk)
+            existing = RecommendationRecord.objects.filter(
+                owner=request.user,
+                request_id=validated_response.request_id,
+                input_payload__request_id=validated_input.request_id,
+            ).first()
+            if existing is not None:
+                return existing
+            return RecommendationRecord.objects.create(
+                owner=request.user,
+                request_id=validated_response.request_id,
+                title=_qa_record_title(validated_input.free_text),
+                question=validated_input.free_text,
+                answer=validated_response.answer,
+                status=validated_response.status,
+                input_payload=validated_input.model_dump(mode="json"),
+                response_payload=validated_response.model_dump(mode="json"),
+            )
+    except Exception:
+        logger.exception("Failed to save recommendation record")
+        return None
+
+
+def _recommendation_record_context(record: RecommendationRecord) -> dict:
+    context = {
+        "record": record,
+        "active_page": "mypage",
+        "status_label": STATUS_LABELS.get(record.status, "저장된 답변"),
+        "is_blocked": record.status in BLOCKED_STATUSES,
+        "input_conditions": [],
+        "snapshot_error": False,
+    }
+    try:
+        saved_input = RecommendationFormInput.model_validate(record.input_payload)
+        level_labels = {value: label for label, value in USER_LEVEL_LABELS.items()}
+        performance_labels = {value: label for label, value in PERFORMANCE_PRIORITY_LABELS.items()}
+        context["input_conditions"] = [
+            ("사용자 수준", level_labels[saved_input.user_level]),
+            ("성능 우선순위", performance_labels[saved_input.performance_priority]),
+        ]
+        for label, value in (
+            ("Wi-Fi 필요", saved_input.wireless_required),
+            ("카메라 사용", saved_input.camera_required),
+            ("GPIO 사용", saved_input.gpio_required),
+            ("모니터 없음", saved_input.monitor_absent),
+        ):
+            context["input_conditions"].append((label, "선택 안 함" if value is None else "예" if value else "아니오"))
+    except (TypeError, ValueError):
+        context["snapshot_error"] = True
+        logger.warning("Recommendation record %s has an invalid input payload", record.pk)
+    try:
+        response = ChatResponse.model_validate(record.response_payload)
+        context.update(_response_context(response))
+    except (TypeError, ValueError):
+        context["snapshot_error"] = True
+        logger.warning("Recommendation record %s has an invalid response payload", record.pk)
+    return context
 
 
 def _question_record_context(record: QuestionRecord) -> dict:
@@ -444,6 +522,8 @@ def recommend(request):
     context = _base_context(active_page="recommend")
     form = RecommendationForm(request.POST or None, initial={"purpose": "모니터 없이 홈 서버로 사용하고 싶어요."})
     context["form"] = form
+    if request.method == "POST":
+        request.session.pop(RECOMMENDATION_SESSION_KEY, None)
     if request.method == "POST" and form.is_valid():
         data = form.cleaned_data
         try:
@@ -461,10 +541,47 @@ def recommend(request):
             response = feature_result.result
             context["feature_result"] = feature_result
             context.update(_response_context(response))
+            if request.user.is_authenticated:
+                snapshot = {
+                    "token": str(uuid.uuid4()),
+                    "owner_id": request.user.pk,
+                    "input": request_form.model_dump(mode="json"),
+                    "response": ChatResponse.model_validate(response.model_dump(mode="json")).model_dump(mode="json"),
+                }
+                request.session[RECOMMENDATION_SESSION_KEY] = snapshot
+                context["recommendation_save_token"] = snapshot["token"]
         except Exception:
             logger.error("Recommendation service failed while processing a form request")
             context["service_error"] = "제품 추천 서비스를 일시적으로 이용할 수 없습니다. 잠시 후 다시 시도해 주세요."
     return render(request, "portal/recommend.html", context)
+
+
+@require_POST
+def recommendation_save(request):
+    """Save only the current member's latest server-built recommendation."""
+
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "로그인 후 제품추천을 다시 받아 주세요."}, status=401)
+    snapshot = request.session.get(RECOMMENDATION_SESSION_KEY)
+    if (
+        not isinstance(snapshot, dict)
+        or snapshot.get("owner_id") != request.user.pk
+        or not snapshot.get("token")
+        or snapshot.get("token") != request.POST.get("token")
+    ):
+        return JsonResponse({"error": "저장할 추천 결과가 만료되었거나 변경되었습니다. 제품추천을 다시 받아 주세요."}, status=409)
+    try:
+        request_form = RecommendationFormInput.model_validate(snapshot["input"])
+        response = ChatResponse.model_validate(snapshot["response"])
+    except (KeyError, TypeError, ValueError):
+        return JsonResponse({"error": "저장할 추천 결과를 확인할 수 없습니다. 제품추천을 다시 받아 주세요."}, status=409)
+    record = _save_recommendation_record(request, request_form, response)
+    if record is None:
+        return JsonResponse({"error": "제품추천 기록을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요."}, status=503)
+    return JsonResponse({
+        "message": "내 제품추천 기록에 저장했습니다.",
+        "record_url": reverse("mypage_recommendation_detail", args=[record.pk]),
+    })
 
 
 @require_http_methods(["GET", "POST"])
@@ -842,6 +959,7 @@ def mypage(request):
             "drawer_items": DrawerItem.objects.filter(owner=user).count(),
             "wrong_notes": WrongNote.objects.filter(owner=user).count(),
             "qa_records": QuestionRecord.objects.filter(owner=user).count(),
+            "recommendation_records": RecommendationRecord.objects.filter(owner=user).count(),
         },
         "recent_posts": Post.objects.filter(author=user).select_related("author")[:MYPAGE_RECENT_LIMIT],
         "recent_comments": Comment.objects.filter(author=user).select_related("post")[:MYPAGE_RECENT_LIMIT],
@@ -849,6 +967,7 @@ def mypage(request):
         "recent_drawer_items": DrawerItem.objects.filter(owner=user)[:MYPAGE_RECENT_LIMIT],
         "recent_wrong_notes": WrongNote.objects.filter(owner=user)[:MYPAGE_RECENT_LIMIT],
         "recent_qa_records": QuestionRecord.objects.filter(owner=user)[:MYPAGE_RECENT_LIMIT],
+        "recent_recommendation_records": RecommendationRecord.objects.filter(owner=user)[:MYPAGE_RECENT_LIMIT],
         "active_page": "mypage",
     }
     return render(request, "portal/mypage.html", context)
@@ -890,6 +1009,32 @@ def mypage_likes(request):
         "portal/mypage_likes.html",
         {"page_obj": _activity_page(request, likes), "active_page": "mypage"},
     )
+
+
+@login_required
+@require_GET
+def mypage_recommendations(request):
+    records = RecommendationRecord.objects.filter(owner=request.user)
+    page_obj = _activity_page(request, records)
+    for record in page_obj:
+        record.status_label = STATUS_LABELS.get(record.status, "저장된 답변")
+    return render(request, "portal/mypage_recommendations.html", {"page_obj": page_obj, "active_page": "mypage"})
+
+
+@login_required
+@require_GET
+def mypage_recommendation_detail(request, pk: int):
+    record = get_object_or_404(RecommendationRecord, pk=pk, owner=request.user)
+    return render(request, "portal/recommendation_detail.html", _recommendation_record_context(record))
+
+
+@login_required
+@require_POST
+def mypage_recommendation_delete(request, pk: int):
+    record = get_object_or_404(RecommendationRecord, pk=pk, owner=request.user)
+    record.delete()
+    messages.success(request, "제품추천 기록을 삭제했습니다.")
+    return redirect("mypage_recommendations")
 
 
 @login_required

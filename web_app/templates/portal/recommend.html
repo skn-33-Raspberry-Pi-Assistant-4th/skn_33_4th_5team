@@ -12,8 +12,51 @@
 {% if service_error %}<div class="alert alert-danger mt-4">{{ service_error }}</div>{% endif %}
 {% if response %}
   <section class="mt-5"><div class="section-heading"><div><p class="card-kicker mb-1">추천 결과</p><h2>추천 제품 {{ response.products|length }}개</h2></div><span class="status-badge {% if is_blocked %}blocked{% endif %}">{{ status_label }}</span></div>
-  {% if response.products %}<div class="row g-4">{% for product in response.products %}<article class="col-md-6 col-xl-4"><div class="product-card h-100">{% if product.image_url %}<img src="{{ product.image_url }}" alt="{{ product.product_model }}" class="product-image">{% endif %}<h3>{{ product.product_model }}</h3><p class="product-reason">{{ product.recommendation }}</p><p class="small text-secondary mb-3">{{ product.limitations|join:' ' }}</p><a href="{{ product.product_url }}" target="_blank" rel="noopener" class="btn btn-outline-picare w-100">자세히 보기 ↗</a><small class="mt-3 text-muted">공식 근거 {{ product.citation_ids|join:', ' }}</small></div></article>{% endfor %}</div>{% endif %}
+  {% if recommendation_save_token %}
+  <form method="post" action="{% url 'recommendation_save' %}" id="recommendationSaveForm" class="mb-4">
+    {% csrf_token %}<input type="hidden" name="token" value="{{ recommendation_save_token }}">
+    <p class="small text-muted">원하는 결과만 저장 버튼을 눌러 내 기록에 보관하세요.</p>
+    <button class="btn btn-outline-picare" type="submit">제품추천 기록 저장</button>
+    <div id="recommendationSaveStatus" class="mt-2" role="status" aria-live="polite"></div>
+  </form>
+  {% elif not user.is_authenticated %}<p class="text-muted">기록을 저장하려면 로그인 후 제품추천을 다시 받아 주세요.</p>{% endif %}
+  {% include 'portal/recommendation_products.html' %}
   {% include 'portal/response_details.html' %}
   </section>
 {% elif not runtime_ready %}<div class="alert alert-warning mt-4 mb-0">{{ runtime_message }}</div>{% endif %}
+{% endblock %}
+{% block extra_script %}
+<script>
+(() => {
+  const form = document.getElementById('recommendationSaveForm');
+  if (!form) return;
+  const button = form.querySelector('button');
+  const status = document.getElementById('recommendationSaveStatus');
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (button.disabled) return;
+    button.disabled = true;
+    button.textContent = '저장 중…';
+    status.textContent = '';
+    try {
+      const response = await fetch(form.action, {method: 'POST', body: new FormData(form), credentials: 'same-origin'});
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || '저장하지 못했습니다. 다시 시도해 주세요.');
+      button.textContent = '저장 완료';
+      status.className = 'mt-2 text-success';
+      status.textContent = data.message + ' ';
+      const link = document.createElement('a');
+      link.href = data.record_url;
+      link.textContent = '기록 보기';
+      status.appendChild(link);
+    } catch (error) {
+      status.className = 'mt-2 text-danger';
+      status.textContent = error instanceof SyntaxError || error instanceof TypeError
+        ? '저장 요청을 완료하지 못했습니다. 로그인 상태와 연결을 확인하고 다시 시도해 주세요.' : error.message;
+      button.disabled = false;
+      button.textContent = '제품추천 기록 저장';
+    }
+  });
+})();
+</script>
 {% endblock %}

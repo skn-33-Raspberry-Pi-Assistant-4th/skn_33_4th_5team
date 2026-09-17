@@ -964,7 +964,7 @@ class MyPageTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.context["activity_counts"],
-            {"posts": 1, "comments": 1, "likes": 1, "drawer_items": 1, "wrong_notes": 1, "qa_records": 1},
+            {"posts": 1, "comments": 1, "likes": 1, "drawer_items": 1, "wrong_notes": 1, "qa_records": 1, "recommendation_records": 0},
         )
         self.assertContains(response, "내 게시글")
         self.assertContains(response, "내 댓글")
@@ -1015,7 +1015,7 @@ class MyPageTests(TestCase):
 
         self.assertEqual(
             response.context["activity_counts"],
-            {"posts": 0, "comments": 0, "likes": 0, "drawer_items": 0, "wrong_notes": 0, "qa_records": 0},
+            {"posts": 0, "comments": 0, "likes": 0, "drawer_items": 0, "wrong_notes": 0, "qa_records": 0, "recommendation_records": 0},
         )
         self.assertContains(response, "작성한 게시글이 없습니다.")
         self.assertContains(response, "저장한 오답노트가 없습니다.")

@@ -1,0 +1,21 @@
+{% extends 'portal/base.html' %}
+{% block title %}PiCare | 내 제품추천 기록{% endblock %}
+{% block content %}
+<nav class="archive-back"><a href="{% url 'mypage' %}">← 마이페이지로</a></nav>
+<section class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+  <div><p class="eyebrow mb-1">MY RECOMMENDATIONS</p><h1 class="h2 mb-1">내 제품추천 기록</h1><p class="text-muted mb-0">저장 버튼으로 보관한 추천 결과입니다. 본인만 볼 수 있습니다.</p></div>
+  <a class="btn btn-picare" href="{% url 'recommend' %}">새 제품추천 받기</a>
+</section>
+<section class="vstack gap-3">
+  {% for record in page_obj %}
+  <article class="lab-card form-card">
+    <span class="status-badge {% if record.status != 'answered' %}blocked{% endif %}">{{ record.status_label }}</span>
+    <h2 class="h5 mt-2 mb-1"><a class="text-decoration-none text-dark" href="{% url 'mypage_recommendation_detail' record.pk %}">{{ record.title }}</a></h2>
+    <p class="small text-muted mb-0">{{ record.created_at|date:'Y.m.d H:i' }} · {{ record.answer|truncatechars:100 }}</p>
+  </article>
+  {% empty %}
+  <div class="lab-card form-card text-center text-muted">저장된 제품추천 기록이 없습니다.</div>
+  {% endfor %}
+</section>
+{% include 'portal/pagination.html' %}
+{% endblock %}

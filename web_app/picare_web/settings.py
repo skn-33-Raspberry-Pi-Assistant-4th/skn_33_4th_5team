@@ -87,20 +87,26 @@ ASGI_APPLICATION = "picare_web.asgi.application"
 # Docker Compose MySQL is the default Django database. ``DJANGO_DB_*`` values
 # override the shared Compose ``MYSQL_*`` values for a separately hosted DB.
 # SQLite remains available only when a test explicitly sets DJANGO_DB_ENGINE.
-_database_engine = os.getenv("DJANGO_DB_ENGINE", "django.db.backends.mysql")
-_is_mysql = _database_engine == "django.db.backends.mysql"
-DATABASES = {
-    "default": {
-        "ENGINE": _database_engine,
+def _database_config() -> dict[str, str]:
+    """Build one database configuration from the current environment."""
+
+    engine = os.getenv("DJANGO_DB_ENGINE", "django.db.backends.mysql")
+    is_mysql = engine == "django.db.backends.mysql"
+    return {
+        "ENGINE": engine,
         "NAME": os.getenv("DJANGO_DB_NAME") or (
-            os.getenv("MYSQL_DATABASE", "picare") if _is_mysql else os.getenv("DJANGO_SQLITE_PATH", str(WEB_APP_ROOT / "db.sqlite3"))
+            os.getenv("MYSQL_DATABASE", "picare")
+            if is_mysql
+            else os.getenv("DJANGO_SQLITE_PATH", str(WEB_APP_ROOT / "db.sqlite3"))
         ),
-        "USER": os.getenv("DJANGO_DB_USER") or (os.getenv("MYSQL_USER", "") if _is_mysql else ""),
-        "PASSWORD": os.getenv("DJANGO_DB_PASSWORD") or (os.getenv("MYSQL_PASSWORD", "") if _is_mysql else ""),
-        "HOST": os.getenv("DJANGO_DB_HOST") or (os.getenv("MYSQL_HOST", "127.0.0.1") if _is_mysql else ""),
-        "PORT": os.getenv("DJANGO_DB_PORT") or (os.getenv("MYSQL_PORT", "3306") if _is_mysql else ""),
+        "USER": os.getenv("DJANGO_DB_USER") or (os.getenv("MYSQL_USER", "") if is_mysql else ""),
+        "PASSWORD": os.getenv("DJANGO_DB_PASSWORD") or (os.getenv("MYSQL_PASSWORD", "") if is_mysql else ""),
+        "HOST": os.getenv("DJANGO_DB_HOST") or (os.getenv("MYSQL_HOST", "127.0.0.1") if is_mysql else ""),
+        "PORT": os.getenv("DJANGO_DB_PORT") or (os.getenv("MYSQL_PORT", "3306") if is_mysql else ""),
     }
-}
+
+
+DATABASES = {"default": _database_config()}
 
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
 SESSION_COOKIE_HTTPONLY = True

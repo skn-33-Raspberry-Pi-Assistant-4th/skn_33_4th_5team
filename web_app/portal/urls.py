@@ -6,6 +6,7 @@ from . import views
 urlpatterns = [
     path("", views.about, name="about"),
     path("recommend/", views.recommend, name="recommend"),
+    path("recommend/save/", views.recommendation_save, name="recommendation_save"),
     path("qa/", views.qa, name="qa"),
     path("questions/", views.questions, name="questions"),
     path("questions/<int:question_id>/", views.question_detail, name="question_detail"),
@@ -24,6 +25,9 @@ urlpatterns = [
     path("mypage/comments/", views.mypage_comments, name="mypage_comments"),
     path("mypage/likes/", views.mypage_likes, name="mypage_likes"),
     path("mypage/questions/", views.mypage_questions, name="mypage_questions"),
+    path("mypage/recommendations/", views.mypage_recommendations, name="mypage_recommendations"),
+    path("mypage/recommendations/<int:pk>/", views.mypage_recommendation_detail, name="mypage_recommendation_detail"),
+    path("mypage/recommendations/<int:pk>/delete/", views.mypage_recommendation_delete, name="mypage_recommendation_delete"),
     path("mypage/questions/<int:pk>/", views.mypage_question_detail, name="mypage_question_detail"),
     path("mypage/questions/<int:pk>/visibility/", views.mypage_question_visibility, name="mypage_question_visibility"),
     path("mypage/questions/<int:pk>/delete/", views.mypage_question_delete, name="mypage_question_delete"),
