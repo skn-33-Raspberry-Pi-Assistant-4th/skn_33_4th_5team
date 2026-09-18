@@ -107,6 +107,12 @@ def _json_request_data(request) -> tuple[dict | None, JsonResponse | None]:
     return data, None
 
 
+def _wants_json_response(request) -> bool:
+    """Return whether the caller explicitly requested a JSON response."""
+
+    return "application/json" in request.headers.get("Accept", "")
+
+
 def _form_compose_arguments(service: CommandLabService, data) -> tuple[str, dict[str, str], str | None]:
     """Collect only catalog-declared editable values before calling the service."""
 
@@ -1596,19 +1602,31 @@ def drawer_delete(request, pk: int):
 @login_required
 @require_POST
 def wrong_note_save(request, quiz_id):
+    """Save one submitted incorrect answer, responding as HTML or JSON by request type."""
+
+    wants_json = _wants_json_response(request)
     loaded_quiz = _load_quiz_response(request, str(quiz_id))
     if loaded_quiz is None:
-        messages.warning(request, "퀴즈가 만료되었습니다. Q&A 결과에서 다시 시작해 주세요.")
+        message = "퀴즈가 만료되었습니다. Q&A 결과에서 다시 시작해 주세요."
+        if wants_json:
+            return _quiz_api_error("quiz_not_found", message, 409)
+        messages.warning(request, message)
         return redirect("qa")
 
     quiz_response, saved_quiz = loaded_quiz
     question = _question_or_none(quiz_response, request.POST.get("question_id"))
     selected_choice_id = saved_quiz.get("submissions", {}).get(question.question_id) if question is not None else None
     if question is None or selected_choice_id is None:
-        messages.warning(request, "저장할 오답 풀이 결과가 없습니다.")
+        message = "저장할 오답 풀이 결과가 없습니다."
+        if wants_json:
+            return _quiz_api_error("submission_not_found", message, 409)
+        messages.warning(request, message)
         return redirect("qa")
     if selected_choice_id == question.correct_choice_id:
-        messages.warning(request, "정답은 오답노트에 저장하지 않습니다.")
+        message = "정답은 오답노트에 저장하지 않습니다."
+        if wants_json:
+            return _quiz_api_error("correct_answer", message, 409)
+        messages.warning(request, message)
         return redirect("qa")
 
     wrong_note = WrongNote.objects.create(
@@ -1622,8 +1640,15 @@ def wrong_note_save(request, quiz_id):
         evidence_ids=question.evidence_ids,
         supporting_quotes=question.supporting_quotes,
     )
-    messages.success(request, "오답노트에 저장했습니다.")
-    return redirect("wrong_note_detail", pk=wrong_note.pk)
+    message = "오답노트에 저장했습니다."
+    wrong_note_url = reverse("wrong_note_detail", args=[wrong_note.pk])
+    if wants_json:
+        return JsonResponse(
+            {"message": message, "wrong_note_id": wrong_note.pk, "wrong_note_url": wrong_note_url},
+            status=201,
+        )
+    messages.success(request, message)
+    return redirect(wrong_note_url)
 
 
 @login_required

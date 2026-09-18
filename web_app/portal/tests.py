@@ -852,6 +852,33 @@ class DynamicQuizAndWrongNoteTests(TestCase):
         self.assertEqual(note.evidence_ids, ["C1"])
         self.assertEqual(note.supporting_quotes, ["SSH is disabled by default on Raspberry Pi OS."])
 
+    def test_wrong_note_save_returns_json_for_asynchronous_requests(self):
+        self.client.force_login(self.owner)
+        self._submit_qa(self._chat_response())
+        task_id = str(uuid.uuid4())
+        self._start_job(task_id=task_id)
+        async_result = Mock(state="SUCCESS", result=QuizResponse(status="available", questions=[self.quiz_question]).model_dump(mode="json"))
+        with patch("portal.views.get_quiz_async_result", return_value=async_result):
+            status_result = self.client.get(reverse("mini_challenge_job_api", args=[task_id]))
+
+        quiz_id = status_result.json()["quiz_id"]
+        self.client.post(
+            reverse("mini_challenge_submit_api", args=[quiz_id]),
+            data=json.dumps({"question_id": self.quiz_question.question_id, "selected_choice_id": "B"}),
+            content_type="application/json",
+        )
+        save_result = self.client.post(
+            reverse("wrong_note_save", args=[quiz_id]),
+            {"question_id": self.quiz_question.question_id},
+            HTTP_ACCEPT="application/json",
+        )
+
+        note = WrongNote.objects.get()
+        self.assertEqual(save_result.status_code, 201)
+        self.assertEqual(save_result.json()["message"], "오답노트에 저장했습니다.")
+        self.assertEqual(save_result.json()["wrong_note_id"], note.pk)
+        self.assertEqual(save_result.json()["wrong_note_url"], reverse("wrong_note_detail", args=[note.pk]))
+
     def test_cancel_api_revokes_only_the_session_task_and_discards_late_result(self):
         self._submit_qa(self._chat_response())
         task_id = str(uuid.uuid4())
