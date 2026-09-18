@@ -17,7 +17,7 @@ from src.lang.safety import (
     validate_grounded_answer,
 )
 from src.model_runtime import InferenceDeviceError, resolve_inference_runtime
-from .cancellation import GenerationCancelled, raise_if_cancelled
+from .cancellation import GenerationCancelled, call_cancellable, raise_if_cancelled
 
 
 class AnswerGenerationError(RuntimeError):
@@ -50,6 +50,8 @@ class AnswerGenerator(Protocol):
         self,
         messages: Sequence[Mapping[str, str]],
         evidence: Sequence[PromptEvidence],
+        *,
+        cancel_requested: Callable[[], bool] | None = None,
     ) -> GenerationResult:
         """인용 ID가 포함된 답변과 실행 정보를 반환한다."""
 
@@ -87,9 +89,12 @@ class EvidenceTemplateGenerator:
         self,
         messages: Sequence[Mapping[str, str]],
         evidence: Sequence[PromptEvidence],
+        *,
+        cancel_requested: Callable[[], bool] | None = None,
     ) -> GenerationResult:
         """각 검색 청크를 자체 인용과 함께 출력한다."""
 
+        raise_if_cancelled(cancel_requested)
         if not messages or not evidence:
             raise ValueError("템플릿 답변에는 질문 메시지와 공식 근거가 필요합니다.")
         started_at = perf_counter()
@@ -236,16 +241,21 @@ class HuggingFaceAnswerGenerator:
         self,
         messages: Sequence[Mapping[str, str]],
         evidence: Sequence[PromptEvidence],
+        *,
+        cancel_requested: Callable[[], bool] | None = None,
     ) -> GenerationResult:
         """같은 근거로 최대 두 번 생성하며 인용·형식 실패는 표시하지 않는다."""
 
+        raise_if_cancelled(cancel_requested)
         if not messages or not evidence:
             raise ValueError("Qwen 답변 생성에는 질문 메시지와 공식 근거가 필요합니다.")
         started_at = perf_counter()
         self._load_model()
         attempt_messages = list(messages)
         for attempt in range(2):
-            answer = _normalize_citation_groups(self._generate_text(attempt_messages))
+            answer = _normalize_citation_groups(call_cancellable(
+                self._generate_text, attempt_messages, cancel_requested=cancel_requested,
+            ))
             # 모델이 독립된 보류 표식과 설명을 함께 썼다면 설명 전체를 버린다.
             # 혼합 답변을 검증 통과시키지 않고, 출처·주장이 없는 보류만 반환한다.
             if INSUFFICIENT_EVIDENCE_MARKER in {line.strip() for line in answer.splitlines()}:
@@ -377,7 +387,7 @@ class HuggingFaceAnswerGenerator:
                     stopping_criteria=StoppingCriteriaList([cancellation_criterion]),
                 )
             if cancellation_criterion.cancelled:
-                raise GenerationCancelled("요약 생성이 취소됐습니다.")
+                raise GenerationCancelled("생성이 취소됐습니다.")
             raise_if_cancelled(cancel_requested)
             return self._tokenizer.decode(
                 self._completion_ids(cancellable_output_ids, prompt_length),

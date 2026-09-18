@@ -1,0 +1,19 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/web_app \
+    DJANGO_DEBUG=false \
+    PICARE_AI_BACKEND=remote
+
+WORKDIR /app
+
+COPY requirements-web.txt ./
+RUN pip install --no-cache-dir -r requirements-web.txt
+
+COPY . .
+RUN chmod +x deploy/aws-entrypoint.sh \
+    && python web_app/manage.py collectstatic --noinput
+
+EXPOSE 8000
+ENTRYPOINT ["/app/deploy/aws-entrypoint.sh"]

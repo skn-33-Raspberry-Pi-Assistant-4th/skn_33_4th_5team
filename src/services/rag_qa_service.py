@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Literal, Protocol, Sequence
+from collections.abc import Callable
 
 from src.contracts.input_limits import validate_input_text
 from src.contracts import ChatCitation, ChatResponse, MediaItem
@@ -17,6 +18,7 @@ from src.lang import (
 from src.media import MediaResolver
 from src.rag import DenseRetrievalError, RagFilters, RagResult, RetrievalDecision
 from src.rag_to_llm import AnswerGenerationError, AnswerGenerator, EvidenceTemplateGenerator
+from src.rag_to_llm.cancellation import GenerationCancelled, raise_if_cancelled
 
 from .grounded_generation import CitationRepairError, generate_validated_grounded_answer
 
@@ -136,8 +138,11 @@ class RagQaService:
         question: str,
         retrieval_mode: RetrievalMode,
         trace: bool = False,
+        cancel_requested: Callable[[], bool] | None = None,
     ) -> ChatResponse:
         """질문 하나를 근거가 검증된 QA 응답으로 변환한다."""
+
+        raise_if_cancelled(cancel_requested)
 
         try:
             question = validate_input_text(question)
@@ -184,6 +189,7 @@ class RagQaService:
                 warnings=[f"retrieval_mode={retrieval_mode}", f"retrieval_error={type(exc).__name__}"],
             )
 
+        raise_if_cancelled(cancel_requested)
         if decision.status == "insufficient_evidence":
             return self._status_response(
                 request_id=request_id,
@@ -209,6 +215,7 @@ class RagQaService:
                 messages=messages,
                 evidence=evidence,
                 require_korean=True,
+                cancel_requested=cancel_requested,
             )
             generation = validated_generation.generation
             if is_evidence_abstention(generation.text):
@@ -231,6 +238,8 @@ class RagQaService:
                     ],
                 )
             used_citation_ids = validated_generation.used_citation_ids
+        except GenerationCancelled:
+            raise
         except AnswerGenerationError as exc:
             return self._status_response(
                 request_id=request_id,

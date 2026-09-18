@@ -9,6 +9,7 @@
   <div class="row g-3">{% for field in form %}{% if field.name != 'purpose' %}<div class="col-sm-6 col-lg-4"><label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}</div>{% endif %}{% endfor %}</div>
   <button class="btn btn-picare mt-4" type="submit">추천 결과 보기 <span>→</span></button>
 </form>
+{% include 'portal/ai_job_panel.html' %}
 {% if service_error %}<div class="alert alert-danger mt-4">{{ service_error }}</div>{% endif %}
 {% if response %}
   <section class="mt-5"><div class="section-heading"><div><p class="card-kicker mb-1">추천 결과</p><h2>추천 제품 {{ response.products|length }}개</h2></div><span class="status-badge {% if is_blocked %}blocked{% endif %}">{{ status_label }}</span></div>

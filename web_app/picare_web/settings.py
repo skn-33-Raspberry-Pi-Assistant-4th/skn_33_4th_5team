@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+import importlib.util
 from pathlib import Path
 
 try:
@@ -62,6 +63,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+if importlib.util.find_spec("whitenoise") is not None:
+    MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
 
 ROOT_URLCONF = "picare_web.urls"
 
@@ -113,6 +116,12 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = _env_flag("DJANGO_SESSION_COOKIE_SECURE")
 CSRF_COOKIE_SECURE = _env_flag("DJANGO_CSRF_COOKIE_SECURE")
 SECURE_SSL_REDIRECT = _env_flag("DJANGO_SECURE_SSL_REDIRECT")
+if _env_flag("DJANGO_USE_PROXY_SSL", False):
+    # AWS reverse proxies terminate TLS and pass this header to Django.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_HSTS_SECONDS", "0"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_flag("DJANGO_HSTS_INCLUDE_SUBDOMAINS")
+SECURE_HSTS_PRELOAD = _env_flag("DJANGO_HSTS_PRELOAD")
 LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "about"
 LOGOUT_REDIRECT_URL = "about"
@@ -131,7 +140,26 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATICFILES_DIRS = [WEB_APP_ROOT / "static"]
+STATIC_ROOT = WEB_APP_ROOT / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": (
+            "whitenoise.storage.CompressedManifestStaticFilesStorage"
+            if importlib.util.find_spec("whitenoise") is not None
+            else "django.contrib.staticfiles.storage.StaticFilesStorage"
+        )
+    },
+}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# AWS runs only the Django presentation layer.  RunPod owns every GPU model
+# and is reached through the authenticated asynchronous job API.
+PICARE_AI_BACKEND = os.getenv("PICARE_AI_BACKEND", "local").strip().lower()
+AI_API_URL = os.getenv("AI_API_URL", "http://127.0.0.1:8000").strip()
+AI_API_TOKEN = os.getenv("AI_API_TOKEN", "").strip()
+AI_HTTP_TIMEOUT = max(1.0, float(os.getenv("AI_HTTP_TIMEOUT", "10")))
+AI_JOB_TIMEOUT = max(30, int(os.getenv("AI_JOB_TIMEOUT", "300")))
 
 # Dynamic Mini Challenge generation is isolated in a GPU Celery worker so an
 # in-flight Qwen call can be terminated without stopping Django itself.

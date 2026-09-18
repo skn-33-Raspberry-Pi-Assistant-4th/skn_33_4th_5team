@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from collections.abc import Callable
 
 from pydantic import Field
 
@@ -13,6 +14,7 @@ from src.contracts import ConditionPayload
 from src.contracts.models import StrictContract
 from src.recommendation.engine import ProductRecommender
 from src.recommendation.schema import RecommendationDecision
+from src.rag_to_llm.cancellation import GenerationCancelled, call_cancellable
 
 
 class ExtractorMode(str, Enum):
@@ -47,18 +49,18 @@ class RecommendationAgent:
         self.recommender = recommender
         self.fallback_extractor = fallback_extractor
 
-    def recommend(self, survey: SurveyResponse) -> RecommendationAgentResult:
+    def recommend(self, survey: SurveyResponse, *, cancel_requested: Callable[[], bool] | None = None) -> RecommendationAgentResult:
         """일반 설문을 조건으로 추출한 뒤 제품 추천 결과를 반환한다."""
 
-        conditions, mode, warnings = self._extract_conditions(survey)
+        conditions, mode, warnings = self._extract_conditions(survey, cancel_requested=cancel_requested)
         return self._result(conditions, mode, warnings)
 
     def recommend_form(
-        self, form: RecommendationFormInput
+        self, form: RecommendationFormInput, *, cancel_requested: Callable[[], bool] | None = None
     ) -> RecommendationAgentResult:
         """Streamlit 입력을 분석하고 명시적 위젯값을 우선해 추천한다."""
 
-        conditions, mode, warnings = self._extract_conditions(form.to_survey())
+        conditions, mode, warnings = self._extract_conditions(form.to_survey(), cancel_requested=cancel_requested)
         conditions = form.apply_explicit_values(conditions)
         return self._result(conditions, mode, warnings)
 
@@ -77,29 +79,33 @@ class RecommendationAgent:
         )
 
     def _extract_conditions(
-        self, survey: SurveyResponse
+        self, survey: SurveyResponse, *, cancel_requested: Callable[[], bool] | None = None
     ) -> tuple[ConditionPayload, ExtractorMode, list[str]]:
         """주 추출기를 호출하고 실패하면 경고를 남긴 뒤 fallback으로 넘긴다."""
 
         warnings: list[str] = []
         try:
-            return self.extractor.extract(survey), ExtractorMode.PRIMARY, warnings
+            return call_cancellable(self.extractor.extract, survey, cancel_requested=cancel_requested), ExtractorMode.PRIMARY, warnings
+        except GenerationCancelled:
+            raise
         except Exception as primary_error:
             warnings.append(f"기본 조건 추출 실패: {type(primary_error).__name__}")
-            conditions, mode = self._fallback(survey, warnings)
+            conditions, mode = self._fallback(survey, warnings, cancel_requested=cancel_requested)
             return conditions, mode, warnings
 
     def _fallback(
-        self, survey: SurveyResponse, warnings: list[str]
+        self, survey: SurveyResponse, warnings: list[str], *, cancel_requested: Callable[[], bool] | None = None
     ) -> tuple[ConditionPayload, ExtractorMode]:
         """Base 추출을 차례로 시도하고 모두 실패하면 안전한 확인 질문을 만든다."""
 
         if self.fallback_extractor is not None:
             try:
                 return (
-                    self.fallback_extractor.extract(survey),
+                    call_cancellable(self.fallback_extractor.extract, survey, cancel_requested=cancel_requested),
                     ExtractorMode.BASE_FALLBACK,
                 )
+            except GenerationCancelled:
+                raise
             except Exception as fallback_error:
                 warnings.append(
                     f"Few-shot fallback 실패: {type(fallback_error).__name__}"
@@ -109,9 +115,11 @@ class RecommendationAgent:
         if callable(extract_without_adapter):
             try:
                 return (
-                    extract_without_adapter(survey),
+                    call_cancellable(extract_without_adapter, survey, cancel_requested=cancel_requested),
                     ExtractorMode.BASE_FALLBACK,
                 )
+            except GenerationCancelled:
+                raise
             except Exception as fallback_error:
                 warnings.append(
                     "동일 모델의 adapter 해제 fallback 실패: "

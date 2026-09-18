@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from src.rag_to_llm.cancellation import call_cancellable, raise_if_cancelled
 from typing import Protocol
 
 from src.contracts import ChatResponse, QuizGenerationRequest, QuizQuestion, QuizResponse
@@ -30,9 +31,10 @@ class QuizGenerator:
     def __init__(self, text_generator: QuizTextGenerator):
         self._text_generator = text_generator
 
-    def generate(self, request: QuizGenerationRequest) -> QuizResponse:
+    def generate(self, request: QuizGenerationRequest, *, cancel_requested: Callable[[], bool] | None = None) -> QuizResponse:
         """Call the text generator once, then reuse the existing quiz pipeline."""
 
+        raise_if_cancelled(cancel_requested)
         if not request.quote_candidates:
             request = request.model_copy(
                 update={"quote_candidates": extract_quote_candidates(request.evidence)}
@@ -41,7 +43,7 @@ class QuizGenerator:
             return QuizResponse(status="insufficient_content", questions=[])
 
         messages = build_quiz_generation_messages(request)
-        raw_output = self._text_generator.generate(messages)
+        raw_output = call_cancellable(self._text_generator.generate, messages, cancel_requested=cancel_requested)
         try:
             parsed = parse_quiz_draft_response(raw_output)
         except QuizOutputError:
@@ -83,13 +85,15 @@ class QuizGenerator:
         response: ChatResponse,
         *,
         max_questions: int = 3,
+        cancel_requested: Callable[[], bool] | None = None,
     ) -> QuizResponse:
         """Generate a challenge from final Q&A citations without retrieval."""
 
+        raise_if_cancelled(cancel_requested)
         request = chat_response_to_quiz_request(response, max_questions=max_questions)
         if request is None:
             return QuizResponse(status="insufficient_content", questions=[])
-        return self.generate(request)
+        return self.generate(request, cancel_requested=cancel_requested)
 
 
 __all__ = ["QuizGenerator", "QuizTextGenerator"]

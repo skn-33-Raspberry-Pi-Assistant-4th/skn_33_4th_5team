@@ -1,5 +1,7 @@
 """Persistent E-team data models for accounts and community features."""
 
+import uuid
+
 from django.conf import settings
 from django.db import models
 
@@ -170,3 +172,35 @@ class QuestionRecord(TimestampedModel):
 
     def __str__(self) -> str:
         return f"{self.owner.get_username()}: {self.title}"
+
+
+class AiJob(TimestampedModel):
+    """Session-owned remote work; terminal results are finalized exactly once."""
+
+    class Kind(models.TextChoices):
+        QA = "qa", "Q&A"
+        RECOMMENDATION = "recommendation", "Recommendation"
+        QUIZ = "quiz", "Quiz"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.CASCADE)
+    session_hash = models.CharField(max_length=64)
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    status = models.CharField(max_length=24, default="queued")
+    input_payload = models.JSONField()
+    result_payload = models.JSONField(null=True, blank=True)
+    error_code = models.CharField(max_length=40, blank=True)
+    is_current = models.BooleanField(default=True)
+    cancel_requested = models.BooleanField(default=False)
+    finalized_at = models.DateTimeField(null=True, blank=True)
+    deadline_at = models.DateTimeField()
+    expires_at = models.DateTimeField()
+    question_record = models.ForeignKey(QuestionRecord, null=True, blank=True, on_delete=models.SET_NULL)
+    quiz_id = models.UUIDField(null=True, blank=True)
+    save_token = models.UUIDField(default=uuid.uuid4, editable=False)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["session_hash", "kind", "is_current"], name="portal_ai_current_idx"),
+            models.Index(fields=["expires_at"], name="portal_ai_expiry_idx"),
+        ]

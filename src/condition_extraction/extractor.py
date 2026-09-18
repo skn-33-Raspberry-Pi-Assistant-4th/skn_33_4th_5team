@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Protocol
+from collections.abc import Callable
 
 from .parser import parse_condition_output
 from .prompts import build_inference_messages
 from src.contracts import ConditionPayload
 from src.model_runtime import InferenceDeviceError, resolve_inference_runtime
+from src.rag_to_llm.cancellation import GenerationCancelled, raise_if_cancelled
 
 from .schema import SurveyResponse
 
@@ -19,7 +21,7 @@ DEFAULT_MODEL_ID = "Qwen/Qwen3-4B-Instruct-2507"
 class ConditionExtractor(Protocol):
     """Agent가 추출기 구현 종류와 무관하게 호출할 공통 인터페이스다."""
 
-    def extract(self, survey: SurveyResponse) -> ConditionPayload:
+    def extract(self, survey: SurveyResponse, *, cancel_requested: Callable[[], bool] | None = None) -> ConditionPayload:
         """설문 답변을 팀 공통 조건 스키마로 변환한다."""
 
 
@@ -98,10 +100,12 @@ class HuggingFaceConditionExtractor:
         model.eval()
         self.model = model
 
-    def extract_with_raw(self, survey: SurveyResponse) -> ExtractionResult:
+    def extract_with_raw(self, survey: SurveyResponse, *, cancel_requested: Callable[[], bool] | None = None) -> ExtractionResult:
         """결정적 생성 후 원문과 스키마 검증을 통과한 조건을 함께 반환한다."""
 
         import torch
+
+        raise_if_cancelled(cancel_requested)
 
         messages = build_inference_messages(
             survey, include_few_shots=self.include_few_shots
@@ -118,6 +122,20 @@ class HuggingFaceConditionExtractor:
         context_limit = getattr(self.model.config, "max_position_embeddings", None)
         if context_limit and prompt_length + self.max_new_tokens > context_limit:
             raise ValueError("모델 문맥 한도를 초과했습니다. 입력을 줄여 주세요. 원문은 자동으로 자르지 않습니다.")
+        generation_kwargs = {}
+        if cancel_requested is not None:
+            from transformers import StoppingCriteria, StoppingCriteriaList
+
+            class CancelWhenRequested(StoppingCriteria):
+                cancelled = False
+
+                def __call__(self, input_ids, scores, **kwargs):
+                    self.cancelled = self.cancelled or cancel_requested()
+                    return self.cancelled
+
+            cancellation = CancelWhenRequested()
+            generation_kwargs["stopping_criteria"] = StoppingCriteriaList([cancellation])
+        raise_if_cancelled(cancel_requested)
         with torch.inference_mode():
             output_ids = self.model.generate(
                 **encoded,
@@ -125,7 +143,11 @@ class HuggingFaceConditionExtractor:
                 do_sample=False,
                 pad_token_id=self.tokenizer.pad_token_id,
                 eos_token_id=self.tokenizer.eos_token_id,
+                **generation_kwargs,
             )
+        if cancel_requested is not None and cancellation.cancelled:
+            raise GenerationCancelled("조건 추출이 취소됐습니다.")
+        raise_if_cancelled(cancel_requested)
         raw_output = self.tokenizer.decode(
             output_ids[0, prompt_length:], skip_special_tokens=True
         ).strip()
@@ -133,7 +155,7 @@ class HuggingFaceConditionExtractor:
             conditions=parse_condition_output(raw_output), raw_output=raw_output
         )
 
-    def extract(self, survey: SurveyResponse) -> ConditionPayload:
+    def extract(self, survey: SurveyResponse, *, cancel_requested: Callable[[], bool] | None = None) -> ConditionPayload:
         """Agent가 사용할 검증 완료 조건 객체만 반환한다."""
 
-        return self.extract_with_raw(survey).conditions
+        return self.extract_with_raw(survey, cancel_requested=cancel_requested).conditions

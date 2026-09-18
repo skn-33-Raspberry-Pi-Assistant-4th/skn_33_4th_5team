@@ -1,0 +1,11 @@
+# AWS web tier. AI/GPU dependencies belong in requirements-gpu.txt on RunPod.
+Django>=5.1,<6
+gunicorn>=23,<24
+whitenoise>=6.8,<7
+PyMySQL>=1.1,<2
+pydantic>=2.8,<3
+python-dotenv>=1.0,<2
+PyYAML>=6.0,<7
+requests>=2.32,<3
+rank-bm25>=0.2.2,<1
+celery[redis]>=5.4,<6

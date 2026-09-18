@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Mapping, Sequence
+from collections.abc import Callable
 
 from src.lang import (
     AnswerSafetyError,
@@ -13,6 +14,7 @@ from src.lang import (
     validate_grounded_answer,
 )
 from src.rag_to_llm import AnswerGenerator, GenerationResult
+from src.rag_to_llm.cancellation import call_cancellable
 
 
 def _safety_reason_code(error: AnswerSafetyError) -> str:
@@ -57,6 +59,7 @@ def generate_validated_grounded_answer(
     messages: Sequence[Mapping[str, str]],
     evidence: Sequence[PromptEvidence],
     require_korean: bool = True,
+    cancel_requested: Callable[[], bool] | None = None,
 ) -> ValidatedGeneration:
     """Qwen 출력만 1회 형식 수정 후 다시 엄격하게 검증한다.
 
@@ -67,7 +70,7 @@ def generate_validated_grounded_answer(
     """
 
     allowed_citation_ids = [item.citation_id for item in evidence]
-    first = generator.generate(messages, evidence)
+    first = call_cancellable(generator.generate, messages, evidence, cancel_requested=cancel_requested)
     if is_evidence_abstention(first.text):
         return ValidatedGeneration(
             generation=first,
@@ -89,7 +92,7 @@ def generate_validated_grounded_answer(
             invalid_answer=first.text,
             evidence=evidence,
         )
-        repaired = generator.generate(repair_messages, evidence)
+        repaired = call_cancellable(generator.generate, repair_messages, evidence, cancel_requested=cancel_requested)
         if is_evidence_abstention(repaired.text):
             return ValidatedGeneration(
                 generation=repaired,

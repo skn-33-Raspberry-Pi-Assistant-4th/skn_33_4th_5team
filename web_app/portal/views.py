@@ -35,7 +35,9 @@ from .forms import (
     QuestionForm,
     RecommendationForm,
 )
-from .models import Comment, DrawerItem, Post, PostLike, QuestionRecord, RecommendationRecord, WrongNote
+from .ai_jobs import cancel_job, create_job, owned_job, refresh_job, remote_enabled
+from .models import AiJob, Comment, DrawerItem, Post, PostLike, QuestionRecord, RecommendationRecord, WrongNote
+from .remote_ai import RemoteAIError
 from .result_service import (
     get_challenge_result,
     get_command_lab_result,
@@ -61,6 +63,15 @@ STATUS_LABELS = {
     "error": "실행 오류",
 }
 BLOCKED_STATUSES = {"needs_clarification", "insufficient_evidence", "out_of_scope", "safety_blocked", "error"}
+LAB_TOPIC_LABELS = {
+    "remote_access": "원격 접속",
+    "networking": "네트워크",
+    "os_installation": "운영체제 설치",
+    "storage": "저장장치",
+    "camera": "카메라",
+    "interfaces": "인터페이스",
+    "system_status": "시스템 상태",
+}
 COMMUNITY_PAGE_SIZE = 10
 ACTIVITY_PAGE_SIZE = 10
 MYPAGE_RECENT_LIMIT = 5
@@ -297,6 +308,72 @@ def _qa_result_context(response: ChatResponse, question: str) -> dict:
     return context
 
 
+def _finalize_remote_job(request, job: AiJob) -> AiJob:
+    """Validate one RunPod result and apply its Django-side effect once."""
+
+    with transaction.atomic():
+        job = owned_job(request, job.pk, lock=True)
+        if job.status != "succeeded" or job.finalized_at is not None:
+            return job
+        try:
+            if job.kind == "qa":
+                response = ChatResponse.model_validate(job.result_payload)
+                question = str(job.input_payload["question"])
+                _store_qa_response(request, response, question)
+                job.question_record = _save_question_record(request, response, question)
+            elif job.kind == "recommendation":
+                request_form = RecommendationFormInput.model_validate(job.input_payload)
+                response = ChatResponse.model_validate(job.result_payload)
+                if request.user.is_authenticated:
+                    request.session[RECOMMENDATION_SESSION_KEY] = {
+                        "token": str(job.save_token),
+                        "owner_id": request.user.pk,
+                        "input": request_form.model_dump(mode="json"),
+                        "response": response.model_dump(mode="json"),
+                    }
+            elif job.kind == "quiz":
+                quiz_response = QuizResponse.model_validate(job.result_payload)
+                job.quiz_id = uuid.uuid4()
+                request.session[QUIZ_SESSION_KEY] = {
+                    "quiz_id": str(job.quiz_id),
+                    "response": quiz_response.model_dump(mode="json"),
+                    "submissions": {},
+                }
+            else:
+                raise ValueError("unsupported feature")
+        except (KeyError, TypeError, ValueError):
+            logger.exception("Remote AI job %s returned an invalid result", job.pk)
+            job.status = "failed"
+            job.error_code = "invalid_response"
+            job.result_payload = None
+            job.save(update_fields=["status", "error_code", "result_payload", "updated_at"])
+            return job
+        job.finalized_at = timezone.now()
+        job.save(update_fields=["question_record", "quiz_id", "finalized_at", "updated_at"])
+        return job
+
+
+def _remote_job_json(request, job: AiJob) -> dict:
+    """Build a browser-safe status response; Quiz answer keys stay in session."""
+
+    payload = {"job_id": str(job.pk), "kind": job.kind, "status": job.status}
+    if job.error_code:
+        payload["error"] = {"code": job.error_code, "message": "AI 작업을 완료하지 못했습니다. 다시 시도해 주세요."}
+    if job.status != "succeeded":
+        return payload
+    if job.kind == "qa":
+        payload["redirect_url"] = f"{reverse('qa')}?job={job.pk}"
+    elif job.kind == "recommendation":
+        payload["redirect_url"] = f"{reverse('recommend')}?job={job.pk}"
+    elif job.kind == "quiz":
+        quiz_response = QuizResponse.model_validate(job.result_payload)
+        payload["status"] = quiz_response.status
+        payload["quiz"] = _public_quiz_payload(quiz_response)
+        if job.quiz_id:
+            payload["quiz_id"] = str(job.quiz_id)
+    return payload
+
+
 def _store_quiz_response(request, quiz_response: QuizResponse) -> str:
     quiz_id = str(uuid.uuid4())
     request.session[QUIZ_SESSION_KEY] = {
@@ -507,6 +584,12 @@ def _drawer_items(request, service) -> list[dict]:
 
 
 def _base_context(*, active_page: str) -> dict:
+    if remote_enabled():
+        return {
+            "active_page": active_page,
+            "runtime_ready": True,
+            "runtime_message": "RunPod AI 서비스에 작업을 요청합니다.",
+        }
     readiness = get_runtime_readiness()
     runtime_message = readiness.message if readiness.ready else "RAG 실행 환경을 준비하지 못했습니다. 설정을 확인해 주세요."
     return {"active_page": active_page, "runtime_ready": readiness.ready, "runtime_message": runtime_message}
@@ -522,6 +605,25 @@ def recommend(request):
     context = _base_context(active_page="recommend")
     form = RecommendationForm(request.POST or None, initial={"purpose": "모니터 없이 홈 서버로 사용하고 싶어요."})
     context["form"] = form
+    requested_job = request.GET.get("job")
+    if request.method == "GET" and requested_job and remote_enabled():
+        job = owned_job(request, requested_job, kind="recommendation")
+        if job.status == "succeeded":
+            job = _finalize_remote_job(request, job)
+            try:
+                request_form = RecommendationFormInput.model_validate(job.input_payload)
+                response = ChatResponse.model_validate(job.result_payload)
+                context["form"] = RecommendationForm(initial={
+                    "purpose": request_form.free_text,
+                })
+                context.update(_response_context(response))
+                if request.user.is_authenticated:
+                    context["recommendation_save_token"] = str(job.save_token)
+            except (TypeError, ValueError):
+                context["service_error"] = "제품 추천 결과를 확인하지 못했습니다. 다시 요청해 주세요."
+        else:
+            context["service_error"] = "제품 추천 작업이 완료되지 않았습니다. 다시 요청해 주세요."
+        return render(request, "portal/recommend.html", context)
     if request.method == "POST":
         request.session.pop(RECOMMENDATION_SESSION_KEY, None)
     if request.method == "POST" and form.is_valid():
@@ -537,6 +639,11 @@ def recommend(request):
                 gpio_required=RecommendationForm.as_optional_boolean(data["gpio"]),
                 monitor_absent=RecommendationForm.as_optional_boolean(data["monitor_absent"]),
             )
+            if remote_enabled():
+                context["ai_job"] = create_job(
+                    request, "recommendation", request_form.model_dump(mode="json")
+                )
+                return render(request, "portal/recommend.html", context)
             feature_result = get_recommendation_result(get_recommendation_service(), form=request_form, trace=True)
             response = feature_result.result
             context["feature_result"] = feature_result
@@ -589,10 +696,34 @@ def qa(request):
     context = _base_context(active_page="qa")
     form = QuestionForm(request.POST or None, initial={"question": request.GET.get("question", "")})
     context["form"] = form
+    requested_job = request.GET.get("job")
+    if request.method == "GET" and requested_job and remote_enabled():
+        job = owned_job(request, requested_job, kind="qa")
+        if job.status == "succeeded":
+            job = _finalize_remote_job(request, job)
+            try:
+                response = ChatResponse.model_validate(job.result_payload)
+                question = str(job.input_payload["question"])
+                context.update(_qa_result_context(response, question))
+                context["qa_record"] = job.question_record
+                context["qa_record_save_error"] = request.user.is_authenticated and job.question_record is None
+                context["quiz_auto_start"] = response.status == "answered" and bool(response.citations)
+            except (KeyError, TypeError, ValueError):
+                context["service_error"] = "Q&A 결과를 확인하지 못했습니다. 다시 요청해 주세요."
+        else:
+            context["service_error"] = "Q&A 작업이 완료되지 않았습니다. 다시 요청해 주세요."
+        return render(request, "portal/qa.html", context)
     if request.method == "POST" and form.is_valid():
         question = form.cleaned_data["question"]
         context["question"] = question
         try:
+            if remote_enabled():
+                context["ai_job"] = create_job(request, "qa", {
+                    "question": question,
+                    "retrieval_mode": "hybrid",
+                    "trace": True,
+                })
+                return render(request, "portal/qa.html", context)
             feature_result = get_qa_result(
                 get_qa_service(),
                 request_id=str(uuid.uuid4()),
@@ -623,6 +754,33 @@ def _quiz_api_error(code: str, message: str, status: int) -> JsonResponse:
     return JsonResponse({"error": {"code": code, "message": message}}, status=status)
 
 
+@require_GET
+def ai_job_status_api(request, job_id):
+    """Poll a caller-owned RunPod job and finalize terminal output once."""
+
+    job = owned_job(request, job_id)
+    try:
+        job = refresh_job(job)
+    except RemoteAIError as exc:
+        return _quiz_api_error(exc.code, "AI 서버 상태를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.", exc.status)
+    if job.status == "succeeded":
+        job = _finalize_remote_job(request, job)
+    try:
+        payload = _remote_job_json(request, job)
+    except (TypeError, ValueError):
+        return _quiz_api_error("invalid_response", "AI 서버 응답 형식을 확인하지 못했습니다.", 502)
+    return JsonResponse(payload, status=202 if job.status not in {"succeeded", "failed", "cancelled", "expired"} else 200)
+
+
+@require_POST
+def ai_job_cancel_api(request, job_id):
+    """Cancel only a job owned by the current user and browser session."""
+
+    job = owned_job(request, job_id)
+    job = cancel_job(job)
+    return JsonResponse(_remote_job_json(request, job), status=202 if job.status == "cancelling" else 200)
+
+
 @require_POST
 def mini_challenge_start_api(request):
     """Queue C's Quiz generation from the latest server-created Q&A response."""
@@ -640,6 +798,22 @@ def mini_challenge_start_api(request):
     response, _ = loaded_qa
     if response.status != "answered" or not response.citations:
         return JsonResponse({"status": "insufficient_content", "quiz": {"status": "insufficient_content", "questions": []}})
+
+    if remote_enabled():
+        try:
+            job = create_job(request, "quiz", {
+                "response": response.model_dump(mode="json"),
+                "max_questions": 3,
+            })
+        except Exception:
+            logger.exception("Unable to submit remote Quiz generation")
+            return _quiz_api_error("queue_unavailable", "미니 챌린지를 준비하지 못했습니다. 잠시 후 다시 시도해 주세요.", 503)
+        request.session[QUIZ_JOB_SESSION_KEY] = {
+            "task_id": str(job.pk),
+            "qa_request_id": response.request_id,
+            "status": "pending",
+        }
+        return JsonResponse({"task_id": str(job.pk), "status": "pending"}, status=202)
 
     existing = request.session.get(QUIZ_JOB_SESSION_KEY)
     if isinstance(existing, dict) and existing.get("status") in {"pending", "running"}:
@@ -672,6 +846,24 @@ def mini_challenge_job_api(request, task_id):
         return _quiz_api_error("job_not_found", "이전 질문의 미니 챌린지입니다.", 404)
     if job.get("status") == "cancelled":
         return JsonResponse({"task_id": str(task_id), "status": "cancelled"})
+
+    if remote_enabled():
+        ai_job = owned_job(request, task_id, kind="quiz")
+        try:
+            ai_job = refresh_job(ai_job)
+        except RemoteAIError as exc:
+            return _quiz_api_error(exc.code, "미니 챌린지 상태를 확인하지 못했습니다.", exc.status)
+        if ai_job.status == "succeeded":
+            ai_job = _finalize_remote_job(request, ai_job)
+        payload = _remote_job_json(request, ai_job)
+        payload["task_id"] = payload.pop("job_id")
+        if payload["status"] in {"queued", "submission_unknown"}:
+            payload["status"] = "pending"
+        job["status"] = payload["status"]
+        if payload.get("quiz_id"):
+            job["quiz_id"] = payload["quiz_id"]
+        request.session[QUIZ_JOB_SESSION_KEY] = job
+        return JsonResponse(payload, status=202 if payload["status"] in {"pending", "running", "cancelling"} else 200)
 
     try:
         task = get_quiz_async_result(str(task_id))
@@ -721,6 +913,12 @@ def cancelAPI(request, task_id):
         return _quiz_api_error("job_not_found", "미니 챌린지 생성 정보를 찾을 수 없습니다.", 404)
     if job.get("status") == "cancelled":
         return JsonResponse({"task_id": str(task_id), "status": "cancelled"})
+
+    if remote_enabled():
+        ai_job = cancel_job(owned_job(request, task_id, kind="quiz"))
+        job["status"] = "cancelled" if ai_job.status == "cancelled" else "cancelling"
+        request.session[QUIZ_JOB_SESSION_KEY] = job
+        return JsonResponse({"task_id": str(task_id), "status": job["status"]}, status=202)
 
     # Persist cancellation first: a result that wins the race must never be exposed.
     job["status"] = "cancelled"

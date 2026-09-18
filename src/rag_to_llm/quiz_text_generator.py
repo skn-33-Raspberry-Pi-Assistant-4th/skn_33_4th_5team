@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from .cancellation import call_cancellable
 
 from .answer_generator import GenerationResult, HuggingFaceAnswerGenerator
 
@@ -24,12 +25,13 @@ class HuggingFaceQuizTextGenerator:
         self._max_new_tokens = max_new_tokens
         self.last_result: GenerationResult | None = None
 
-    def generate(self, messages: Sequence[Mapping[str, str]]) -> str:
+    def generate(self, messages: Sequence[Mapping[str, str]], *, cancel_requested: Callable[[], bool] | None = None) -> str:
         """Generate raw text once through the injected Qwen instance."""
 
-        self.last_result = self._answer_generator.generate_structured(
-            messages,
+        self.last_result = call_cancellable(
+            self._answer_generator.generate_structured, messages,
             max_new_tokens=self._max_new_tokens,
+            cancel_requested=cancel_requested,
         )
         return self.last_result.text
 

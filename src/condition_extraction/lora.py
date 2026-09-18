@@ -1,6 +1,7 @@
 """Base와 같은 프롬프트에 학습된 QLoRA adapter를 결합해 추론한다."""
 
 from __future__ import annotations
+from collections.abc import Callable
 
 from .extractor import DEFAULT_MODEL_ID, HuggingFaceConditionExtractor
 from src.contracts import ConditionPayload
@@ -32,9 +33,9 @@ class LoraConditionExtractor(HuggingFaceConditionExtractor):
         )
 
     def extract_without_adapter(
-        self, survey: SurveyResponse
+        self, survey: SurveyResponse, *, cancel_requested: Callable[[], bool] | None = None
     ) -> ConditionPayload:
         """모델을 중복 로드하지 않고 adapter만 꺼서 Base fallback을 수행한다."""
 
         with self.model.disable_adapter():
-            return self.extract(survey)
+            return self.extract(survey, cancel_requested=cancel_requested)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import replace
 from typing import Literal, Mapping, Protocol, Sequence
+from collections.abc import Callable
 
 from src.condition_extraction.schema import SurveyAnswer, SurveyResponse
 from src.condition_extraction.ui_input import RecommendationFormInput
@@ -21,6 +22,7 @@ from src.lang import (
 from src.media import MediaResolver
 from src.rag import DenseRetrievalError, RagFilters, RagResult, RetrievalDecision
 from src.rag_to_llm import AnswerGenerationError, AnswerGenerator, EvidenceTemplateGenerator
+from src.rag_to_llm.cancellation import GenerationCancelled, call_cancellable, raise_if_cancelled
 
 from .integration_adapters import (
     RagResultMetadata,
@@ -261,8 +263,11 @@ class RecommendationRagService:
         request_id: str,
         question: str,
         trace: bool = False,
+        cancel_requested: Callable[[], bool] | None = None,
     ) -> ChatResponse:
         """자유 입력을 조건 추출부터 인용 포함 제품 추천까지 처리한다."""
+
+        raise_if_cancelled(cancel_requested)
 
         try:
             question = validate_input_text(question)
@@ -286,7 +291,9 @@ class RecommendationRagService:
             )
 
         try:
-            agent_result = self.recommendation_agent.recommend(self._survey(question))
+            agent_result = call_cancellable(self.recommendation_agent.recommend, self._survey(question), cancel_requested=cancel_requested)
+        except GenerationCancelled:
+            raise
         except Exception as exc:
             return self._response(
                 request_id=request_id,
@@ -300,6 +307,7 @@ class RecommendationRagService:
             question=question,
             agent_result=agent_result,
             trace=trace,
+            cancel_requested=cancel_requested,
         )
 
     def answer_form(
@@ -307,6 +315,7 @@ class RecommendationRagService:
         *,
         form: RecommendationFormInput,
         trace: bool = False,
+        cancel_requested: Callable[[], bool] | None = None,
     ) -> ChatResponse:
         """Streamlit 폼 입력을 조건 추출부터 인용 포함 제품 추천까지 처리한다.
 
@@ -314,6 +323,7 @@ class RecommendationRagService:
         `RecommendationAgent.recommend_form`을 통해 sLLM 추출값보다 우선 적용된다.
         """
 
+        raise_if_cancelled(cancel_requested)
         request_decision = evaluate_request(form.free_text)
         if not request_decision.allowed:
             return self._response(
@@ -327,7 +337,9 @@ class RecommendationRagService:
             )
 
         try:
-            agent_result = self.recommendation_agent.recommend_form(form)
+            agent_result = call_cancellable(self.recommendation_agent.recommend_form, form, cancel_requested=cancel_requested)
+        except GenerationCancelled:
+            raise
         except Exception as exc:
             return self._response(
                 request_id=form.request_id,
@@ -341,6 +353,7 @@ class RecommendationRagService:
             question=form.free_text,
             agent_result=agent_result,
             trace=trace,
+            cancel_requested=cancel_requested,
         )
 
     def _answer_from_agent_result(
@@ -350,9 +363,11 @@ class RecommendationRagService:
         question: str,
         agent_result: RecommendationAgentResult,
         trace: bool,
+        cancel_requested: Callable[[], bool] | None = None,
     ) -> ChatResponse:
         """조건 추출 이후의 catalog 매칭·RAG 검색·인용 생성을 공통 처리한다."""
 
+        raise_if_cancelled(cancel_requested)
         decision = agent_result.decision
         if decision.status.value == "needs_clarification":
             return self._response(
@@ -426,6 +441,7 @@ class RecommendationRagService:
                 warnings=[*agent_result.warnings, f"retrieval_error={type(exc).__name__}"],
             )
 
+        raise_if_cancelled(cancel_requested)
         if retrieval.status == "insufficient_evidence":
             return self._response(
                 request_id=request_id,
@@ -478,6 +494,7 @@ class RecommendationRagService:
                 messages=messages,
                 evidence=evidence,
                 require_korean=True,
+                cancel_requested=cancel_requested,
             )
             generation = validated_generation.generation
             if is_evidence_abstention(generation.text):
@@ -517,6 +534,8 @@ class RecommendationRagService:
                 supported_agent_result,
                 provider=generation.provider,
             )
+        except GenerationCancelled:
+            raise
         except AnswerGenerationError as exc:
             return self._response(
                 request_id=request_id,

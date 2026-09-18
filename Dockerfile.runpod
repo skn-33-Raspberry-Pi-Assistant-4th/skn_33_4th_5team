@@ -1,0 +1,15 @@
+# Dedicated single-process GPU inference server for RunPod Pods.
+FROM pytorch/pytorch:2.7.0-cuda12.8-cudnn9-runtime
+
+WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app
+
+COPY requirements.txt requirements-gpu.txt ./
+RUN pip install --no-cache-dir -r requirements-gpu.txt
+
+COPY . .
+
+EXPOSE 8000
+CMD ["python", "-m", "src.runpod_api"]
