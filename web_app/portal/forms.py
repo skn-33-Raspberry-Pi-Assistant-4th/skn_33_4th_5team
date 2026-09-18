@@ -83,6 +83,8 @@ class CommandAnalyzeForm(forms.Form):
 
 
 class RecommendationForm(forms.Form):
+    """제품 추천에 필요한 사용 목적과 선택 조건을 입력받는다."""
+
     purpose = forms.CharField(
         label="어디에 사용하실 건가요?",
         max_length=MAX_INPUT_CHARS,
@@ -126,6 +128,8 @@ class RecommendationForm(forms.Form):
 
 
 class QuestionForm(forms.Form):
+    """RAG Q&A에 전달할 사용자 질문을 입력받고 검증한다."""
+
     question = forms.CharField(
         label="질문",
         max_length=MAX_INPUT_CHARS,
@@ -142,6 +146,8 @@ class QuestionForm(forms.Form):
 
 
 class CommandInputForm(forms.Form):
+    """명령어 실험실에서 분석할 단일 명령어를 입력받는다."""
+
     command = forms.CharField(
         label="한 줄 명령어",
         max_length=2000,

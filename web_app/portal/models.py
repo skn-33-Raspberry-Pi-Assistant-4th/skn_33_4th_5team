@@ -121,13 +121,7 @@ class WrongNote(TimestampedModel):
 
 
 class RecommendationRecord(TimestampedModel):
-    """A member's recommendation snapshot, independent of the live catalog.
-
-    input_payload holds RecommendationFormInput.model_dump(mode="json");
-    response_payload holds the original ChatResponse.model_dump(mode="json").
-    Explicit UI values (including None versus False) and extracted conditions
-    are retained separately so the original recommendation can be reproduced.
-    """
+    """사용자가 저장한 제품 추천 입력과 응답 스냅샷을 보관한다."""
 
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="recommendation_records"

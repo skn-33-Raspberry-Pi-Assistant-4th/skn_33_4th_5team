@@ -17,6 +17,8 @@ from .contracts import JobCreate, JobKind, JobResponse, JobStatus
 
 
 class JobRunner(Protocol):
+    """AI 작업 실행기가 따라야 할 호출 규약을 정의한다."""
+
     def __call__(
         self,
         kind: JobKind,
@@ -44,6 +46,8 @@ class JobNotFoundError(LookupError):
 
 @dataclass
 class _Job:
+    """메모리 큐에 보관하는 단일 작업의 상태를 나타낸다."""
+
     request: JobCreate
     fingerprint: str
     created_at: float

@@ -276,6 +276,8 @@ def _save_recommendation_record(
 
 
 def _recommendation_record_context(record: RecommendationRecord) -> dict:
+    """저장된 제품 추천 기록을 화면 표시용 컨텍스트로 변환한다."""
+
     context = {
         "record": record,
         "active_page": "mypage",
@@ -450,6 +452,8 @@ def _public_quiz_payload(quiz_response: QuizResponse) -> dict:
 
 
 def _quiz_evidence_cards(response: ChatResponse, question) -> list[dict[str, str]]:
+    """퀴즈 문항의 근거 인용을 화면 표시용 카드 목록으로 변환한다."""
+
     citations = {citation.citation_id: citation for citation in response.citations}
     cards = []
     for citation_id in question.evidence_ids:
@@ -489,6 +493,8 @@ def _activity_page(request, queryset):
 
 
 def _source_cards(response: ChatResponse, *, preferred_use_case: str | None = None) -> list[dict[str, str]]:
+    """답변 인용 정보를 화면에 표시할 출처 카드 목록으로 변환한다."""
+
     presenter = get_citation_presenter()
     cards = []
     for citation in response.citations:
@@ -513,6 +519,8 @@ def _source_cards(response: ChatResponse, *, preferred_use_case: str | None = No
 
 
 def _response_context(response: ChatResponse) -> dict:
+    """AI 응답을 상태·출처·미디어가 포함된 화면 컨텍스트로 변환한다."""
+
     preferred_use_case = response.conditions.use_case if response.conditions else None
     return {
         "response": response,
@@ -558,6 +566,8 @@ def _lab_payload(result: dict) -> dict:
 
 
 def _lab_template_payload(template: dict) -> dict:
+    """명령어 템플릿에서 브라우저에 필요한 필드만 추려 반환한다."""
+
     return {
         "template_id": template["template_id"],
         "topic": template["topic"],
@@ -573,6 +583,8 @@ def _lab_template_payload(template: dict) -> dict:
 
 
 def _lab_context() -> dict:
+    """명령어 실험실의 템플릿·주제·제품 목록 컨텍스트를 구성한다."""
+
     service = get_command_lab_service()
     templates = service.list_templates()
     grouped_templates: dict[str, list[dict]] = {}
@@ -596,10 +608,14 @@ def _lab_context() -> dict:
 
 
 def _selected_template(templates: list[dict], template_id: str | None) -> dict | None:
+    """템플릿 ID와 일치하는 항목 하나를 찾아 반환한다."""
+
     return next((item for item in templates if item["template_id"] == template_id), None)
 
 
 def _editable_fields(template: dict | None, values: dict | None) -> list[dict]:
+    """템플릿 편집 필드에 현재 입력값을 합쳐 화면용 목록을 만든다."""
+
     if not template:
         return []
     current_values = values or {}
@@ -646,11 +662,15 @@ def _base_context(*, active_page: str) -> dict:
 
 @require_http_methods(["GET"])
 def about(request):
+    """서비스 소개 화면을 렌더링한다."""
+
     return render(request, "portal/about.html", _base_context(active_page="about"))
 
 
 @require_http_methods(["GET", "POST"])
 def recommend(request):
+    """제품 추천 입력을 처리하고 로컬 또는 RunPod 결과를 표시한다."""
+
     context = _base_context(active_page="recommend")
     form = RecommendationForm(request.POST or None, initial={"purpose": "모니터 없이 홈 서버로 사용하고 싶어요."})
     context["form"] = form
@@ -742,6 +762,8 @@ def recommendation_save(request):
 
 @require_http_methods(["GET", "POST"])
 def qa(request):
+    """사용자 질문을 처리하고 RAG Q&A 결과와 퀴즈 연결 상태를 표시한다."""
+
     context = _base_context(active_page="qa")
     form = QuestionForm(request.POST or None, initial={"question": request.GET.get("question", "")})
     context["form"] = form
@@ -804,6 +826,8 @@ def qa(request):
 
 
 def _quiz_api_error(code: str, message: str, status: int) -> JsonResponse:
+    """미니 챌린지 API 오류를 일관된 JSON 형식으로 반환한다."""
+
     return JsonResponse({"error": {"code": code, "message": message}}, status=status)
 
 
@@ -1043,6 +1067,8 @@ def questions(request):
 
 @require_http_methods(["GET"])
 def question_detail(request, question_id: int):
+    """공개된 질문 기록 하나의 상세 화면을 렌더링한다."""
+
     record = get_object_or_404(QuestionRecord.objects.select_related("owner"), pk=question_id, is_public=True)
     context = _base_context(active_page="questions")
     context.update(_question_record_context(record))
@@ -1126,6 +1152,8 @@ def lab(request):
 
 
 def _json_body(request) -> dict:
+    """요청 본문을 JSON 객체로 읽고 형식 오류를 검증한다."""
+
     try:
         value = json.loads(request.body)
     except (TypeError, json.JSONDecodeError) as exc:
@@ -1137,6 +1165,8 @@ def _json_body(request) -> dict:
 
 @require_GET
 def lab_templates_api(request):
+    """명령어 실험실에서 사용할 템플릿 목록을 JSON으로 반환한다."""
+
     try:
         templates = [_lab_template_payload(item) for item in get_command_lab_service().list_templates()]
         return JsonResponse({"templates": templates})
@@ -1146,6 +1176,8 @@ def lab_templates_api(request):
 
 @require_POST
 def lab_analyze_api(request):
+    """입력 명령어를 분석하고 검증된 실험실 결과를 JSON으로 반환한다."""
+
     try:
         feature_result = get_command_lab_result(get_command_lab_service(), command=_json_body(request).get("command"))
         return JsonResponse(_lab_payload(feature_result.result))
@@ -1157,6 +1189,8 @@ def lab_analyze_api(request):
 
 @require_POST
 def lab_compose_api(request):
+    """템플릿 입력값으로 명령어를 조합해 JSON 결과를 반환한다."""
+
     try:
         body = _json_body(request)
         feature_result = get_command_lab_result(
@@ -1174,6 +1208,8 @@ def lab_compose_api(request):
 
 @require_http_methods(["GET"])
 def health(request):
+    """웹 애플리케이션과 RAG 런타임의 준비 상태를 반환한다."""
+
     readiness = get_runtime_readiness()
     return JsonResponse(
         {
@@ -1265,6 +1301,8 @@ def mypage_likes(request):
 @login_required
 @require_GET
 def mypage_recommendations(request):
+    """현재 사용자가 저장한 제품 추천 기록 목록을 표시한다."""
+
     records = RecommendationRecord.objects.filter(owner=request.user)
     page_obj = _activity_page(request, records)
     for record in page_obj:
@@ -1275,6 +1313,8 @@ def mypage_recommendations(request):
 @login_required
 @require_GET
 def mypage_recommendation_detail(request, pk: int):
+    """현재 사용자가 소유한 제품 추천 기록 상세를 표시한다."""
+
     record = get_object_or_404(RecommendationRecord, pk=pk, owner=request.user)
     return render(request, "portal/recommendation_detail.html", _recommendation_record_context(record))
 
@@ -1282,6 +1322,8 @@ def mypage_recommendation_detail(request, pk: int):
 @login_required
 @require_POST
 def mypage_recommendation_delete(request, pk: int):
+    """현재 사용자가 소유한 제품 추천 기록을 삭제한다."""
+
     record = get_object_or_404(RecommendationRecord, pk=pk, owner=request.user)
     record.delete()
     messages.success(request, "제품추천 기록을 삭제했습니다.")
@@ -1291,6 +1333,8 @@ def mypage_recommendation_delete(request, pk: int):
 @login_required
 @require_GET
 def mypage_questions(request):
+    """현재 사용자가 저장한 Q&A 기록 목록을 표시한다."""
+
     records = QuestionRecord.objects.filter(owner=request.user)
     return render(
         request,
@@ -1302,6 +1346,8 @@ def mypage_questions(request):
 @login_required
 @require_GET
 def mypage_question_detail(request, pk: int):
+    """현재 사용자가 소유한 Q&A 기록 상세를 표시한다."""
+
     record = get_object_or_404(QuestionRecord.objects.select_related("owner"), pk=pk, owner=request.user)
     context = _question_record_context(record)
     context.update({"active_page": "mypage", "is_private_view": True})
@@ -1311,6 +1357,8 @@ def mypage_question_detail(request, pk: int):
 @login_required
 @require_POST
 def mypage_question_visibility(request, pk: int):
+    """현재 사용자의 Q&A 기록 공개 여부를 전환한다."""
+
     record = get_object_or_404(QuestionRecord, pk=pk, owner=request.user)
     if record.is_public:
         record.is_public = False
@@ -1327,6 +1375,8 @@ def mypage_question_visibility(request, pk: int):
 @login_required
 @require_POST
 def mypage_question_delete(request, pk: int):
+    """현재 사용자가 소유한 Q&A 기록을 삭제한다."""
+
     record = get_object_or_404(QuestionRecord, pk=pk, owner=request.user)
     record.delete()
     messages.success(request, "질문 기록을 삭제했습니다.")

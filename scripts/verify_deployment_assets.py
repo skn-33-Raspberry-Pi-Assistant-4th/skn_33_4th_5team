@@ -18,10 +18,14 @@ EXPECTED_COMMANDS = 100
 
 
 class VerificationError(RuntimeError):
+    """배포 자산 검증이 실패했음을 나타낸다."""
+
     pass
 
 
 def _read_json(path: Path) -> dict[str, Any]:
+    """지정한 JSON 파일을 읽고 객체 형태인지 검증한다."""
+
     if not path.is_file():
         raise VerificationError(f"missing file: {path}")
     try:
@@ -34,6 +38,8 @@ def _read_json(path: Path) -> dict[str, Any]:
 
 
 def _sha256(path: Path) -> str:
+    """파일 내용을 기준으로 SHA-256 체크섬을 계산한다."""
+
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
@@ -42,6 +48,8 @@ def _sha256(path: Path) -> str:
 
 
 def _require_nonempty(path: Path) -> None:
+    """필수 파일이 존재하고 비어 있지 않은지 확인한다."""
+
     if not path.is_file() or path.stat().st_size == 0:
         raise VerificationError(f"missing or empty file: {path}")
 
@@ -115,6 +123,8 @@ def verify_runpod(project_root: Path, adapter_path: Path | None, *, skip_adapter
 
 
 def verify_aws(project_root: Path) -> dict[str, Any]:
+    """AWS 웹 배포에 필요한 카탈로그와 실행 파일을 검증한다."""
+
     command_catalog = _read_json(project_root / "data/products/command_catalog.json")
     templates = command_catalog.get("templates")
     if not isinstance(templates, list) or len(templates) != EXPECTED_COMMANDS:
@@ -140,6 +150,8 @@ def verify(
     adapter_path: Path | None = None,
     skip_adapter: bool = False,
 ) -> dict[str, Any]:
+    """선택한 배포 대상의 자산을 검증하고 요약 보고서를 반환한다."""
+
     root = project_root.resolve()
     report: dict[str, Any] = {"ok": True, "project_root": str(root), "target": target}
     if target in {"all", "runpod"}:
@@ -150,6 +162,8 @@ def verify(
 
 
 def main() -> int:
+    """명령행 인자를 읽어 배포 자산 검증을 실행하고 종료 코드를 반환한다."""
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project-root", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--target", choices=("all", "runpod", "aws"), default="all")

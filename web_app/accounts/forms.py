@@ -9,6 +9,8 @@ class LoginForm(AuthenticationForm):
     """Apply the same PiCare input treatment used by the signup form."""
 
     def __init__(self, *args, **kwargs):
+        """로그인 필드에 PiCare 스타일과 한국어 안내 문구를 적용한다."""
+
         super().__init__(*args, **kwargs)
         self.fields["username"].label = "아이디"
         self.fields["username"].widget.attrs.update(
@@ -21,6 +23,8 @@ class LoginForm(AuthenticationForm):
 
 
 class SignupForm(UserCreationForm):
+    """Django 회원가입 필드에 이메일 검증과 PiCare 스타일을 적용한다."""
+
     email = forms.EmailField(
         label="이메일",
         required=True,

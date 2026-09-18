@@ -23,6 +23,8 @@ class RemoteAIError(Exception):
 
 
 class RunPodClient:
+    """AWS Django에서 RunPod AI API 호출을 담당한다."""
+
     def __init__(self):
         """Django 설정에서 RunPod API 주소와 인증 토큰을 읽고 유효성을 검사한다."""
 

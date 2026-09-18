@@ -21,6 +21,8 @@ from .runtime import PiCareRuntime
 
 @dataclass(frozen=True)
 class ApiSettings:
+    """RunPod API 인증·큐·타임아웃 설정을 보관한다."""
+
     token: str
     max_queued: int = 8
     timeout_seconds: float = 300
@@ -29,6 +31,8 @@ class ApiSettings:
 
     @classmethod
     def from_env(cls) -> "ApiSettings":
+        """환경변수에서 RunPod API 설정을 읽고 검증한다."""
+
         token = os.getenv("AI_API_TOKEN", "").strip()
         if len(token) < 32:
             raise RuntimeError("AI_API_TOKEN must contain at least 32 characters")
@@ -42,7 +46,11 @@ class ApiSettings:
 
 
 class ServerState:
+    """RunPod 런타임과 작업 큐의 생명주기를 관리한다."""
+
     def __init__(self, settings: ApiSettings, runtime: PiCareRuntime | None = None) -> None:
+        """API 설정과 추론 런타임으로 서버 상태를 구성한다."""
+
         self.settings = settings
         self.runtime = runtime or PiCareRuntime(settings.project_root)
         self.manager = JobManager(
@@ -54,10 +62,14 @@ class ServerState:
         self.initializer: threading.Thread | None = None
 
     def start(self) -> None:
+        """백그라운드에서 런타임을 준비하고 작업 큐를 시작한다."""
+
         if self.initializer is not None and self.initializer.is_alive():
             return
 
         def initialize() -> None:
+            """런타임 초기화가 끝나면 GPU 작업 큐를 시작한다."""
+
             try:
                 self.runtime.initialize()
             except Exception:
@@ -72,6 +84,8 @@ class ServerState:
         self.initializer.start()
 
     def stop(self) -> None:
+        """실행 중인 작업 큐를 안전하게 종료한다."""
+
         self.manager.stop()
 
 
@@ -92,14 +106,20 @@ def get_server_state() -> ServerState:
 
 
 def _json_response(response: JobResponse, *, status: int = 200) -> JsonResponse:
+    """작업 응답 모델을 Django JSON 응답으로 변환한다."""
+
     return JsonResponse(response.model_dump(mode="json", exclude_none=True), status=status)
 
 
 def _error(detail: str, status: int) -> JsonResponse:
+    """오류 코드와 HTTP 상태값으로 JSON 응답을 만든다."""
+
     return JsonResponse({"detail": detail}, status=status)
 
 
 def _is_authenticated(request: HttpRequest, state: ServerState) -> bool:
+    """Bearer 토큰이 서버 설정의 인증 토큰과 일치하는지 확인한다."""
+
     authorization = request.headers.get("Authorization", "")
     scheme, separator, token = authorization.partition(" ")
     return (
@@ -110,6 +130,8 @@ def _is_authenticated(request: HttpRequest, state: ServerState) -> bool:
 
 
 def _manager_for(request: HttpRequest) -> tuple[JobManager | None, JsonResponse | None]:
+    """인증과 준비 상태를 확인하고 사용할 작업 관리자를 반환한다."""
+
     state = get_server_state()
     if not _is_authenticated(request, state):
         return None, _error("unauthorized", 401)
@@ -121,11 +143,15 @@ def _manager_for(request: HttpRequest) -> tuple[JobManager | None, JsonResponse 
 
 @require_GET
 def live(_: HttpRequest) -> JsonResponse:
+    """RunPod HTTP 프로세스의 생존 상태를 반환한다."""
+
     return JsonResponse({"live": True})
 
 
 @require_GET
 def ready(_: HttpRequest) -> JsonResponse:
+    """추론 런타임과 작업 큐의 준비 상태를 반환한다."""
+
     state = get_server_state()
     is_ready, message = state.runtime.readiness
     return JsonResponse({"ready": is_ready and state.manager.running, "message": message})
@@ -134,6 +160,8 @@ def ready(_: HttpRequest) -> JsonResponse:
 @csrf_exempt
 @require_POST
 def submit(request: HttpRequest) -> JsonResponse:
+    """검증된 AI 작업 요청을 RunPod 작업 큐에 등록한다."""
+
     manager, error = _manager_for(request)
     if error is not None:
         return error
@@ -155,6 +183,8 @@ def submit(request: HttpRequest) -> JsonResponse:
 
 @require_GET
 def get_job(request: HttpRequest, job_id: str) -> JsonResponse:
+    """지정한 RunPod 작업의 현재 상태와 결과를 조회한다."""
+
     manager, error = _manager_for(request)
     if error is not None:
         return error
@@ -169,6 +199,8 @@ def get_job(request: HttpRequest, job_id: str) -> JsonResponse:
 @csrf_exempt
 @require_POST
 def cancel_job(request: HttpRequest, job_id: str) -> JsonResponse:
+    """지정한 RunPod 작업에 취소 요청을 전달한다."""
+
     manager, error = _manager_for(request)
     if error is not None:
         return error
