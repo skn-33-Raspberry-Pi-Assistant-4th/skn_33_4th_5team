@@ -4,8 +4,8 @@
   <p class="card-kicker mb-1">DYNAMIC MINI CHALLENGE</p>
   <h2 class="h5">답변 이해 확인을 준비하고 있어요</h2>
   <p class="text-muted small mb-2" id="dynamicQuizMessage">방금 받은 답변과 공식 인용만 사용해 문제를 만들고 있습니다.</p>
-  <div class="d-flex align-items-center gap-2" id="dynamicQuizLoading" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span><span>문제를 생성 중입니다…</span></div>
-  <div class="d-flex flex-wrap gap-2 mt-3" id="dynamicQuizActions" hidden><button class="btn btn-outline-picare btn-sm" id="dynamicQuizCancel" type="button">생성 취소</button><button class="btn btn-outline-picare btn-sm" id="dynamicQuizRetry" type="button" hidden>다시 생성</button></div>
+  <div id="dynamicQuizLoading" role="status"><div class="d-flex align-items-center gap-2"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span><span>문제를 생성 중입니다…</span></div></div>
+  <div id="dynamicQuizActions" hidden><div class="d-flex flex-wrap gap-2 mt-3"><button class="btn btn-outline-picare btn-sm" id="dynamicQuizCancel" type="button">생성 취소</button><button class="btn btn-outline-picare btn-sm" id="dynamicQuizRetry" type="button" hidden>다시 생성</button></div></div>
   <div class="vstack gap-3 mt-3" id="dynamicQuizQuestions" aria-live="polite"></div>
 </section>
 {% endif %}

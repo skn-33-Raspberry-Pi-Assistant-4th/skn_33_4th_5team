@@ -784,6 +784,15 @@ class DynamicQuizAndWrongNoteTests(TestCase):
         self.assertEqual(result.json()["status"], "pending")
         task.delay.assert_called_once_with(chat_response.model_dump(mode="json"), max_questions=3)
 
+    def test_dynamic_quiz_hidden_targets_do_not_have_bootstrap_display_utilities(self):
+        qa_result = self._submit_qa(self._chat_response())
+        page = qa_result.content.decode()
+
+        self.assertIn('<div id="dynamicQuizLoading" role="status">', page)
+        self.assertIn('<div id="dynamicQuizActions" hidden>', page)
+        self.assertNotIn('class="d-flex align-items-center gap-2" id="dynamicQuizLoading"', page)
+        self.assertNotIn('class="d-flex flex-wrap gap-2 mt-3" id="dynamicQuizActions"', page)
+
     def test_response_without_citation_does_not_queue_a_task(self):
         qa_result = self._submit_qa(self._chat_response(answered=False, with_citation=False))
         self.assertNotContains(qa_result, "DYNAMIC MINI CHALLENGE")
