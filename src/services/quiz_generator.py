@@ -26,13 +26,13 @@ class QuizTextGenerator(Protocol):
 
 
 class QuizGenerator:
-    """Generate and deterministically filter grounded quiz questions once."""
+    """Generate and deterministically filter grounded quiz questions."""
 
     def __init__(self, text_generator: QuizTextGenerator):
         self._text_generator = text_generator
 
     def generate(self, request: QuizGenerationRequest, *, cancel_requested: Callable[[], bool] | None = None) -> QuizResponse:
-        """Call the text generator once, then reuse the existing quiz pipeline."""
+        """Generate once and retry only an output-contract rejection one time."""
 
         raise_if_cancelled(cancel_requested)
         if not request.quote_candidates:
@@ -43,11 +43,28 @@ class QuizGenerator:
             return QuizResponse(status="insufficient_content", questions=[])
 
         messages = build_quiz_generation_messages(request)
-        raw_output = call_cancellable(self._text_generator.generate, messages, cancel_requested=cancel_requested)
+        raw_output = call_cancellable(
+            self._text_generator.generate,
+            messages,
+            cancel_requested=cancel_requested,
+        )
         try:
             parsed = parse_quiz_draft_response(raw_output)
         except QuizOutputError:
-            return QuizResponse(status="generation_failed", questions=[])
+            # Preserve the original grounded request and only strengthen the
+            # output-shape instruction.  A malformed model response must not
+            # bypass the existing schema and evidence checks below.
+            raise_if_cancelled(cancel_requested)
+            repair_messages = build_quiz_generation_messages(request, repair=True)
+            repair_output = call_cancellable(
+                self._text_generator.generate,
+                repair_messages,
+                cancel_requested=cancel_requested,
+            )
+            try:
+                parsed = parse_quiz_draft_response(repair_output)
+            except QuizOutputError:
+                return QuizResponse(status="generation_failed", questions=[])
 
         if parsed.status == "insufficient_content":
             return QuizResponse(status="insufficient_content", questions=[])

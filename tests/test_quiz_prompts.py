@@ -62,6 +62,16 @@ def test_quiz_prompt_reflects_requested_question_limit() -> None:
     assert "최대 2개의 미니 챌린지" in messages[1]["content"]
 
 
+def test_quiz_repair_prompt_calls_out_the_known_json_structure_failures() -> None:
+    messages = build_quiz_generation_messages(make_request(), repair=True)
+
+    system_prompt = messages[0]["content"]
+    assert "이전 출력은 JSON 계약을 통과하지 못했습니다" in system_prompt
+    assert '"choices" 배열은 네 번째 선택지 객체 뒤에서 `]`로 닫으세요' in system_prompt
+    assert "마지막 항목 뒤에는 쉼표를 쓰지 마세요" in system_prompt
+    assert '"correct_choice_id"' in system_prompt
+
+
 def test_quiz_prompt_escapes_html_special_characters_in_answer_and_evidence() -> None:
     messages = build_quiz_generation_messages(
         make_request(

@@ -18,6 +18,16 @@ class FakeQuizTextGenerator:
         return self.output
 
 
+class SequenceQuizTextGenerator:
+    def __init__(self, outputs: list[str]):
+        self.outputs = outputs
+        self.calls: list[list[dict[str, str]]] = []
+
+    def generate(self, messages: Sequence[Mapping[str, str]]) -> str:
+        self.calls.append([dict(message) for message in messages])
+        return self.outputs.pop(0)
+
+
 def quiz_request() -> QuizGenerationRequest:
     return QuizGenerationRequest(
         request_id="request-001",
@@ -107,7 +117,18 @@ def test_quiz_generator_returns_generation_failed_for_invalid_json() -> None:
 
     assert response.status == "generation_failed"
     assert response.questions == []
-    assert len(fake.calls) == 1
+    assert len(fake.calls) == 2
+
+
+def test_quiz_generator_retries_once_with_the_json_repair_instruction() -> None:
+    fake = SequenceQuizTextGenerator(["{invalid json", model_output([question_payload(1)])])
+
+    response = QuizGenerator(fake).generate(quiz_request())
+
+    assert response.status == "available"
+    assert len(fake.calls) == 2
+    assert "이전 출력은 JSON 계약을 통과하지 못했습니다" not in fake.calls[0][0]["content"]
+    assert "이전 출력은 JSON 계약을 통과하지 못했습니다" in fake.calls[1][0]["content"]
 
 
 def test_quiz_generator_removes_question_with_unknown_evidence_id() -> None:

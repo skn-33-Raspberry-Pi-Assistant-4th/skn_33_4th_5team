@@ -40,6 +40,16 @@ QUIZ_GENERATION_SYSTEM_PROMPT = """당신은 방금 제공된 Q&A 답변의 이�
   ]
 }"""
 
+QUIZ_REPAIR_SYSTEM_PROMPT = """
+
+이전 출력은 JSON 계약을 통과하지 못했습니다. 아래 형식 규칙을 특히 엄격하게 지키세요.
+- JSON 객체 하나만 출력하고, 객체 바깥에는 어떤 문자도 쓰지 마세요.
+- "choices" 배열은 네 번째 선택지 객체 뒤에서 `]`로 닫으세요.
+- 배열이나 객체의 마지막 항목 뒤에는 쉼표를 쓰지 마세요.
+- "correct_choice_id", "explanation", "evidence_ids", "supporting_quote_id"는 "choices" 배열 바깥의 문항 객체 필드입니다.
+- 제공된 answer, evidence, quote 후보와 반환 JSON 형식은 새로 해석해 생성하고, 이전 출력의 내용을 이어 쓰지 마세요.
+"""
+
 
 def _render_evidence(evidence: QuizEvidence) -> str:
     """Render untrusted citation data as an escaped, labelled evidence block."""
@@ -65,6 +75,8 @@ def _render_quote_candidates(request: QuizGenerationRequest) -> str:
 
 def build_quiz_generation_messages(
     request: QuizGenerationRequest,
+    *,
+    repair: bool = False,
 ) -> list[dict[str, str]]:
     """Build model-agnostic messages for a grounded quiz generation call.
 
@@ -95,9 +107,16 @@ def build_quiz_generation_messages(
 
 위 answer와 quiz_evidence만 사용해 최대 {request.max_questions}개의 미니 챌린지를 생성하세요."""
     return [
-        {"role": "system", "content": QUIZ_GENERATION_SYSTEM_PROMPT},
+        {
+            "role": "system",
+            "content": QUIZ_GENERATION_SYSTEM_PROMPT + (QUIZ_REPAIR_SYSTEM_PROMPT if repair else ""),
+        },
         {"role": "user", "content": user_prompt},
     ]
 
 
-__all__ = ["QUIZ_GENERATION_SYSTEM_PROMPT", "build_quiz_generation_messages"]
+__all__ = [
+    "QUIZ_GENERATION_SYSTEM_PROMPT",
+    "QUIZ_REPAIR_SYSTEM_PROMPT",
+    "build_quiz_generation_messages",
+]

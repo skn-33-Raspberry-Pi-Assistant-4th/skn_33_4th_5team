@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 import pytest
 
@@ -46,6 +47,24 @@ def test_parse_quiz_response_accepts_json_or_complete_code_fence(raw_output: str
 
     assert response.status == "available"
     assert response.questions[0].question_id == "generated_001"
+
+
+def test_parse_quiz_response_repairs_a_trailing_comma_before_a_closing_array() -> None:
+    raw_output = re.sub(r"(\}\s*)\]", r"\1,]", serialized_valid_response(), count=1)
+
+    response = parse_quiz_response(raw_output)
+
+    assert response.status == "available"
+    assert len(response.questions[0].choices) == 4
+
+
+def test_parse_quiz_response_repairs_only_missing_terminal_outer_closers() -> None:
+    raw_output = serialized_valid_response()[:-2]
+
+    response = parse_quiz_response(raw_output)
+
+    assert response.status == "available"
+    assert response.questions[0].correct_choice_id == "A"
 
 
 @pytest.mark.parametrize(
