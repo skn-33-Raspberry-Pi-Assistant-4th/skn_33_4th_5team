@@ -1,18 +1,20 @@
 """Authentication flow tests for the Django presentation layer."""
 
+import hashlib
 import json
 import uuid
 from copy import deepcopy
-from datetime import date
+from datetime import date, timedelta
 from types import SimpleNamespace
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 from django.test import Client, TestCase
 from django.urls import reverse
+from django.utils import timezone
 from unittest.mock import Mock, patch
 
-from .models import Comment, DrawerItem, Post, PostLike, QuestionRecord, UserProfile, WrongNote
-from src.contracts import ChatCitation, ChatResponse, QuizChoice, QuizQuestion, QuizResponse
+from .models import AiJob, Comment, DrawerItem, Post, PostLike, QuestionRecord, UserProfile, WrongNote
+from src.contracts import ChatCitation, ChatResponse, QaSummaryResult, QuizChoice, QuizQuestion, QuizResponse
 from src.services.command_lab_service import CommandLabError, CommandLabService
 
 
@@ -1103,6 +1105,15 @@ class QuestionRecordViewTests(TestCase):
             is_public=public,
         )
 
+    @staticmethod
+    def _summary() -> QaSummaryResult:
+        return QaSummaryResult(
+            question_title="Raspberry Pi SSH 설정 방법",
+            question_title_status="available",
+            answer_summary="Raspberry Pi OS에서 SSH를 활성화한 뒤 같은 네트워크에서 접속합니다. [C1]",
+            answer_summary_status="available",
+        )
+
     def test_logged_in_qa_saves_full_response_snapshot_and_guest_qa_does_not(self):
         response = self._response()
         self.client.force_login(self.owner)
@@ -1126,6 +1137,121 @@ class QuestionRecordViewTests(TestCase):
         record = QuestionRecord.objects.get()
         self.assertEqual(record.status, "insufficient_evidence")
         self.assertEqual(record.answer, "공식 문서 근거가 부족합니다.")
+
+    def test_generated_summary_is_auto_saved_with_original_response(self):
+        response = self._response()
+        summary = self._summary()
+        self.client.force_login(self.owner)
+
+        with patch("portal.views._generate_qa_summary", return_value=summary):
+            page = self._submit_qa(response)
+
+        record = QuestionRecord.objects.get()
+        self.assertEqual(record.question_title, summary.question_title)
+        self.assertEqual(record.question_title_status, "available")
+        self.assertEqual(record.answer_summary, summary.answer_summary)
+        self.assertEqual(record.answer_summary_status, "available")
+        self.assertEqual(record.answer, response.answer)
+        self.assertEqual(record.response_payload, response.model_dump(mode="json"))
+        self.assertContains(page, "답변 요약")
+        self.assertContains(page, summary.answer_summary)
+
+    def test_summary_generation_failure_does_not_block_original_qa_or_auto_save(self):
+        response = self._response()
+        self.client.force_login(self.owner)
+
+        with patch(
+            "portal.views.build_qa_summary_text_generator",
+            side_effect=RuntimeError("summary adapter failed"),
+        ):
+            page = self._submit_qa(response)
+
+        record = QuestionRecord.objects.get()
+        self.assertEqual(record.question_title_status, "generation_failed")
+        self.assertEqual(record.answer_summary_status, "generation_failed")
+        self.assertEqual(record.answer, response.answer)
+        self.assertContains(page, response.answer)
+        self.assertContains(page, "답변을 내 질문 기록에 저장했습니다")
+
+    def test_archive_and_detail_prefer_generated_summary_with_legacy_fallback(self):
+        summarized = self._record(public=True)
+        summary = self._summary()
+        summarized.question_title = summary.question_title
+        summarized.question_title_status = summary.question_title_status
+        summarized.answer_summary = summary.answer_summary
+        summarized.answer_summary_status = summary.answer_summary_status
+        summarized.save(
+            update_fields=[
+                "question_title",
+                "question_title_status",
+                "answer_summary",
+                "answer_summary_status",
+            ]
+        )
+        legacy = QuestionRecord.objects.create(
+            owner=self.owner,
+            request_id="qa-legacy-fallback",
+            title="기존 질문 제목",
+            question="기존 질문",
+            answer="기존 전체 답변",
+            status="answered",
+            response_payload={},
+            is_public=True,
+        )
+
+        archive = self.client.get(reverse("questions"))
+        summarized_detail = self.client.get(reverse("question_detail", args=[summarized.pk]))
+        legacy_detail = self.client.get(reverse("question_detail", args=[legacy.pk]))
+
+        self.assertContains(archive, summary.question_title)
+        self.assertContains(archive, summary.answer_summary)
+        self.assertContains(archive, legacy.title)
+        self.assertContains(archive, legacy.answer)
+        self.assertContains(summarized_detail, summary.question_title)
+        self.assertContains(summarized_detail, summary.answer_summary)
+        self.assertContains(summarized_detail, summarized.answer)
+        self.assertContains(legacy_detail, legacy.title)
+        self.assertContains(legacy_detail, legacy.answer)
+
+        self.client.force_login(self.owner)
+        mypage = self.client.get(reverse("mypage_questions"))
+        self.assertContains(mypage, summary.question_title)
+        self.assertContains(mypage, summary.answer_summary)
+        self.assertContains(mypage, legacy.title)
+
+    def test_remote_qa_summary_envelope_is_auto_saved(self):
+        response = self._response()
+        summary = self._summary()
+        self.client.force_login(self.owner)
+        session = self.client.session
+        session.save()
+        session_hash = hashlib.sha256(session.session_key.encode()).hexdigest()
+        now = timezone.now()
+        job = AiJob.objects.create(
+            owner=self.owner,
+            session_hash=session_hash,
+            kind="qa",
+            status="succeeded",
+            input_payload={"question": "SSH를 어떻게 설정하나요?"},
+            result_payload={
+                "response": response.model_dump(mode="json"),
+                "summary": summary.model_dump(mode="json"),
+            },
+            deadline_at=now + timedelta(minutes=5),
+            expires_at=now + timedelta(minutes=30),
+        )
+
+        with patch("portal.views.remote_enabled", return_value=True):
+            page = self.client.get(reverse("qa"), {"job": str(job.pk)})
+
+        record = QuestionRecord.objects.get()
+        job.refresh_from_db()
+        self.assertEqual(job.question_record_id, record.pk)
+        self.assertIsNotNone(job.finalized_at)
+        self.assertEqual(record.question_title, summary.question_title)
+        self.assertEqual(record.answer_summary, summary.answer_summary)
+        self.assertEqual(record.answer, response.answer)
+        self.assertContains(page, summary.answer_summary)
 
     def test_private_records_are_owner_only_and_public_records_appear_in_archive(self):
         record = self._record()

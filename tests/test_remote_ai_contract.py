@@ -24,7 +24,7 @@ from django.test import SimpleTestCase, override_settings
 
 from portal.remote_ai import RemoteAIError, RunPodClient
 from scripts.mock_ai_api import MockAIServer, MockJobStore
-from src.contracts.models import ChatResponse, QuizResponse
+from src.contracts.models import ChatResponse, QaSummaryResult, QuizResponse
 
 
 TOKEN = "contract-test-token-at-least-32-bytes"
@@ -94,7 +94,9 @@ class RemoteAIContractTests(SimpleTestCase):
 
         self.assertEqual(submitted, {"job_id": "job-qa-1", "kind": "qa", "status": "queued"})
         self.assertEqual(completed["status"], "succeeded")
-        ChatResponse.model_validate(completed["result"])
+        self.assertEqual(set(completed["result"]), {"response", "summary"})
+        ChatResponse.model_validate(completed["result"]["response"])
+        QaSummaryResult.model_validate(completed["result"]["summary"])
 
     def test_quiz_result_reuses_quiz_response_contract(self):
         with RunningMock() as mock, override_settings(

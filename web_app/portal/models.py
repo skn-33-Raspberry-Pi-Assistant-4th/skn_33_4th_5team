@@ -160,6 +160,10 @@ class QuestionRecord(TimestampedModel):
     answer = models.TextField()
     status = models.CharField(max_length=32)
     response_payload = models.JSONField()
+    question_title = models.CharField(max_length=200, null=True, blank=True)
+    question_title_status = models.CharField(max_length=32, null=True, blank=True)
+    answer_summary = models.TextField(null=True, blank=True)
+    answer_summary_status = models.CharField(max_length=32, null=True, blank=True)
     is_public = models.BooleanField(default=False)
     published_at = models.DateTimeField(null=True, blank=True)
 

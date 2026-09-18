@@ -24,11 +24,11 @@
         <span class="question-topic">{{ record.status }}</span>
         <time>{{ record.published_at|date:'Y.m.d' }}</time>
       </div>
-      <h2><a href="{% url 'question_detail' record.pk %}">{{ record.title }}</a></h2>
-      <p class="question-preview-summary">{{ record.answer|truncatechars:180 }}</p>
+      <h2><a href="{% url 'question_detail' record.pk %}">{% if record.question_title_status == 'available' and record.question_title %}{{ record.question_title }}{% else %}{{ record.title }}{% endif %}</a></h2>
+      <p class="question-preview-summary">{% if record.answer_summary_status == 'available' and record.answer_summary %}{{ record.answer_summary }}{% else %}{{ record.answer|truncatechars:180 }}{% endif %}</p>
       <footer>
         <span>👤 {{ record.owner.username }}</span>
-        <a href="{% url 'question_detail' record.pk %}" aria-label="{{ record.title }} 상세 보기">질문 보기 <span aria-hidden="true">→</span></a>
+        <a href="{% url 'question_detail' record.pk %}" aria-label="{% if record.question_title_status == 'available' and record.question_title %}{{ record.question_title }}{% else %}{{ record.title }}{% endif %} 상세 보기">질문 보기 <span aria-hidden="true">→</span></a>
       </footer>
     </article>
   {% empty %}

@@ -24,7 +24,9 @@ from src.condition_extraction.ui_input import (
     USER_LEVEL_LABELS,
     RecommendationFormInput,
 )
-from src.contracts import ChatResponse, QuizResponse
+from src.contracts import ChatResponse, QaSummaryResult, QuizResponse
+from src.rag_to_llm.qa_summary_text_generator import build_qa_summary_text_generator
+from src.services.qa_summary import QaSummaryService
 
 from .forms import (
     CommandAnalyzeForm,
@@ -172,20 +174,50 @@ def _qa_record_title(question: str) -> str:
     return first_sentence[:200]
 
 
-def _save_question_record(request, response: ChatResponse, question: str) -> QuestionRecord | None:
+def _generate_qa_summary(service, question: str, response: ChatResponse) -> QaSummaryResult:
+    """Generate archive metadata from the Q&A service's already-loaded answer model."""
+
+    try:
+        text_generator = build_qa_summary_text_generator(getattr(service, "answer_generator", None))
+        return QaSummaryService(text_generator).generate(question, response)
+    except Exception:
+        logger.exception("Q&A summary generation failed; preserving the original response")
+        return QaSummaryResult(
+            question_title=None,
+            question_title_status="generation_failed",
+            answer_summary=None,
+            answer_summary_status="generation_failed" if response.status == "answered" else "not_applicable",
+        )
+
+
+def _save_question_record(
+    request,
+    response: ChatResponse,
+    question: str,
+    summary: QaSummaryResult | None = None,
+) -> QuestionRecord | None:
     """Persist only a server-built response for an authenticated member."""
 
     if not request.user.is_authenticated:
         return None
     try:
+        generated_title = (
+            summary.question_title
+            if summary is not None and summary.question_title_status == "available"
+            else None
+        )
         return QuestionRecord.objects.create(
             owner=request.user,
             request_id=response.request_id,
-            title=_qa_record_title(question),
+            title=generated_title or _qa_record_title(question),
             question=question,
             answer=response.answer,
             status=response.status,
             response_payload=response.model_dump(mode="json"),
+            question_title=summary.question_title if summary is not None else None,
+            question_title_status=summary.question_title_status if summary is not None else None,
+            answer_summary=summary.answer_summary if summary is not None else None,
+            answer_summary_status=summary.answer_summary_status if summary is not None else None,
         )
     except Exception:
         logger.exception("Failed to save Q&A record")
@@ -308,6 +340,17 @@ def _qa_result_context(response: ChatResponse, question: str) -> dict:
     return context
 
 
+def _remote_qa_result(payload: object) -> tuple[ChatResponse, QaSummaryResult | None]:
+    """Validate the QA-only RunPod envelope while accepting pre-deploy jobs."""
+
+    if isinstance(payload, dict) and "response" in payload:
+        response = ChatResponse.model_validate(payload["response"])
+        summary_payload = payload.get("summary")
+        summary = QaSummaryResult.model_validate(summary_payload) if summary_payload is not None else None
+        return response, summary
+    return ChatResponse.model_validate(payload), None
+
+
 def _finalize_remote_job(request, job: AiJob) -> AiJob:
     """Validate one RunPod result and apply its Django-side effect once."""
 
@@ -317,10 +360,10 @@ def _finalize_remote_job(request, job: AiJob) -> AiJob:
             return job
         try:
             if job.kind == "qa":
-                response = ChatResponse.model_validate(job.result_payload)
+                response, summary = _remote_qa_result(job.result_payload)
                 question = str(job.input_payload["question"])
                 _store_qa_response(request, response, question)
-                job.question_record = _save_question_record(request, response, question)
+                job.question_record = _save_question_record(request, response, question, summary)
             elif job.kind == "recommendation":
                 request_form = RecommendationFormInput.model_validate(job.input_payload)
                 response = ChatResponse.model_validate(job.result_payload)
@@ -702,9 +745,10 @@ def qa(request):
         if job.status == "succeeded":
             job = _finalize_remote_job(request, job)
             try:
-                response = ChatResponse.model_validate(job.result_payload)
+                response, summary = _remote_qa_result(job.result_payload)
                 question = str(job.input_payload["question"])
                 context.update(_qa_result_context(response, question))
+                context["qa_summary"] = summary
                 context["qa_record"] = job.question_record
                 context["qa_record_save_error"] = request.user.is_authenticated and job.question_record is None
                 context["quiz_auto_start"] = response.status == "answered" and bool(response.citations)
@@ -724,17 +768,20 @@ def qa(request):
                     "trace": True,
                 })
                 return render(request, "portal/qa.html", context)
+            service = get_qa_service()
             feature_result = get_qa_result(
-                get_qa_service(),
+                service,
                 request_id=str(uuid.uuid4()),
                 question=question,
                 retrieval_mode="hybrid",
                 trace=True,
             )
             response = feature_result.result
+            summary = _generate_qa_summary(service, question, response)
             context["feature_result"] = feature_result
             context.update(_response_context(response))
-            saved_record = _save_question_record(request, response, question)
+            context["qa_summary"] = summary
+            saved_record = _save_question_record(request, response, question, summary)
             if saved_record is not None:
                 context["qa_record"] = saved_record
             elif request.user.is_authenticated:

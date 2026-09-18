@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import threading
 from collections.abc import Callable, Mapping
@@ -9,7 +10,7 @@ from pathlib import Path
 
 from src.condition_extraction.schema import SurveyAnswer, SurveyResponse
 from src.condition_extraction.ui_input import RecommendationFormInput
-from src.contracts import ChatResponse
+from src.contracts import ChatResponse, QaSummaryResult
 from src.media import MediaResolver
 from src.rag import HybridRetriever, RagSettings, load_indexed_at
 from src.rag_to_llm import AnswerGeneratorSettings, build_answer_generator
@@ -25,8 +26,14 @@ from src.services.rag_qa_service import RagQaService
 from src.services.recommendation_agent import RecommendationAgent
 from src.services.recommendation_rag_service import RecommendationRagService
 from src.rag_to_llm.quiz_text_generator import HuggingFaceQuizTextGenerator
+from src.rag_to_llm.qa_summary_text_generator import build_qa_summary_text_generator
+from src.rag_to_llm.cancellation import GenerationCancelled
+from src.services.qa_summary import QaSummaryService
 
 from .contracts import JobKind, QaPayload, QuizPayload
+
+
+logger = logging.getLogger(__name__)
 
 
 class RuntimeNotReadyError(RuntimeError):
@@ -46,6 +53,8 @@ class PiCareRuntime:
     def __init__(self, project_root: Path) -> None:
         self.project_root = project_root.resolve()
         self.qa_service: RagQaService | None = None
+        self.qa_summary_service: QaSummaryService | None = None
+        self._qa_summary_text_generator = None
         self.recommendation_service: RecommendationRagService | None = None
         self.quiz_generator: QuizGenerator | None = None
         self._condition_extractor = None
@@ -103,6 +112,8 @@ class PiCareRuntime:
                 media_resolver=media_resolver,
                 top_k=rag_settings.top_k,
             )
+            qa_summary_text_generator = build_qa_summary_text_generator(answer_generator)
+            qa_summary_service = QaSummaryService(qa_summary_text_generator)
             recommendation_service = RecommendationRagService(
                 recommendation_agent=RecommendationAgent(
                     extractor=condition_extractor,
@@ -123,6 +134,8 @@ class PiCareRuntime:
                 self._smoke_inference(answer_generator, condition_extractor)
 
             self.qa_service = qa_service
+            self.qa_summary_service = qa_summary_service
+            self._qa_summary_text_generator = qa_summary_text_generator
             self.recommendation_service = recommendation_service
             self.quiz_generator = quiz_generator
             self._condition_extractor = condition_extractor
@@ -165,18 +178,45 @@ class PiCareRuntime:
         cancel_requested: Callable[[], bool],
     ) -> dict[str, object]:
         ready, _ = self.readiness
-        if not ready or self.qa_service is None or self.recommendation_service is None or self.quiz_generator is None:
+        if (
+            not ready
+            or self.qa_service is None
+            or self.qa_summary_service is None
+            or self.recommendation_service is None
+            or self.quiz_generator is None
+        ):
             raise RuntimeNotReadyError("RunPod runtime is not ready")
 
         if kind == "qa":
             request = QaPayload.model_validate(payload)
-            result = self.qa_service.answer(
+            response = self.qa_service.answer(
                 request_id=job_id,
                 question=request.question,
                 retrieval_mode=request.retrieval_mode,
                 trace=request.trace,
                 cancel_requested=cancel_requested,
             )
+            try:
+                summary = QaSummaryService(
+                    self._qa_summary_text_generator,
+                    cancel_requested=cancel_requested,
+                ).generate(request.question, response)
+            except GenerationCancelled:
+                raise
+            except Exception:
+                logger.exception("Q&A summary generation failed; preserving the original response")
+                summary = QaSummaryResult(
+                    question_title=None,
+                    question_title_status="generation_failed",
+                    answer_summary=None,
+                    answer_summary_status=(
+                        "generation_failed" if response.status == "answered" else "not_applicable"
+                    ),
+                )
+            return {
+                "response": response.model_dump(mode="json"),
+                "summary": summary.model_dump(mode="json"),
+            }
         elif kind == "recommendation":
             form_payload = dict(payload)
             form_payload.setdefault("request_id", job_id)

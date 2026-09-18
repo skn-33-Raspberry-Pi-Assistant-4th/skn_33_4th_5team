@@ -42,6 +42,16 @@ def _chat_result(job_id: str) -> dict[str, Any]:
 def result_for(kind: str, job_id: str) -> dict[str, Any]:
     if kind == "quiz":
         return {"status": "insufficient_content", "questions": []}
+    if kind == "qa":
+        return {
+            "response": _chat_result(job_id),
+            "summary": {
+                "question_title": "모의 질문 요약",
+                "question_title_status": "available",
+                "answer_summary": None,
+                "answer_summary_status": "not_applicable",
+            },
+        }
     return _chat_result(job_id)
 
 
