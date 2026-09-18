@@ -1,5 +1,10 @@
 # RunPod에서 PiCare Django 실행
 
+> 현재 AWS–RunPod 분리 배포에서는 AWS가 Django 화면·인증·저장을 담당하고,
+> RunPod는 Django 기반 AI 추론 API만 실행한다. 실제 배포는
+> [`docs/deployment/aws-runpod-operations.md`](deployment/aws-runpod-operations.md)를 따른다.
+> 이 문서는 RunPod 한 대에서 전체 Django 서비스를 직접 실행하는 개발/레거시 구성 참고용이다.
+
 이 문서는 Django 화면과 기존 Q&A·제품 추천의 Qwen/LoRA 경로를 같은 RunPod GPU Pod에서 실행하는 기준이다.
 기존 `docs/runpod-streamlit-setup.md`는 이전 Streamlit 기준 문서이므로, 새 Django 실행은 이 문서를 따른다.
 

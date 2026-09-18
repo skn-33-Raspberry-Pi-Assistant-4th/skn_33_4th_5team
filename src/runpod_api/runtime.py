@@ -41,6 +41,8 @@ class RuntimeNotReadyError(RuntimeError):
 
 
 def _bool_env(name: str, default: bool) -> bool:
+    """환경변수의 ``true``/``false`` 문자열을 Python ``bool`` 값으로 변환한다."""
+
     value = os.getenv(name, "true" if default else "false").strip().lower()
     if value not in {"true", "false"}:
         raise ValueError(f"{name} must be true or false")
@@ -51,6 +53,8 @@ class PiCareRuntime:
     """Load one retriever and answer model shared by every AI feature."""
 
     def __init__(self, project_root: Path) -> None:
+        """RunPod에서 공용으로 사용할 AI 런타임 상태와 서비스 참조를 초기화한다."""
+
         self.project_root = project_root.resolve()
         self.qa_service: RagQaService | None = None
         self.qa_summary_service: QaSummaryService | None = None
@@ -64,11 +68,18 @@ class PiCareRuntime:
 
     @property
     def readiness(self) -> tuple[bool, str]:
+        """현재 AI 모델과 검색 인덱스가 요청을 처리할 준비가 되었는지 반환한다."""
+
         with self._lock:
             return self._state == "ready", self._message
 
     def initialize(self) -> None:
-        """Build and warm all dependencies before accepting inference jobs."""
+        """
+        AI 요청을 받기 전에 RAG, Qwen, LoRA 등 공용 추론 구성요소를 한 번 로드한다.
+
+        RunPod 프로세스 시작 시 백그라운드 초기화 스레드에서 호출되며,
+        모든 구성요소 준비가 끝난 뒤에만 ``readiness`` 상태를 ready로 변경한다.
+        """
 
         try:
             rag_settings = RagSettings.from_env(self.project_root)
@@ -150,7 +161,11 @@ class PiCareRuntime:
 
     @staticmethod
     def _smoke_inference(answer_generator, condition_extractor) -> None:
-        """Exercise both generation models once; no generated text is persisted."""
+        """
+        답변 생성 모델과 조건 추출 모델을 한 번 실행해 실제 추론 가능 여부를 확인한다.
+
+        생성 결과는 저장하지 않으며 RunPod readiness 확인 용도로만 사용한다.
+        """
 
         answer_generator.generate_structured(
             [{"role": "user", "content": "한 글자로 예라고 답하세요."}],
@@ -177,6 +192,13 @@ class PiCareRuntime:
         job_id: str,
         cancel_requested: Callable[[], bool],
     ) -> dict[str, object]:
+        """
+        작업 종류에 맞는 PiCare AI 기능을 실행하고 JSON 직렬화 가능한 결과를 반환한다.
+
+        ``kind`` 값에 따라 Q&A, 제품 추천, 퀴즈 생성을 분기하며,
+        ``cancel_requested`` 콜백을 각 생성 서비스에 전달해 작업 취소를 지원한다.
+        """
+
         ready, _ = self.readiness
         if (
             not ready

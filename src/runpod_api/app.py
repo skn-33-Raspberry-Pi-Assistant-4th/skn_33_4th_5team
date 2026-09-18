@@ -1,16 +1,18 @@
-"""FastAPI application exposed through the RunPod HTTPS proxy."""
+"""Django HTTP views exposed through the RunPod HTTPS proxy."""
 
 from __future__ import annotations
 
 import hmac
+import json
 import os
 import threading
-from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from django.http import HttpRequest, JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET, require_POST
+from pydantic import ValidationError
 
 from .contracts import JobCreate, JobResponse
 from .jobs import JobConflictError, JobManager, JobNotFoundError, QueueFullError
@@ -52,6 +54,9 @@ class ServerState:
         self.initializer: threading.Thread | None = None
 
     def start(self) -> None:
+        if self.initializer is not None and self.initializer.is_alive():
+            return
+
         def initialize() -> None:
             try:
                 self.runtime.initialize()
@@ -70,86 +75,118 @@ class ServerState:
         self.manager.stop()
 
 
-def create_app(*, settings: ApiSettings | None = None, runtime: PiCareRuntime | None = None) -> FastAPI:
-    configured = settings or ApiSettings.from_env()
-    state_holder = ServerState(configured, runtime)
-    bearer = HTTPBearer(auto_error=False)
+_state_lock = threading.Lock()
+_state_holder: ServerState | None = None
 
-    @asynccontextmanager
-    async def lifespan(_: FastAPI):
-        state_holder.start()
-        try:
-            yield
-        finally:
-            state_holder.stop()
 
-    api = FastAPI(title="PiCare RunPod AI API", version="1.0.0", lifespan=lifespan)
-    api.state.server = state_holder
+def get_server_state() -> ServerState:
+    """Create the RunPod runtime once per Django worker and start it lazily."""
 
-    def authenticate(
-        credentials: HTTPAuthorizationCredentials | None = Depends(bearer),
-    ) -> None:
-        if (
-            credentials is None
-            or credentials.scheme.lower() != "bearer"
-            or not hmac.compare_digest(credentials.credentials, configured.token)
-        ):
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="unauthorized")
+    global _state_holder
+    if _state_holder is None:
+        with _state_lock:
+            if _state_holder is None:
+                _state_holder = ServerState(ApiSettings.from_env())
+                _state_holder.start()
+    return _state_holder
 
-    def require_manager(_: None = Depends(authenticate)) -> JobManager:
-        ready, _ = state_holder.runtime.readiness
-        if not ready or not state_holder.manager.running:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="runtime_not_ready")
-        return state_holder.manager
 
-    @api.get("/health/live")
-    def live() -> dict[str, bool]:
-        return {"live": True}
+def _json_response(response: JobResponse, *, status: int = 200) -> JsonResponse:
+    return JsonResponse(response.model_dump(mode="json", exclude_none=True), status=status)
 
-    @api.get("/health/ready")
-    def ready() -> dict[str, object]:
-        is_ready, message = state_holder.runtime.readiness
-        return {"ready": is_ready and state_holder.manager.running, "message": message}
 
-    @api.post(
-        "/v1/jobs",
-        response_model=JobResponse,
-        response_model_exclude_none=True,
-        dependencies=[Depends(authenticate)],
+def _error(detail: str, status: int) -> JsonResponse:
+    return JsonResponse({"detail": detail}, status=status)
+
+
+def _is_authenticated(request: HttpRequest, state: ServerState) -> bool:
+    authorization = request.headers.get("Authorization", "")
+    scheme, separator, token = authorization.partition(" ")
+    return (
+        bool(separator)
+        and scheme.lower() == "bearer"
+        and hmac.compare_digest(token.strip(), state.settings.token)
     )
-    def submit(request: JobCreate, manager: JobManager = Depends(require_manager)) -> JobResponse:
-        try:
-            return manager.submit(request)
-        except QueueFullError as exc:
-            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="queue_full") from exc
-        except JobConflictError as exc:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="job_conflict") from exc
-
-    @api.get(
-        "/v1/jobs/{job_id}",
-        response_model=JobResponse,
-        response_model_exclude_none=True,
-        dependencies=[Depends(authenticate)],
-    )
-    def get_job(job_id: str, manager: JobManager = Depends(require_manager)) -> JobResponse:
-        try:
-            return manager.get(job_id)
-        except JobNotFoundError as exc:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="job_not_found") from exc
-
-    @api.post(
-        "/v1/jobs/{job_id}/cancel",
-        response_model=JobResponse,
-        response_model_exclude_none=True,
-        dependencies=[Depends(authenticate)],
-    )
-    def cancel_job(job_id: str, manager: JobManager = Depends(require_manager)) -> JobResponse:
-        try:
-            return manager.cancel(job_id)
-        except JobNotFoundError as exc:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="job_not_found") from exc
-
-    return api
 
 
-__all__ = ["ApiSettings", "ServerState", "create_app"]
+def _manager_for(request: HttpRequest) -> tuple[JobManager | None, JsonResponse | None]:
+    state = get_server_state()
+    if not _is_authenticated(request, state):
+        return None, _error("unauthorized", 401)
+    ready, _ = state.runtime.readiness
+    if not ready or not state.manager.running:
+        return None, _error("runtime_not_ready", 503)
+    return state.manager, None
+
+
+@require_GET
+def live(_: HttpRequest) -> JsonResponse:
+    return JsonResponse({"live": True})
+
+
+@require_GET
+def ready(_: HttpRequest) -> JsonResponse:
+    state = get_server_state()
+    is_ready, message = state.runtime.readiness
+    return JsonResponse({"ready": is_ready and state.manager.running, "message": message})
+
+
+@csrf_exempt
+@require_POST
+def submit(request: HttpRequest) -> JsonResponse:
+    manager, error = _manager_for(request)
+    if error is not None:
+        return error
+    assert manager is not None
+
+    try:
+        raw_payload = json.loads(request.body or b"{}")
+        job = JobCreate.model_validate(raw_payload)
+    except (json.JSONDecodeError, ValidationError, TypeError):
+        return _error("invalid_request", 422)
+
+    try:
+        return _json_response(manager.submit(job))
+    except QueueFullError:
+        return _error("queue_full", 429)
+    except JobConflictError:
+        return _error("job_conflict", 409)
+
+
+@require_GET
+def get_job(request: HttpRequest, job_id: str) -> JsonResponse:
+    manager, error = _manager_for(request)
+    if error is not None:
+        return error
+    assert manager is not None
+
+    try:
+        return _json_response(manager.get(job_id))
+    except JobNotFoundError:
+        return _error("job_not_found", 404)
+
+
+@csrf_exempt
+@require_POST
+def cancel_job(request: HttpRequest, job_id: str) -> JsonResponse:
+    manager, error = _manager_for(request)
+    if error is not None:
+        return error
+    assert manager is not None
+
+    try:
+        return _json_response(manager.cancel(job_id))
+    except JobNotFoundError:
+        return _error("job_not_found", 404)
+
+
+__all__ = [
+    "ApiSettings",
+    "ServerState",
+    "cancel_job",
+    "get_job",
+    "get_server_state",
+    "live",
+    "ready",
+    "submit",
+]

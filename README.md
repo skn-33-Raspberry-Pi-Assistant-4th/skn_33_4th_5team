@@ -274,5 +274,5 @@ Command Lab은 확장된 23개 문서·381개 청크 기준으로 최종 검수�
 - [Command Lab 계약·검증](docs/data-contracts/command-lab.md)
 - [Mini Challenge 인계 계약](docs/data-contracts/mini-challenge-handoff.md)
 - [RAG 데이터 계약](docs/data-contracts/rag-corpus.md)
-- [RunPod Django 가이드](docs/runpod-django-setup.md)
+- [AWS–RunPod 배포·복구 가이드](docs/deployment/aws-runpod-operations.md)
 - [Mini Challenge 최종 평가](docs/validation/mini-challenge-final-evaluation.md)

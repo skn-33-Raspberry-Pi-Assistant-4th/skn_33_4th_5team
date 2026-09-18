@@ -24,7 +24,10 @@ class JobRunner(Protocol):
         *,
         job_id: str,
         cancel_requested: Callable[[], bool],
-    ) -> dict[str, object]: ...
+    ) -> dict[str, object]:
+        """하나의 AI 작업을 실행하고 JSON 객체 형태의 결과를 반환한다."""
+
+        ...
 
 
 class QueueFullError(RuntimeError):
@@ -52,6 +55,8 @@ class _Job:
     cancel_event: threading.Event = field(default_factory=threading.Event)
 
     def response(self) -> JobResponse:
+        """내부 작업 상태를 외부 API용 ``JobResponse``로 변환한다."""
+
         return JobResponse(
             job_id=self.request.job_id,
             kind=self.request.kind,
@@ -73,6 +78,8 @@ class JobManager:
         retention_seconds: float = 1_800,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
+        """GPU 작업을 순차 실행하는 메모리 큐를 생성한다."""
+
         if max_queued < 1 or timeout_seconds <= 0 or retention_seconds <= 0:
             raise ValueError("job limits must be positive")
         self._runner = runner
@@ -87,15 +94,21 @@ class JobManager:
 
     @staticmethod
     def _fingerprint(request: JobCreate) -> str:
+        """동일한 ``job_id`` 재사용 여부를 판별할 요청 해시를 생성한다."""
+
         wire = request.model_dump(mode="json")
         encoded = json.dumps(wire, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
     @property
     def running(self) -> bool:
+        """GPU worker 스레드가 현재 실행 중인지 반환한다."""
+
         return self._thread is not None and self._thread.is_alive()
 
     def start(self) -> None:
+        """GPU 작업을 하나씩 처리하는 worker 스레드를 시작한다."""
+
         with self._lock:
             if self.running:
                 return
@@ -108,6 +121,8 @@ class JobManager:
             self._thread.start()
 
     def stop(self, *, timeout: float = 10) -> None:
+        """진행 중인 작업에 취소를 요청하고 worker 스레드를 종료한다."""
+
         with self._lock:
             if not self.running:
                 return
@@ -124,6 +139,8 @@ class JobManager:
             thread.join(timeout=timeout)
 
     def submit(self, request: JobCreate) -> JobResponse:
+        """새 작업을 큐에 등록하고 현재 상태를 반환한다."""
+
         fingerprint = self._fingerprint(request)
         now = self._clock()
         with self._lock:
@@ -150,6 +167,8 @@ class JobManager:
             return job.response()
 
     def get(self, job_id: str) -> JobResponse:
+        """``job_id``에 해당하는 최신 작업 상태를 조회한다."""
+
         with self._lock:
             self._expire_locked(self._clock())
             try:
@@ -158,6 +177,8 @@ class JobManager:
                 raise JobNotFoundError(job_id) from exc
 
     def cancel(self, job_id: str) -> JobResponse:
+        """대기 중이거나 실행 중인 작업에 취소를 요청한다."""
+
         with self._lock:
             self._expire_locked(self._clock())
             try:
@@ -173,6 +194,8 @@ class JobManager:
             return job.response()
 
     def _expire_locked(self, now: float) -> None:
+        """시간 제한 또는 보관 기간이 지난 작업을 만료 상태로 변경한다."""
+
         for job in self._jobs.values():
             if job.status == "queued" and now >= job.deadline_at:
                 job.cancel_event.set()
@@ -194,12 +217,16 @@ class JobManager:
         result: dict[str, object] | None = None,
         error: str | None = None,
     ) -> None:
+        """작업의 최종 상태와 결과 또는 오류 정보를 기록한다."""
+
         job.status = status
         job.result = result if status == "succeeded" else None
         job.error = error if status == "failed" else None
         job.finished_at = self._clock()
 
     def _worker_loop(self) -> None:
+        """큐에서 작업 ID를 꺼내 단일 GPU worker에서 순차 처리한다."""
+
         while not self._stopping.is_set():
             try:
                 job_id = self._queue.get(timeout=0.25)
@@ -214,6 +241,8 @@ class JobManager:
                 self._queue.task_done()
 
     def _run_one(self, job_id: str) -> None:
+        """하나의 작업을 실행하고 성공·실패·취소·만료 상태를 확정한다."""
+
         with self._lock:
             job = self._jobs.get(job_id)
             if job is None or job.status != "queued":
@@ -226,6 +255,8 @@ class JobManager:
         timed_out = False
 
         def cancel_requested() -> bool:
+            """사용자 취소, 시간 초과, 서버 종료 요청 여부를 확인한다."""
+
             nonlocal timed_out
             timed_out = self._clock() >= job.deadline_at
             return job.cancel_event.is_set() or timed_out or self._stopping.is_set()

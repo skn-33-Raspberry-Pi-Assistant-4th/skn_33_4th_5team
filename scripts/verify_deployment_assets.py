@@ -47,16 +47,23 @@ def _require_nonempty(path: Path) -> None:
 
 
 def _require_text(path: Path, expected: str) -> None:
+    """파일이 존재하고 지정한 문자열을 포함하는지 확인한다."""
+
     _require_nonempty(path)
     if expected not in path.read_text(encoding="utf-8"):
         raise VerificationError(f"{path} must contain: {expected}")
 
 
 def verify_runpod(project_root: Path, adapter_path: Path | None, *, skip_adapter: bool) -> dict[str, Any]:
+    """RunPod Django 추론 API와 GPU 추론 자산이 배포 가능한 상태인지 검증한다."""
+
     _require_text(project_root / "Dockerfile.runpod", "EXPOSE 8000")
     _require_text(project_root / "Dockerfile.runpod", 'CMD ["python", "-m", "src.runpod_api"]')
-    _require_text(project_root / "requirements-gpu.txt", "fastapi")
-    _require_text(project_root / "requirements-gpu.txt", "uvicorn")
+    _require_text(project_root / "requirements-gpu.txt", "-r requirements.txt")
+    _require_text(project_root / "requirements.txt", "Django>=5.1,<6")
+    _require_text(project_root / "requirements.txt", "gunicorn>=23,<24")
+    _require_text(project_root / "src/runpod_api/__main__.py", 'ROOT_URLCONF="src.runpod_api.urls"')
+    _require_text(project_root / "src/runpod_api/urls.py", 'path("v1/jobs", app.submit')
     manifest_path = project_root / "document_pipeline/data/manifest_v3.json"
     manifest = _read_json(manifest_path)
     chunks = manifest.get("chunks")

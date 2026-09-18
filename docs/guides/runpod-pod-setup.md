@@ -1,7 +1,9 @@
 # RunPod Pod: Qwen3-4B RAG QA·제품 추천 실행
 
-이 문서는 HTTP endpoint나 vLLM 없이 RunPod Pod 안에서 RAG와 Qwen3-4B Base
-Instruct를 같은 Python 프로세스로 실행하는 절차다. 일반 QA에서는 조건 JSON 추출용
+이 문서는 HTTP API 서버를 거치지 않고 RunPod Pod 내부에서 CLI로 RAG와 Qwen3-4B Base
+Instruct를 직접 점검하는 절차다. AWS와 연결하는 실제 AI API 배포는
+[`docs/deployment/aws-runpod-operations.md`](../deployment/aws-runpod-operations.md)를 따른다.
+일반 QA에서는 조건 JSON 추출용
 LoRA adapter를 사용하지 않지만, 제품 추천 CLI에서는 같은 계열 모델의 LoRA adapter로
 조건만 추출한다.
 

@@ -1,4 +1,4 @@
-# Dedicated single-process GPU inference server for RunPod Pods.
+# RunPod GPU image for the PiCare Django inference API.
 FROM pytorch/pytorch:2.7.0-cuda12.8-cudnn9-runtime
 
 WORKDIR /app
@@ -12,4 +12,6 @@ RUN pip install --no-cache-dir -r requirements-gpu.txt
 COPY . .
 
 EXPOSE 8000
+
+# src.runpod_api.__main__ starts the Django WSGI app with one Gunicorn worker.
 CMD ["python", "-m", "src.runpod_api"]
