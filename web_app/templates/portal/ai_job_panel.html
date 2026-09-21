@@ -1,13 +1,14 @@
 {% if ai_job %}
 <section class="lab-card form-card mt-3" id="aiJobPanel"
   data-status-url="{% url 'ai_job_status_api' ai_job.id %}"
-  data-cancel-url="{% url 'ai_job_cancel_api' ai_job.id %}">
+  data-cancel-url="{% url 'ai_job_cancel_api' ai_job.id %}"
+  data-job-kind="{{ ai_job.kind }}">
   <form hidden>{% csrf_token %}</form>
   <div class="d-flex align-items-center gap-2" role="status" aria-live="polite">
     <span class="spinner-border spinner-border-sm text-danger" id="aiJobSpinner" aria-hidden="true"></span>
-    <strong id="aiJobMessage">AI 작업을 대기열에 등록했습니다.</strong>
+    <strong id="aiJobMessage">{% if ai_job.kind == 'recommendation' %}추천 제품을 검색 중입니다.{% else %}AI 작업을 대기열에 등록했습니다.{% endif %}</strong>
   </div>
-  <p class="text-muted small mb-2 mt-2">페이지를 열어 두면 완료된 결과로 자동 이동합니다.</p>
+  <p class="text-muted small mb-2 mt-2">{% if ai_job.kind == 'recommendation' %}입력한 조건과 공식 사양을 비교하고 있어요. 페이지를 열어 두면 결과로 자동 이동합니다.{% else %}페이지를 열어 두면 완료된 결과로 자동 이동합니다.{% endif %}</p>
   <div class="progress mb-3" id="aiJobProgress" aria-label="AI 작업 진행 중">
     <div class="progress-bar progress-bar-striped progress-bar-animated bg-danger w-100"></div>
   </div>
@@ -26,6 +27,7 @@
   const csrf = panel.querySelector('[name=csrfmiddlewaretoken]').value;
   let stopped = false;
   let transientFailures = 0;
+  const isRecommendation = panel.dataset.jobKind === 'recommendation';
 
   const terminal = (text, canRetry = true) => {
     stopped = true;
@@ -46,8 +48,8 @@
         window.location.assign(payload.redirect_url);
         return;
       }
-      if (['queued', 'submission_unknown'].includes(payload.status)) message.textContent = 'AI 작업을 대기 중입니다.';
-      else if (payload.status === 'running') message.textContent = '공식 문서를 확인하고 답변을 생성하고 있습니다.';
+      if (['queued', 'submission_unknown'].includes(payload.status)) message.textContent = isRecommendation ? '추천 제품 검색을 대기 중입니다.' : 'AI 작업을 대기 중입니다.';
+      else if (payload.status === 'running') message.textContent = isRecommendation ? '추천 제품을 검색하고 있습니다.' : '공식 문서를 확인하고 답변을 생성하고 있습니다.';
       else if (payload.status === 'cancelling') message.textContent = '생성 작업을 취소하고 있습니다.';
       else if (payload.status === 'cancelled') return terminal('생성 작업을 취소했습니다.');
       else if (payload.status === 'expired') return terminal('작업 시간이 만료되었습니다. 다시 요청해 주세요.');

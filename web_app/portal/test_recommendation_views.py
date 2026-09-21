@@ -130,7 +130,10 @@ class RecommendationHistoryTests(TestCase):
 
     def test_guest_invalid_input_and_service_error_do_not_save(self):
         page, _ = self.submit()
-        self.assertContains(page, "홈 서버용 후보")
+        self.assertContains(page, 'class="product-reason-tag"')
+        self.assertContains(page, "홈 서버")
+        self.assertContains(page, 'id="recommendationRequestLoading"')
+        self.assertContains(page, "추천 제품을 검색 중입니다.")
         self.assertNotContains(page, "내 제품추천 기록에 저장했습니다")
         self.assertNotContains(page, 'id="recommendationSaveForm"')
         self.assertNotIn(RECOMMENDATION_SESSION_KEY, self.client.session)
@@ -159,7 +162,8 @@ class RecommendationHistoryTests(TestCase):
     def test_save_failure_keeps_cards_and_hides_internal_error(self):
         self.client.force_login(self.owner)
         page, _ = self.submit()
-        self.assertContains(page, "홈 서버용 후보")
+        self.assertContains(page, 'class="product-reason-tag"')
+        self.assertContains(page, "홈 서버")
         with (
             patch("portal.views.RecommendationRecord.objects.create", side_effect=DatabaseError("PRIVATE_DB_ERROR")),
             self.assertLogs("portal.views", level="ERROR"),
@@ -239,8 +243,9 @@ class RecommendationHistoryTests(TestCase):
         with patch("portal.views.get_recommendation_service", side_effect=AssertionError("must not infer")) as service:
             page = self.client.get(reverse("mypage_recommendation_detail", args=[record.pk]))
         service.assert_not_called()
-        for text in (record.question, "홈 서버용 후보", "Raspberry Pi 5 specifications.", "공식 제품 사진"):
+        for text in (record.question, "홈 서버", "Raspberry Pi 5 specifications.", "공식 제품 사진"):
             self.assertContains(page, text)
+        self.assertContains(page, 'class="product-reason-tag"')
         self.assertEqual(dict(page.context["input_conditions"])["Wi-Fi 필요"], "아니오")
         self.assertEqual(dict(page.context["input_conditions"])["카메라 사용"], "선택 안 함")
         self.assertEqual(dict(page.context["input_conditions"])["모니터 없음"], "예")

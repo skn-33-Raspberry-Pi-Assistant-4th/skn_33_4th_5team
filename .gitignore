@@ -122,6 +122,7 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+web_app/staticfiles/
 build/
 dist/
 *.egg-info/

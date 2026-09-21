@@ -793,6 +793,14 @@ class DynamicQuizAndWrongNoteTests(TestCase):
         self.assertNotIn('class="d-flex align-items-center gap-2" id="dynamicQuizLoading"', page)
         self.assertNotIn('class="d-flex flex-wrap gap-2 mt-3" id="dynamicQuizActions"', page)
 
+    def test_qa_result_places_quiz_before_sources_in_one_column(self):
+        qa_result = self._submit_qa(self._chat_response())
+        page = qa_result.content.decode()
+
+        self.assertLess(page.index('class="answer-card"'), page.index('id="dynamicQuiz"'))
+        self.assertLess(page.index('id="dynamicQuiz"'), page.index('class="sources-panel"'))
+        self.assertNotIn('<aside class="col-lg-5">', page)
+
     def test_response_without_citation_does_not_queue_a_task(self):
         qa_result = self._submit_qa(self._chat_response(answered=False, with_citation=False))
         self.assertNotContains(qa_result, "DYNAMIC MINI CHALLENGE")

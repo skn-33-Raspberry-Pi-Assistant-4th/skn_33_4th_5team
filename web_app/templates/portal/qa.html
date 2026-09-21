@@ -8,9 +8,25 @@
 {% include 'portal/ai_job_panel.html' %}
 {% if qa_record %}<div class="alert alert-success mt-3 mb-0">답변을 내 질문 기록에 저장했습니다. <a href="{% url 'mypage_question_detail' qa_record.pk %}">기록 관리하기</a></div>{% elif qa_record_save_error %}<div class="alert alert-warning mt-3 mb-0">답변은 표시했지만 질문 기록을 저장하지 못했습니다.</div>{% endif %}
 {% if service_error %}<div class="alert alert-danger mt-4">{{ service_error }}</div>{% endif %}
-{% if response %}<section class="mt-5"><div class="user-question">{{ question }}</div><div class="row g-4"><div class="col-lg-7"><article class="answer-card"><div class="d-flex justify-content-between gap-3 mb-3"><strong>🤖 PiCare</strong><span class="status-badge {% if is_blocked %}blocked{% endif %}">{{ status_label }}</span></div>{% if qa_summary and qa_summary.answer_summary_status == 'available' and qa_summary.answer_summary %}<div class="border rounded-4 p-3 mb-3 bg-light"><strong class="d-block mb-2">답변 요약</strong><div>{{ qa_summary.answer_summary }}</div></div>{% endif %}<div class="answer-text">{{ response.answer|linebreaksbr }}</div>{% for clarification in response.clarification_questions %}<div class="alert alert-info mt-3 mb-0">{{ clarification }}</div>{% endfor %}</article>
-{% include 'portal/quiz_panel.html' %}
-{% if images or videos %}<section class="media-card mt-4"><h2 class="h5">인용 근거와 연결된 이미지·영상</h2><div class="row g-3">{% for image in images %}<div class="col-md-6"><img src="{{ image.url }}" alt="{{ image.alt_text|default:image.title }}" class="img-fluid rounded-4"><p class="small text-muted mt-2 mb-0">{{ image.title }} · {{ image.source_citation_id }}</p></div>{% endfor %}{% for video in videos %}<div class="col-md-6"><a class="video-link" href="{{ video.url }}" target="_blank" rel="noopener">▶ {{ video.title }} ↗</a></div>{% endfor %}</div></section>{% endif %}</div><aside class="col-lg-5">{% include 'portal/source_cards.html' %}</aside></div>{% if response.warnings %}<details class="mt-4"><summary>실행 추적 정보</summary><pre class="warning-log">{{ response.warnings|join:'\n' }}</pre></details>{% endif %}</section>{% elif not runtime_ready %}<div class="alert alert-warning mt-4 mb-0">{{ runtime_message }}</div>{% endif %}
+{% if response %}
+<section class="mt-5">
+  <div class="user-question">{{ question }}</div>
+  <article class="answer-card">
+    <div class="d-flex justify-content-between gap-3 mb-3"><strong>🤖 PiCare</strong><span class="status-badge {% if is_blocked %}blocked{% endif %}">{{ status_label }}</span></div>
+    {% if qa_summary and qa_summary.answer_summary_status == 'available' and qa_summary.answer_summary %}<div class="border rounded-4 p-3 mb-3 bg-light"><strong class="d-block mb-2">답변 요약</strong><div>{{ qa_summary.answer_summary }}</div></div>{% endif %}
+    <div class="answer-text">{{ response.answer|linebreaksbr }}</div>
+    {% for clarification in response.clarification_questions %}<div class="alert alert-info mt-3 mb-0">{{ clarification }}</div>{% endfor %}
+  </article>
+
+  {% include 'portal/quiz_panel.html' %}
+
+  {% if source_cards %}<section class="mt-4">{% include 'portal/source_cards.html' %}</section>{% endif %}
+
+  {% if images or videos %}<section class="media-card mt-4"><h2 class="h5">인용 근거와 연결된 이미지·영상</h2><div class="row g-3">{% for image in images %}<div class="col-md-6"><img src="{{ image.url }}" alt="{{ image.alt_text|default:image.title }}" class="img-fluid rounded-4"><p class="small text-muted mt-2 mb-0">{{ image.title }} · {{ image.source_citation_id }}</p></div>{% endfor %}{% for video in videos %}<div class="col-md-6"><a class="video-link" href="{{ video.url }}" target="_blank" rel="noopener">▶ {{ video.title }} ↗</a></div>{% endfor %}</div></section>{% endif %}
+
+  {% if response.warnings %}<details class="mt-4"><summary>실행 추적 정보</summary><pre class="warning-log">{{ response.warnings|join:'\n' }}</pre></details>{% endif %}
+</section>
+{% elif not runtime_ready %}<div class="alert alert-warning mt-4 mb-0">{{ runtime_message }}</div>{% endif %}
 {% endblock %}
 {% block extra_script %}
 <script>
