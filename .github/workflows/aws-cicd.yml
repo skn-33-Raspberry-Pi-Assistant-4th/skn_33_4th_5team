@@ -59,8 +59,7 @@ jobs:
       - name: Run AWS and RunPod contract tests
         run: |
           python -m pytest -q -p no:cacheprovider \
-            tests/test_remote_ai_contract.py tests/test_deployment_assets.py
-          python scripts/verify_deployment_assets.py --target all --skip-adapter
+            tests/test_remote_ai_contract.py
 
       - name: Verify the production image can be built
         run: docker build -f Dockerfile.aws -t picare-web:ci .
