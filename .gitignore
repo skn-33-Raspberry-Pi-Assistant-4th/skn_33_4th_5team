@@ -190,6 +190,9 @@ document_pipeline/data/media_chunk_map*.json
 document_pipeline/data/raw_v*/
 document_pipeline/data/processed_v*/
 document_pipeline/data/manifest_v*.json
+# 명령어 실험실은 승인된 근거 청크를 검증할 때 v3 매니페스트를 읽는다.
+# EC2 배포 이미지에도 포함돼야 하므로, 현재 운영 버전만 예외로 추적한다.
+!document_pipeline/data/manifest_v3.json
 document_pipeline/data/media_manifest.json
 document_pipeline/data/media_manifest_v*.json
 !document_pipeline/data/source_registry_v*.csv
