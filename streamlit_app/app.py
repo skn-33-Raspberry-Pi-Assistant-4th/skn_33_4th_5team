@@ -481,7 +481,7 @@ def render_about_page() -> None:
     """Render a readable project introduction and clear paths into the service."""
 
     render_hero(
-        "Raspberry Pi 시작을 위한 실용 가이드",
+        "Raspberry Pi @@@@@@@@@@@@@@@ 시작을 위한 실용 가이드",
         "실용 가이드",
         "제품 선택부터 설치와 문제 해결까지, Raspberry Pi 공식 문서를 바탕으로 필요한 정보를 안내합니다.",
     )
