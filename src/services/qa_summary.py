@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import logging
+import re
 from collections.abc import Callable, Mapping, Sequence
 from typing import Literal
 
@@ -27,6 +29,48 @@ from src.services.quiz_generator import QuizTextGenerator
 
 logger = logging.getLogger(__name__)
 MAX_GENERATED_TITLE_CHARS = 80
+_LIST_ITEM_PREFIX = re.compile(r"^\s*(?:[-*]\s+|\d+[.)]\s+)")
+
+
+def _fallback_answer_summary(response: ChatResponse) -> str | None:
+    """Reuse leading cited answer items only when the normal summary validator accepts them."""
+
+    blocks: list[str] = []
+    current: list[str] = []
+    for raw_line in response.answer.splitlines():
+        line = raw_line.strip()
+        starts_item = bool(_LIST_ITEM_PREFIX.match(line))
+        if current and (not line or starts_item):
+            blocks.append(" ".join(current))
+            current = []
+        if line:
+            current.append(line)
+    if current:
+        blocks.append(" ".join(current))
+
+    selected: list[str] = []
+    fallback: str | None = None
+    for block in blocks:
+        normalized = _LIST_ITEM_PREFIX.sub("", block, count=1).strip()
+        if not normalized or not re.search(r"\[C[1-9][0-9]*\]", normalized):
+            continue
+        candidate = " ".join([*selected, normalized])
+        if len(candidate) > 500:
+            break
+        try:
+            # The fallback is not exempt from the public summary contract,
+            # citation allowlist, command mapping, or numeric-strength checks.
+            parse_answer_summary(
+                json.dumps({"answer_summary": candidate}, ensure_ascii=False),
+                response,
+            )
+        except QaSummaryOutputError:
+            break
+        selected.append(normalized)
+        fallback = candidate
+        if len(selected) == 3:
+            break
+    return fallback
 
 
 class QaSummaryService:
@@ -107,7 +151,7 @@ class QaSummaryService:
         if self._text_generator is None:
             return self._answer_result(None, "unsupported")
 
-        for retry in (False, True):
+        for attempt, retry in enumerate((False, True), start=1):
             try:
                 raw_output = self._generate_text(
                     build_answer_summary_messages(normalized_question, response.answer, retry=retry)
@@ -115,7 +159,11 @@ class QaSummaryService:
             except GenerationCancelled:
                 raise
             except Exception as exc:
-                logger.warning("Answer summary generation failed: %s", type(exc).__name__)
+                logger.warning(
+                    "Answer summary generation failed: attempt=%d error=%s",
+                    attempt,
+                    type(exc).__name__,
+                )
                 return self._answer_result(None, "generation_failed")
             try:
                 summary = parse_answer_summary(raw_output, response, normalized_question)
@@ -127,15 +175,31 @@ class QaSummaryService:
             except GenerationCancelled:
                 raise
             except QaSummaryOutputError as exc:
-                logger.warning("Answer summary output rejected: %s", exc)
+                logger.warning(
+                    "Answer summary output rejected: attempt=%d reason=%s raw_length=%d",
+                    attempt,
+                    str(exc),
+                    len(exc.raw_output),
+                )
                 if retry:
-                    return self._answer_result(None, "generation_failed")
+                    break
                 continue
             except Exception as exc:
-                logger.warning("Answer summary validation failed: %s", type(exc).__name__)
+                logger.warning(
+                    "Answer summary validation failed: attempt=%d error=%s",
+                    attempt,
+                    type(exc).__name__,
+                )
                 return self._answer_result(None, "generation_failed")
             return self._answer_result(summary, "available")
 
+        fallback = _fallback_answer_summary(response)
+        if fallback is not None:
+            logger.info(
+                "Answer summary used validated fallback: length=%d",
+                len(fallback),
+            )
+            return self._answer_result(fallback, "available")
         return self._answer_result(None, "generation_failed")
 
     def generate(self, question: str, response: ChatResponse) -> QaSummaryResult:

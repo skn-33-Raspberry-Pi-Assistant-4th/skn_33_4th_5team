@@ -129,15 +129,15 @@ class HuggingFaceAnswerGenerator:
         model_id: str,
         model_revision: str = "main",
         load_in_4bit: bool = True,
-        max_new_tokens: int = 512,
+        max_new_tokens: int = 768,
         device: str = "auto",
     ) -> None:
         if not model_id.strip():
             raise ValueError("model_id must not be empty.")
         if not model_revision.strip():
             raise ValueError("model_revision must not be empty.")
-        if not 1 <= max_new_tokens <= 512:
-            raise ValueError("max_new_tokens must be between 1 and 512.")
+        if not 1 <= max_new_tokens <= 1024:
+            raise ValueError("max_new_tokens must be between 1 and 1024.")
         self.model_id = model_id
         self.model_revision = model_revision
         self.load_in_4bit = load_in_4bit
@@ -281,8 +281,9 @@ class HuggingFaceAnswerGenerator:
                     "content": (
                         "이전 생성은 인용·출력 형식 검사를 통과하지 못했습니다. "
                         "원래 질문과 제공된 공식 근거만 다시 검토하여 새로 답하세요. "
-                        "서론·제목·맺음말·하위 목록 없이 최대 3개의 짧은 번호 항목만 쓰고, "
-                        "각 항목을 완성된 한국어 문장과 허용된 인용 ID로 끝내세요. "
+                        "서론·제목·맺음말 없이 질문에 필요한 내용을 번호 항목으로 다시 작성하세요. "
+                        "단순 질문은 1~3문장으로 간결하게 답하고, 복합 질문은 공식 근거로 확인되는 요구사항을 최대 6개 항목으로 정리하세요. "
+                        "각 항목을 1~3개의 완성된 한국어 문장과 허용된 인용 ID로 끝내세요. "
                         "URL이나 근거에 없는 명령어·사실을 추가하지 마세요. "
                         f"질문의 핵심 답을 근거에서 확인할 수 없으면 {INSUFFICIENT_EVIDENCE_MARKER} "
                         "한 줄만 출력하고 설명이나 인용을 덧붙이지 마세요."

@@ -25,7 +25,7 @@ def test_answer_generator_settings_defaults_to_template(tmp_path, monkeypatch) -
     settings = AnswerGeneratorSettings.from_env(tmp_path)
 
     assert settings.provider == "template"
-    assert settings.max_new_tokens == 512
+    assert settings.max_new_tokens == 768
     assert settings.device == "auto"
 
 

@@ -127,7 +127,7 @@ def test_answer_summary_accepts_valid_single_line_prose_from_qwen() -> None:
         '설명 {"answer_summary":"SSH는 비활성화되어 있습니다. [C1]"}',
         "```json {SSH는 기본적으로 비활성화되어 있습니다. [C1]}```",
         "```SSH는 기본적으로 비활성화되어 있습니다. [C1]```",
-        "첫 문장.둘째 문장.셋째 문장. [C1]",
+        "첫 문장.둘째 문장.셋째 문장.넷째 문장. [C1]",
     ],
 )
 def test_answer_summary_rejects_unsafe_or_long_plain_output(raw_output: str) -> None:
@@ -181,16 +181,22 @@ def test_answer_summary_requires_only_valid_original_citations(summary: str) -> 
 @pytest.mark.parametrize(
     "summary",
     [
-        "첫 문장. 둘째 문장. 셋째 문장. [C1]",
-        "첫 문장.둘째 문장.셋째 문장. [C1]",
+        "첫 문장. 둘째 문장. 셋째 문장. 넷째 문장. [C1]",
+        "첫 문장.둘째 문장.셋째 문장.넷째 문장. [C1]",
     ],
 )
-def test_answer_summary_rejects_more_than_two_sentences(summary: str) -> None:
+def test_answer_summary_rejects_more_than_three_sentences(summary: str) -> None:
     with pytest.raises(QaSummaryOutputError, match="결과 계약"):
         parse_answer_summary(
             json.dumps({"answer_summary": summary}),
             _response(),
         )
+
+
+def test_answer_summary_accepts_three_sentences() -> None:
+    summary = "첫 문장. 둘째 문장. 셋째 문장. [C1]"
+
+    assert parse_answer_summary(json.dumps({"answer_summary": summary}), _response()) == summary
 
 
 def test_sentence_count_ignores_decimal_and_ascii_identifier_dots() -> None:
@@ -230,22 +236,22 @@ def test_review_parser_requires_exact_boolean_json() -> None:
             parse_summary_review(raw)
 
 
-def test_summary_rejects_missing_explicit_question_facet() -> None:
+@pytest.mark.parametrize(
+    "question",
+    [
+        "저장장치와 키보드에서 무엇이 다른가요?",
+        "저장장치 및 키보드 차이는 무엇인가요?",
+    ],
+)
+def test_summary_does_not_fail_only_because_a_long_question_facet_is_omitted(question: str) -> None:
     response = _response().model_copy(
         update={"answer": "저장장치는 M.2 SSD입니다. [C1]"}
     )
-    with pytest.raises(QaSummaryOutputError, match="항목"):
-        parse_answer_summary(
-            json.dumps({"answer_summary": "저장장치는 M.2 SSD입니다. [C1]"}),
-            response,
-            "저장장치와 키보드에서 무엇이 다른가요?",
-        )
-    with pytest.raises(QaSummaryOutputError, match="항목"):
-        parse_answer_summary(
-            json.dumps({"answer_summary": "저장장치는 M.2 SSD입니다. [C1]"}),
-            response,
-            "저장장치 및 키보드 차이는 무엇인가요?",
-        )
+    summary = "저장장치는 M.2 SSD입니다. [C1]"
+
+    assert parse_answer_summary(
+        json.dumps({"answer_summary": summary}), response, question
+    ) == summary
 
 
 def test_summary_rejects_command_with_wrong_original_citation() -> None:
