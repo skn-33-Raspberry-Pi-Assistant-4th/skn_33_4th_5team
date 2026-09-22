@@ -1,0 +1,148 @@
+name: AWS CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Production releases must not overlap: an in-flight migration/restart must finish
+# before a newer commit is released.
+concurrency:
+  group: picare-production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  EC2_INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
+
+jobs:
+  test:
+    name: Test and validate deployment image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DJANGO_DB_ENGINE: django.db.backends.sqlite3
+      DJANGO_SQLITE_PATH: ${{ github.workspace }}/.ci.sqlite3
+      DJANGO_SECRET_KEY: ci-only-not-a-production-secret
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,testserver
+      PICARE_AI_BACKEND: remote
+      AI_API_URL: http://127.0.0.1:8000
+      AI_API_TOKEN: ci-only-token-with-at-least-32-characters
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-web.txt
+
+      - name: Install web and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-web.txt pytest
+
+      - name: Check Django configuration and migrations
+        run: |
+          python web_app/manage.py check
+          python web_app/manage.py makemigrations --check --dry-run
+
+      - name: Run Django production health smoke tests
+        run: python web_app/manage.py test portal.test_aws_remote_health --noinput
+
+      - name: Run AWS and RunPod contract tests
+        run: |
+          python -m pytest -q -p no:cacheprovider \
+            tests/test_remote_ai_contract.py tests/test_deployment_assets.py
+          python scripts/verify_deployment_assets.py --target all --skip-adapter
+
+      - name: Verify the production image can be built
+        run: docker build -f Dockerfile.aws -t picare-web:ci .
+
+  release:
+    name: Publish and release to EC2
+    needs: test
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    env:
+      IMAGE_TAG: sha-${{ github.sha }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and publish immutable production image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.aws
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+      - name: Release the image through AWS Systems Manager
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          release_command="cd /opt/picare && bash deploy/aws-release.sh ${IMAGE_TAG} ${AWS_ACCOUNT_ID} ${ECR_REPOSITORY}"
+          command_id="$(aws ssm send-command \
+            --document-name AWS-RunShellScript \
+            --instance-ids "${EC2_INSTANCE_ID}" \
+            --comment "PiCare GitHub Actions ${GITHUB_SHA}" \
+            --timeout-seconds 600 \
+            --parameters "commands=${release_command}" \
+            --query 'Command.CommandId' \
+            --output text)"
+
+          echo "SSM command ID: ${command_id}"
+          for attempt in {1..72}; do
+            status="$(aws ssm get-command-invocation \
+              --command-id "${command_id}" \
+              --instance-id "${EC2_INSTANCE_ID}" \
+              --query 'Status' \
+              --output text 2>/dev/null || printf 'Pending')"
+            echo "Attempt ${attempt}: ${status}"
+
+            case "${status}" in
+              Success)
+                aws ssm get-command-invocation \
+                  --command-id "${command_id}" \
+                  --instance-id "${EC2_INSTANCE_ID}" \
+                  --query 'StandardOutputContent' \
+                  --output text
+                exit 0
+                ;;
+              Failed|Cancelled|TimedOut|Cancelling)
+                aws ssm get-command-invocation \
+                  --command-id "${command_id}" \
+                  --instance-id "${EC2_INSTANCE_ID}" \
+                  --query '{status:Status,stdout:StandardOutputContent,stderr:StandardErrorContent}' \
+                  --output json
+                exit 1
+                ;;
+            esac
+            sleep 5
+          done
+
+          echo "Timed out waiting for the EC2 release command."
+          exit 1
