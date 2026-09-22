@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import json
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -87,6 +88,52 @@ class DjangoPortalTests(TestCase):
         self.assertEqual(len(drawer), 1)
         self.assertEqual(drawer[0]["command_snapshot"], "ssh pi@192.168.0.12")
         self.assertNotIn("rationale_ko", drawer[0])
+
+    @patch("portal.views.get_runtime_readiness", return_value=SimpleNamespace(ready=True, message="ready"))
+    def test_command_lab_reports_live_validation_contract_and_field_errors(self, _readiness):
+        page = self.client.get("/lab/")
+        self.assertContains(page, "data-command-editor")
+        self.assertContains(page, "공식 검수 예제 그대로입니다")
+        self.assertContains(page, "data-validation-summary")
+
+        valid = self.client.post(
+            "/api/lab/compose",
+            data=json.dumps({
+                "template_id": "cmd-networking-002",
+                "values": {"part-02": "tcp://camera.local:65535"},
+                "product_id": None,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(valid.status_code, 200)
+        self.assertEqual(valid.json()["validation_summary"]["status"], "warning")
+        self.assertTrue(valid.json()["parts"][1]["changed"])
+
+        invalid = self.client.post(
+            "/api/lab/compose",
+            data=json.dumps({
+                "template_id": "cmd-networking-002",
+                "values": {"part-02": "tcp://camera.local:99999"},
+                "product_id": None,
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(invalid.status_code, 400)
+        self.assertEqual(invalid.json()["field"], "part-02")
+        self.assertIn("1~65535", invalid.json()["error"])
+
+        submitted = self.client.post(
+            "/lab/",
+            {
+                "action": "compose",
+                "mode": "examples",
+                "template_id": "cmd-networking-002",
+                "value_part-02": "tcp://camera.local:99999",
+            },
+        )
+        self.assertContains(submitted, "tcp://camera.local:99999")
+        self.assertContains(submitted, "1~65535")
+        self.assertContains(submitted, 'aria-invalid="true"')
 
     @patch("portal.views.get_runtime_readiness", return_value=SimpleNamespace(ready=True, message="ready"))
     def test_lab_qa_link_prefills_question_without_submitting_it(self, _readiness):

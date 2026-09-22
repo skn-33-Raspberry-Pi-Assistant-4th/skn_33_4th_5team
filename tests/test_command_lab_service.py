@@ -1,4 +1,5 @@
 from copy import deepcopy
+import shlex
 
 import pytest
 
@@ -64,6 +65,80 @@ def test_edit_ssh_and_analyze_roundtrip(lab):
     assert result["command"] == "ssh pi@192.168.0.12"
     assert result["product"]["name"] == "Raspberry Pi 5"
     assert lab.analyze(result["command"])["values"] == {"part-02": "pi@192.168.0.12"}
+
+
+def test_official_and_user_changed_values_have_distinct_validation_states(lab):
+    official = lab.compose("cmd-remote-access-004")
+    assert official["validation_summary"]["status"] == "valid"
+    assert official["field_validation"][0]["changed"] is False
+    assert official["parts"][1]["changed"] is False
+
+    changed = lab.compose("cmd-remote-access-004", {"part-02": "pi@raspberrypi.local"})
+    assert changed["validation_summary"]["status"] == "warning"
+    assert "실행 성공은 확인되지 않았습니다" in changed["validation_summary"]["message"]
+    assert changed["field_validation"][0]["changed"] is True
+    assert changed["parts"][1]["changed"] is True
+
+
+@pytest.mark.parametrize("target", ["pi@192.168.0.12", "pi@raspberrypi.local", "pi@[2001:db8::1]"])
+def test_valid_ip_hostname_and_ipv6_ssh_targets_pass(lab, target):
+    assert shlex.split(lab.compose("cmd-remote-access-004", {"part-02": target})["command"])[1] == target
+
+
+@pytest.mark.parametrize(
+    ("target", "message"),
+    [
+        ("pi@999.999.999.999", "0~255"),
+        ("pi@-camera.local", "하이픈"),
+        ("pi@camera_.local", "호스트 이름"),
+        ("9pi@camera.local", "사용자명"),
+    ],
+)
+def test_invalid_ip_hostname_and_username_are_rejected_with_specific_messages(lab, target, message):
+    with pytest.raises(CommandLabError, match=message):
+        lab.compose("cmd-remote-access-004", {"part-02": target})
+
+
+@pytest.mark.parametrize("port", [1, 65535])
+def test_valid_port_boundaries_pass(lab, port):
+    result = lab.compose("cmd-networking-002", {"part-02": f"tcp://camera.local:{port}"})
+    assert result["validation_summary"]["status"] == "warning"
+
+
+@pytest.mark.parametrize("port", [0, 65536, 99999])
+def test_invalid_port_boundaries_are_rejected(lab, port):
+    with pytest.raises(CommandLabError, match="1~65535"):
+        lab.compose("cmd-networking-002", {"part-02": f"tcp://camera.local:{port}"})
+
+
+def test_invalid_stream_host_is_rejected(lab):
+    with pytest.raises(CommandLabError, match="0~255"):
+        lab.compose("cmd-networking-002", {"part-02": "tcp://999.999.999.999:8554"})
+    with pytest.raises(CommandLabError, match="1~65535"):
+        lab.analyze("vlc tcp://camera.local:99999")
+
+
+def test_ssid_uses_utf8_byte_limit(lab):
+    assert lab.compose("cmd-networking-008", {"part-06": "a" * 32})["command"] == f"sudo nmcli dev wifi connect {'a' * 32}"
+    with pytest.raises(CommandLabError, match="32바이트"):
+        lab.compose("cmd-networking-008", {"part-06": "가" * 11})
+
+
+def test_keyboard_coordinates_and_tga_path_are_validated(lab):
+    result = lab.compose("cmd-interfaces-016", {"part-04": "0", "part-05": "12"})
+    assert result["command"] == "rpi-keyboard-config key get 0 12"
+    with pytest.raises(CommandLabError, match="0 이상의 정수"):
+        lab.compose("cmd-interfaces-016", {"part-04": "row", "part-05": "1"})
+    with pytest.raises(CommandLabError, match=".tga"):
+        lab.compose("cmd-system-status-004", {"part-03": "splash.png"})
+    with pytest.raises(CommandLabError, match="상위 경로"):
+        lab.compose("cmd-system-status-004", {"part-03": "../splash.tga"})
+
+
+def test_quoted_stream_template_keeps_expected_shell_shape(lab):
+    value = '"tcp://camera.local:9000?listen=1"'
+    result = lab.compose("cmd-networking-017", {"part-10": value})
+    assert result["command"].endswith(f"-o {value}")
 
 
 @pytest.mark.parametrize("value", ["", "x" * 161, "pi@host; reboot", "pi@host\nreboot", "$(id)",
