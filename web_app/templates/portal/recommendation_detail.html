@@ -1,4 +1,5 @@
 {% extends 'portal/base.html' %}
+{% load picare_text %}
 {% block title %}{{ record.title }} | PiCare{% endblock %}
 {% block content %}
 <nav class="archive-back"><a href="{% url 'mypage_recommendations' %}">← 내 제품추천 기록으로</a></nav>
@@ -19,7 +20,7 @@
   {% include 'portal/response_details.html' %}
 </section>
 {% else %}
-<section class="answer-card mt-4"><h2 class="h5">PiCare 추천 안내</h2><span class="status-badge {% if is_blocked %}blocked{% endif %}">{{ status_label }}</span><div class="answer-text mt-3">{{ record.answer|linebreaksbr }}</div></section>
+<section class="answer-card mt-4"><h2 class="h5">PiCare 추천 안내</h2><span class="status-badge {% if is_blocked %}blocked{% endif %}">{{ status_label }}</span><div class="answer-text mt-3">{{ record.answer|strip_citations|linebreaksbr }}</div></section>
 {% endif %}
 <form method="post" action="{% url 'mypage_recommendation_delete' record.pk %}" class="mt-4">{% csrf_token %}<button type="submit" class="btn btn-outline-danger">기록 삭제</button></form>
 {% endblock %}

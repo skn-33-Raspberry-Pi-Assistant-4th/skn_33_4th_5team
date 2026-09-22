@@ -1,4 +1,5 @@
 {% extends 'portal/base.html' %}
+{% load picare_text %}
 
 {% block title %}{% if question_record.question_title_status == 'available' and question_record.question_title %}{{ question_record.question_title }}{% else %}{{ question_record.title }}{% endif %} | PiCare{% endblock %}
 
@@ -36,10 +37,10 @@
     {% if question_record.answer_summary_status == 'available' and question_record.answer_summary %}
       <div class="border rounded-4 p-3 mb-3 bg-light">
         <strong class="d-block mb-2">답변 요약</strong>
-        <div>{{ question_record.answer_summary }}</div>
+        <div>{{ question_record.answer_summary|strip_citations }}</div>
       </div>
     {% endif %}
-    <div class="answer-text">{{ question_record.answer|linebreaksbr }}</div>
+    <div class="answer-text">{{ question_record.answer|strip_citations|linebreaksbr }}</div>
     {% if saved_response %}{% for clarification in saved_response.clarification_questions %}<div class="alert alert-info mt-3 mb-0">{{ clarification }}</div>{% endfor %}{% endif %}
   </section>
 

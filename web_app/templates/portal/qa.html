@@ -1,4 +1,5 @@
 {% extends 'portal/base.html' %}
+{% load picare_text %}
 {% block title %}PiCare | 질의응답{% endblock %}
 {% block content %}
 <section class="hero text-center mx-auto"><p class="eyebrow">DOCUMENT-GROUNDED Q&amp;A</p><h1>무엇이 <em>궁금하신가요?</em></h1><p class="hero-copy">사용법, 문제 해결, 공식 지원 절차를 문서 근거와 함께 알려드려요.</p></section>
@@ -13,8 +14,8 @@
   <div class="user-question">{{ question }}</div>
   <article class="answer-card">
     <div class="d-flex justify-content-between gap-3 mb-3"><strong>🤖 PiCare</strong><span class="status-badge {% if is_blocked %}blocked{% endif %}">{{ status_label }}</span></div>
-    {% if qa_summary and qa_summary.answer_summary_status == 'available' and qa_summary.answer_summary %}<div class="border rounded-4 p-3 mb-3 bg-light"><strong class="d-block mb-2">답변 요약</strong><div>{{ qa_summary.answer_summary }}</div></div>{% endif %}
-    <div class="answer-text">{{ response.answer|linebreaksbr }}</div>
+    {% if qa_summary and qa_summary.answer_summary_status == 'available' and qa_summary.answer_summary %}<div class="border rounded-4 p-3 mb-3 bg-light"><strong class="d-block mb-2">답변 요약</strong><div>{{ qa_summary.answer_summary|strip_citations }}</div></div>{% endif %}
+    <div class="answer-text">{{ response.answer|strip_citations|linebreaksbr }}</div>
     {% for clarification in response.clarification_questions %}<div class="alert alert-info mt-3 mb-0">{{ clarification }}</div>{% endfor %}
   </article>
 
