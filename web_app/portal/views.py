@@ -39,7 +39,7 @@ from .forms import (
 )
 from .ai_jobs import cancel_job, create_job, owned_job, refresh_job, remote_enabled
 from .models import AiJob, Comment, DrawerItem, Post, PostLike, QuestionRecord, RecommendationRecord, WrongNote
-from .remote_ai import RemoteAIError
+from .remote_ai import RemoteAIError, RunPodClient
 from .result_service import (
     get_challenge_result,
     get_command_lab_result,
@@ -1209,6 +1209,23 @@ def lab_compose_api(request):
 @require_http_methods(["GET"])
 def health(request):
     """웹 애플리케이션과 RAG 런타임의 준비 상태를 반환한다."""
+
+    if remote_enabled():
+        try:
+            ready = RunPodClient().readiness()
+        except RemoteAIError:
+            ready = False
+        return JsonResponse(
+            {
+                "status": "ok" if ready else "not_ready",
+                "ready": ready,
+                "message": (
+                    "RunPod AI 서비스가 준비되었습니다."
+                    if ready
+                    else "RunPod AI 서비스를 준비하지 못했습니다. 설정을 확인해 주세요."
+                ),
+            }
+        )
 
     readiness = get_runtime_readiness()
     return JsonResponse(

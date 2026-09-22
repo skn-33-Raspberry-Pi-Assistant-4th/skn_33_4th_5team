@@ -113,6 +113,8 @@ COMMIT_MSG*
 .env
 .env.*
 .env_copy
+deploy/release.env
+deploy/previous-release.env
 !.env.example
 *.pem
 *.key

@@ -1,0 +1,35 @@
+name: picare-aws
+
+services:
+  web:
+    image: ${PICARE_WEB_IMAGE:?PICARE_WEB_IMAGE must be set by deploy/aws-release.sh}
+    restart: unless-stopped
+    env_file:
+      - ${PICARE_ENV_FILE:-../.env}
+    environment:
+      GUNICORN_BIND: 0.0.0.0:8000
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "from urllib.request import urlopen; response = urlopen('http://127.0.0.1:8000/health/', timeout=3); assert response.status == 200",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 45s
+
+  nginx:
+    image: nginx:1.28-alpine
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.aws.conf:/etc/nginx/conf.d/default.conf:ro
