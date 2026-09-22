@@ -2,7 +2,7 @@
 
 이 문서는 HTTP API 서버를 거치지 않고 RunPod Pod 내부에서 CLI로 RAG와 Qwen3-4B Base
 Instruct를 직접 점검하는 절차다. AWS와 연결하는 실제 AI API 배포는
-[`docs/deployment/aws-runpod-operations.md`](../deployment/aws-runpod-operations.md)를 따른다.
+[`docs/deployment/CI-CD-실행-설정-API-명세서.md`](../deployment/CI-CD-실행-설정-API-명세서.md)를 따른다.
 일반 QA에서는 조건 JSON 추출용
 LoRA adapter를 사용하지 않지만, 제품 추천 CLI에서는 같은 계열 모델의 LoRA adapter로
 조건만 추출한다.

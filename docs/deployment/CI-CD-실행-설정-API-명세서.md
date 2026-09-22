@@ -471,8 +471,5 @@ curl -fsS "http://127.0.0.1/health/"
 
 ## 10. 관련 문서
 
-- [AWS 통합 설정 및 실행 가이드](AWS-통합-설정-및-실행-가이드.md)
-- [GitHub Actions CI/CD 운영 설정](github-actions-cicd.md)
 - [AWS 인프라 스펙 발표용](AWS-인프라-스펙-발표용.md)
-- [AWS와 RunPod 운영 문서](aws-runpod-operations.md)
-
+- [이전 배포 문서 보관함](../archive/deployment/README.md)

@@ -47,4 +47,4 @@ python scripts/verify_deployment_assets.py --target all --skip-adapter
 - 다른 사용자·세션 접근 차단 결과
 - RunPod 재시작 전후 진행 작업 만료 및 MySQL 저장 기록 유지 결과
 
-운영 절차와 장애 복구 기준은 `docs/deployment/aws-runpod-operations.md`를 따른다.
+운영 절차와 장애 복구 기준은 `docs/deployment/CI-CD-실행-설정-API-명세서.md`를 따른다.
