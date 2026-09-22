@@ -21,13 +21,133 @@
 
   <section class="command-workspace" aria-label="명령어 분석 작업 공간">
     {% if lab_result %}
-      <article class="terminal-card" aria-label="명령어 미리보기"><header class="terminal-titlebar"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>PiCare Command Lab</span></header><div class="terminal-line" aria-label="현재 재조합 명령"><span class="terminal-prompt">learner@picare:~&nbsp;$</span>{% for part in lab_result.parts %}<button type="button" class="terminal-token {% if part.editable %}editable{% endif %} {% if forloop.first %}active{% endif %}" data-token-label="{{ part.label_ko }}" data-token-description="{{ part.description_ko }}" aria-label="{{ part.label_ko }}: {{ part.value }}. 구성 요소 설명 보기">{{ part.prefix }}{{ part.value }}{% if part.editable %}<span class="visually-hidden">, 수정 가능</span>{% endif %}</button>{% endfor %}<span class="terminal-cursor" aria-hidden="true"></span></div><p class="terminal-token-note" id="terminal-token-note"><strong>{{ lab_result.parts.0.label_ko }}</strong> · {{ lab_result.parts.0.description_ko }}</p></article>
-      <form method="post" class="command-editor" aria-label="명령어 재조합">{% csrf_token %}<input type="hidden" name="mode" value="{{ lab_mode }}"><input type="hidden" name="template_id" value="{{ lab_result.template_id }}"><div class="editor-fields">{% if lab_editable_fields %}{% for field in lab_editable_fields %}<div><label for="value_{{ field.part_id }}">{{ field.label_ko }}</label><input id="value_{{ field.part_id }}" class="form-control font-monospace" name="value_{{ field.part_id }}" value="{{ field.current_value }}" maxlength="160" aria-describedby="{{ field.part_id }}-hint"><small id="{{ field.part_id }}-hint">예: {{ field.example }}</small></div>{% endfor %}{% else %}<div class="fixed-command-note"><strong>고정 명령어</strong><span>변경 가능한 값 없이 설명 전용으로 확인합니다.</span></div>{% endif %}<div class="product-picker"><label for="product_id">내 제품 <span>(선택)</span></label><select id="product_id" class="form-select" name="product_id"><option value="">제품 선택 안 함</option>{% for product in lab_products %}<option value="{{ product.product_id }}" {% if lab_result.product and lab_result.product.product_id == product.product_id %}selected{% endif %}>{{ product.name }}</option>{% endfor %}</select></div></div><div class="editor-actions"><button class="btn btn-outline-picare" name="action" value="compose" type="submit">⟳ 명령 다시 조립하기</button><button class="btn btn-outline-picare" name="action" value="save_drawer" type="submit">▣ 서랍에 담기</button></div></form>
-      <div class="lab-analysis-grid mt-3"><article class="lab-purpose-card"><p class="analysis-icon" aria-hidden="true">💡</p><h2>이 명령은 무엇을 하나요?</h2><p>{{ lab_result.effect_ko }}</p><div class="analysis-meta"><span>● 사용 위치</span><strong>{{ lab_result.execution_context }}</strong></div><span class="risk-chip">▲ {{ lab_result.risk_notice_ko }}</span></article><article class="lab-parts-card"><div class="d-flex align-items-center gap-2"><span class="parts-icon" aria-hidden="true">⚙</span><h2>명령어 구성 요소</h2></div><div class="parts-list">{% for part in lab_result.parts %}<button type="button" class="part-row {% if part.editable %}editable{% endif %}" data-token-label="{{ part.label_ko }}" data-token-description="{{ part.description_ko }}"><code>{{ part.value }}</code><span>—</span><span>{{ part.description_ko }}</span>{% if part.editable %}<small>수정 가능</small>{% endif %}</button>{% endfor %}</div></article></div>
+      <article class="terminal-card" aria-label="명령어 미리보기"><header class="terminal-titlebar"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>PiCare Command Lab</span></header><div class="terminal-line" aria-label="현재 재조합 명령"><span class="terminal-prompt">learner@picare:~&nbsp;$</span>{% for part in lab_result.parts %}<button type="button" class="terminal-token {% if part.editable %}editable{% endif %} {% if part.changed %}changed{% endif %} {% if forloop.first %}active{% endif %}" data-terminal-part="{{ part.part_id }}" data-token-label="{{ part.label_ko }}" data-token-description="{{ part.description_ko }}" aria-label="{{ part.label_ko }}: {{ part.value }}. 구성 요소 설명 보기"><span data-part-value>{{ part.prefix }}{{ part.value }}</span>{% if part.editable %}<span class="visually-hidden">, 수정 가능</span>{% endif %}</button>{% endfor %}<span class="terminal-cursor" aria-hidden="true"></span></div><p class="terminal-token-note" id="terminal-token-note"><strong>{{ lab_result.parts.0.label_ko }}</strong> · {{ lab_result.parts.0.description_ko }}</p></article>
+      <form method="post" class="command-editor" aria-label="명령어 재조합" data-command-editor data-compose-url="{% url 'lab_compose_api' %}">{% csrf_token %}<input type="hidden" name="mode" value="{{ lab_mode }}"><input type="hidden" name="template_id" value="{{ lab_result.template_id }}"><div class="editor-fields">{% if lab_editable_fields %}{% for field in lab_editable_fields %}<div class="editor-field state-{{ field.validation.status|default:'valid' }}" data-field-group="{{ field.part_id }}"><label for="value_{{ field.part_id }}">{{ field.validation.label|default:field.label_ko }}</label><input id="value_{{ field.part_id }}" class="form-control font-monospace" name="value_{{ field.part_id }}" value="{{ field.current_value }}" maxlength="160" aria-describedby="{{ field.part_id }}-hint {{ field.part_id }}-status" aria-invalid="{% if field.validation.status == 'error' %}true{% else %}false{% endif %}" data-command-field data-part-id="{{ field.part_id }}"><small id="{{ field.part_id }}-hint">예: {{ field.example }}</small><p id="{{ field.part_id }}-status" class="field-validation status-{{ field.validation.status|default:'valid' }}" role="status">{{ field.validation.message|default:'공식 검수 예제 그대로입니다.' }}</p></div>{% endfor %}{% else %}<div class="fixed-command-note"><strong>고정 명령어</strong><span>변경 가능한 값 없이 설명 전용으로 확인합니다.</span></div>{% endif %}<div class="product-picker"><label for="product_id">내 제품 <span>(선택)</span></label><select id="product_id" class="form-select" name="product_id"><option value="">제품 선택 안 함</option>{% for product in lab_products %}<option value="{{ product.product_id }}" {% if lab_result.product and lab_result.product.product_id == product.product_id %}selected{% endif %}>{{ product.name }}</option>{% endfor %}</select></div></div><div class="editor-actions"><button class="btn btn-outline-picare" name="action" value="compose" type="submit">⟳ 명령 다시 조립하기</button><button class="btn btn-outline-picare" name="action" value="save_drawer" type="submit">▣ 서랍에 담기</button></div></form>
+      {% if lab_result.validation_summary %}<section class="lab-validation-summary status-{{ lab_result.validation_summary.status }}" data-validation-summary data-status="{{ lab_result.validation_summary.status }}" aria-live="polite"><strong data-validation-title>{% if lab_result.validation_summary.status == 'warning' %}확인 필요{% else %}형식 확인 완료{% endif %}</strong><span data-validation-message>{{ lab_result.validation_summary.message }}</span></section>{% endif %}
+      <div class="lab-analysis-grid mt-3"><article class="lab-purpose-card"><p class="analysis-icon" aria-hidden="true">💡</p><h2>이 명령은 무엇을 하나요?</h2><p>{{ lab_result.effect_ko }}</p><div class="analysis-meta"><span>● 사용 위치</span><strong>{{ lab_result.execution_context }}</strong></div><span class="risk-chip">▲ {{ lab_result.risk_notice_ko }}</span></article><article class="lab-parts-card"><div class="d-flex align-items-center gap-2"><span class="parts-icon" aria-hidden="true">⚙</span><h2>명령어 구성 요소</h2></div><div class="parts-list">{% for part in lab_result.parts %}<button type="button" class="part-row {% if part.editable %}editable{% endif %} {% if part.changed %}changed{% endif %}" data-part-row="{{ part.part_id }}" data-token-label="{{ part.label_ko }}" data-token-description="{{ part.description_ko }}"><code data-part-value>{{ part.value }}</code><span>—</span><span>{{ part.description_ko }}</span>{% if part.editable %}<small data-part-badge>{% if part.changed %}사용자 변경값{% else %}수정 가능{% endif %}</small>{% endif %}</button>{% endfor %}</div></article></div>
       <footer class="lab-action-bar mt-4"><div class="product-scope"><span class="product-icon" aria-hidden="true">🍓</span><div><small>내 제품</small><strong>{% if lab_result.product %}{{ lab_result.product.name }}{% else %}제품을 선택하지 않았습니다{% endif %}</strong></div>{% if lab_result.product %}<span class="scope-status">✓ 공식 문서 적용 범위 확인</span>{% endif %}</div><div class="action-bar-buttons"><a class="btn btn-outline-picare" href="#official-evidence">↗ 공식 근거 보기</a><a class="btn btn-picare" href="{% url 'qa' %}?question={{ lab_result.command|urlencode }}%20명령의%20사용%20조건과%20주의사항을%20공식%20문서로%20설명해%20주세요.">◯ Q&amp;A에서 더 물어보기</a><a class="btn btn-outline-picare" href="{% url 'recommend' %}">◇ 제품 추천 보기</a></div></footer>
       <section class="lab-evidence mt-4" id="official-evidence"><p class="card-kicker mb-1">공식 근거</p><h2 class="h5">출처 확인</h2><div class="row g-3">{% for source in lab_result.evidence %}<div class="col-md-6"><a class="source-card d-block h-100" href="{{ source.url }}" target="_blank" rel="noopener"><strong>{{ source.title }} ↗</strong><p class="ms-0">{{ source.section }}</p></a></div>{% endfor %}</div></section>
     {% else %}<article class="lab-empty-state"><span aria-hidden="true">⌘</span><h2>명령어를 선택해 보세요</h2><p>왼쪽 라이브러리에서 검수된 예시를 고르거나 한 줄 명령어를 직접 입력하면 구성 요소와 공식 근거를 확인할 수 있습니다.</p></article>{% endif %}
   </section>
 </div>
 {% endblock %}
-{% block extra_script %}<script>(() => { const note = document.getElementById('terminal-token-note'); const controls = document.querySelectorAll('[data-token-description]'); controls.forEach((control) => control.addEventListener('click', () => { controls.forEach((item) => item.classList.remove('active')); control.classList.add('active'); if (note) note.innerHTML = `<strong>${control.dataset.tokenLabel}</strong> · ${control.dataset.tokenDescription}`; })); const filter = document.getElementById('lab-command-filter'); const status = document.getElementById('lab-filter-status'); const commands = [...document.querySelectorAll('[data-lab-command]')]; const topics = [...document.querySelectorAll('[data-lab-topic]')]; if (filter) filter.addEventListener('input', () => { const query = filter.value.trim().toLocaleLowerCase('ko'); let visible = 0; commands.forEach((item) => { const match = !query || item.dataset.labCommand.includes(query); item.hidden = !match; if (match) visible += 1; }); topics.forEach((topic) => { const hasMatch = [...topic.querySelectorAll('[data-lab-command]')].some((item) => !item.hidden); topic.hidden = !hasMatch; if (query && hasMatch) topic.open = true; }); if (status) status.textContent = `${visible}개 표시`; }); })();</script>{% endblock %}
+{% block extra_script %}
+<script>
+(() => {
+  const note = document.getElementById('terminal-token-note');
+  const controls = document.querySelectorAll('[data-token-description]');
+  controls.forEach((control) => control.addEventListener('click', () => {
+    controls.forEach((item) => item.classList.remove('active'));
+    control.classList.add('active');
+    if (note) note.innerHTML = `<strong>${control.dataset.tokenLabel}</strong> · ${control.dataset.tokenDescription}`;
+  }));
+
+  const filter = document.getElementById('lab-command-filter');
+  const filterStatus = document.getElementById('lab-filter-status');
+  const commands = [...document.querySelectorAll('[data-lab-command]')];
+  const topics = [...document.querySelectorAll('[data-lab-topic]')];
+  if (filter) filter.addEventListener('input', () => {
+    const query = filter.value.trim().toLocaleLowerCase('ko');
+    let visible = 0;
+    commands.forEach((item) => {
+      const match = !query || item.dataset.labCommand.includes(query);
+      item.hidden = !match;
+      if (match) visible += 1;
+    });
+    topics.forEach((topic) => {
+      const hasMatch = [...topic.querySelectorAll('[data-lab-command]')].some((item) => !item.hidden);
+      topic.hidden = !hasMatch;
+      if (query && hasMatch) topic.open = true;
+    });
+    if (filterStatus) filterStatus.textContent = `${visible}개 표시`;
+  });
+
+  const editor = document.querySelector('[data-command-editor]');
+  if (!editor) return;
+  const fields = [...editor.querySelectorAll('[data-command-field]')];
+  if (!fields.length) return;
+  const summary = document.querySelector('[data-validation-summary]');
+  const submitButtons = [...editor.querySelectorAll('button[type="submit"]')];
+  const csrfToken = editor.querySelector('[name="csrfmiddlewaretoken"]').value;
+  const templateId = editor.querySelector('[name="template_id"]').value;
+  const product = editor.querySelector('[name="product_id"]');
+  let validationTimer;
+
+  const setFieldState = (partId, status, message) => {
+    const input = fields.find((item) => item.dataset.partId === partId);
+    if (!input) return;
+    const group = input.closest('[data-field-group]');
+    const output = document.getElementById(`${partId}-status`);
+    ['valid', 'warning', 'error', 'checking'].forEach((name) => group.classList.remove(`state-${name}`));
+    group.classList.add(`state-${status}`);
+    input.setAttribute('aria-invalid', status === 'error' ? 'true' : 'false');
+    if (output) {
+      output.className = `field-validation status-${status}`;
+      output.textContent = message;
+    }
+  };
+
+  const setSummary = (status, message) => {
+    if (!summary) return;
+    summary.className = `lab-validation-summary status-${status}`;
+    summary.dataset.status = status;
+    summary.querySelector('[data-validation-title]').textContent = {
+      valid: '형식 확인 완료', warning: '확인 필요', error: '입력 오류', checking: '확인 중',
+    }[status];
+    summary.querySelector('[data-validation-message]').textContent = message;
+  };
+
+  const setSubmitState = (disabled) => submitButtons.forEach((button) => { button.disabled = disabled; });
+
+  const applyPreview = (result) => {
+    const parts = new Map(result.parts.map((part) => [part.part_id, part]));
+    document.querySelectorAll('[data-terminal-part]').forEach((token) => {
+      const part = parts.get(token.dataset.terminalPart);
+      if (!part) return;
+      token.querySelector('[data-part-value]').textContent = `${part.prefix}${part.value}`;
+      token.classList.toggle('changed', Boolean(part.changed));
+    });
+    document.querySelectorAll('[data-part-row]').forEach((row) => {
+      const part = parts.get(row.dataset.partRow);
+      if (!part) return;
+      row.querySelector('[data-part-value]').textContent = part.value;
+      row.classList.toggle('changed', Boolean(part.changed));
+      const badge = row.querySelector('[data-part-badge]');
+      if (badge) badge.textContent = part.changed ? '사용자 변경값' : '수정 가능';
+    });
+  };
+
+  const validateFields = async () => {
+    const values = Object.fromEntries(fields.map((input) => [input.dataset.partId, input.value]));
+    setSummary('checking', '입력값을 서버 검증 규칙으로 확인하고 있습니다.');
+    try {
+      const response = await fetch(editor.dataset.composeUrl, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken, 'Accept': 'application/json'},
+        body: JSON.stringify({template_id: templateId, values, product_id: product.value || null}),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        if (result.field) setFieldState(result.field, 'error', result.error);
+        setSummary('error', result.error || '입력값을 확인해 주세요.');
+        setSubmitState(true);
+        return;
+      }
+      result.field_validation.forEach((item) => setFieldState(item.part_id, item.status, item.message));
+      setSummary(result.validation_summary.status, result.validation_summary.message);
+      applyPreview(result);
+      setSubmitState(false);
+    } catch (error) {
+      setSummary('warning', '실시간 확인에 실패했습니다. 제출하면 서버에서 다시 검증합니다.');
+      setSubmitState(false);
+    }
+  };
+
+  fields.forEach((input) => input.addEventListener('input', () => {
+    setFieldState(input.dataset.partId, 'checking', '입력값 확인 중…');
+    clearTimeout(validationTimer);
+    validationTimer = setTimeout(validateFields, 250);
+  }));
+})();
+</script>
+{% endblock %}

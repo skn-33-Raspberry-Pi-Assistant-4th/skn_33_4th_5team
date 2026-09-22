@@ -53,7 +53,7 @@ from .services import (
     get_recommendation_service,
     get_runtime_readiness,
 )
-from src.services.command_lab_service import CommandLabError, CommandLabService
+from src.services.command_lab_service import CommandLabError, CommandLabFieldError, CommandLabService
 
 
 STATUS_LABELS = {
@@ -88,7 +88,10 @@ logger = logging.getLogger(__name__)
 
 
 def _command_lab_error_response(error: CommandLabError) -> JsonResponse:
-    return JsonResponse({"error": str(error)}, status=400)
+    payload = {"error": str(error)}
+    if isinstance(error, CommandLabFieldError):
+        payload["field"] = error.part_id
+    return JsonResponse(payload, status=400)
 
 
 def _command_lab_unavailable_response() -> JsonResponse:
@@ -562,6 +565,8 @@ def _lab_payload(result: dict) -> dict:
         "evidence": _lab_evidence_cards(result["evidence"]),
         "product": result["product"],
         "values": result["values"],
+        "field_validation": result.get("field_validation", []),
+        "validation_summary": result.get("validation_summary"),
     }
 
 
@@ -613,16 +618,31 @@ def _selected_template(templates: list[dict], template_id: str | None) -> dict |
     return next((item for item in templates if item["template_id"] == template_id), None)
 
 
-def _editable_fields(template: dict | None, values: dict | None) -> list[dict]:
+def _editable_fields(
+    template: dict | None,
+    values: dict | None,
+    validations: list[dict] | None = None,
+    errors: dict[str, str] | None = None,
+) -> list[dict]:
     """템플릿 편집 필드에 현재 입력값을 합쳐 화면용 목록을 만든다."""
 
     if not template:
         return []
     current_values = values or {}
-    return [
-        {**field, "current_value": current_values.get(field["part_id"], field["example"])}
-        for field in template["editable_fields"]
-    ]
+    validation_by_part = {item["part_id"]: item for item in validations or []}
+    errors = errors or {}
+    result = []
+    for field in template["editable_fields"]:
+        part_id = field["part_id"]
+        validation = dict(validation_by_part.get(part_id, {}))
+        if part_id in errors:
+            validation.update({"status": "error", "message": errors[part_id]})
+        result.append({
+            **field,
+            "current_value": current_values.get(part_id, field["example"]),
+            "validation": validation,
+        })
+    return result
 
 
 def _drawer_items(request, service) -> list[dict]:
@@ -1093,6 +1113,9 @@ def lab(request):
     service = get_command_lab_service()
     selected_result = None
     feature_result = None
+    submitted_template_id = None
+    submitted_values = None
+    submitted_product_id = None
     if request.method == "POST":
         action = request.POST.get("action")
         try:
@@ -1103,12 +1126,15 @@ def lab(request):
                 selected_result = _lab_payload(feature_result.result)
             elif action in {"compose", "save_drawer"}:
                 template_id = request.POST.get("template_id", "")
+                submitted_template_id = template_id
                 item = service._item(template_id)
                 values = {
                     field["part_id"]: request.POST.get(f"value_{field['part_id']}", "")
                     for field in item["editable_fields"]
                 }
+                submitted_values = values
                 product_id = request.POST.get("product_id") or None
+                submitted_product_id = product_id
                 feature_result = get_command_lab_result(
                     service, template_id=template_id, values=values, product_id=product_id
                 )
@@ -1131,6 +1157,17 @@ def lab(request):
                     context["drawer_saved"] = True
             elif action not in {"analyze", "compose", "save_drawer"}:
                 context["lab_error"] = "요청을 확인하지 못했습니다."
+        except CommandLabFieldError as exc:
+            context["lab_error"] = str(exc)
+            context["lab_field_errors"] = {exc.part_id: str(exc)}
+            if submitted_template_id:
+                feature_result = get_command_lab_result(
+                    service,
+                    template_id=submitted_template_id,
+                    product_id=submitted_product_id,
+                )
+                selected_result = _lab_payload(feature_result.result)
+                context["lab_submitted_values"] = submitted_values
         except CommandLabError as exc:
             context["lab_error"] = str(exc)
         except Exception:
@@ -1145,7 +1182,12 @@ def lab(request):
         context["feature_result"] = feature_result
         context["lab_result"] = selected_result
         context["selected_template"] = _selected_template(context["lab_templates"], selected_result["template_id"])
-        context["lab_editable_fields"] = _editable_fields(context["selected_template"], selected_result["values"])
+        context["lab_editable_fields"] = _editable_fields(
+            context["selected_template"],
+            context.get("lab_submitted_values", selected_result["values"]),
+            selected_result.get("field_validation"),
+            context.get("lab_field_errors"),
+        )
     context["drawer_items"] = _drawer_items(request, service)
     context["drawer_count"] = len(context["drawer_items"])
     return render(request, "portal/lab.html", context)
@@ -1181,6 +1223,8 @@ def lab_analyze_api(request):
     try:
         feature_result = get_command_lab_result(get_command_lab_service(), command=_json_body(request).get("command"))
         return JsonResponse(_lab_payload(feature_result.result))
+    except CommandLabError as exc:
+        return _command_lab_error_response(exc)
     except ValueError as exc:
         return JsonResponse({"error": str(exc)}, status=400)
     except Exception:
@@ -1200,6 +1244,8 @@ def lab_compose_api(request):
             product_id=body.get("product_id"),
         )
         return JsonResponse(_lab_payload(feature_result.result))
+    except CommandLabError as exc:
+        return _command_lab_error_response(exc)
     except ValueError as exc:
         return JsonResponse({"error": str(exc)}, status=400)
     except Exception:
