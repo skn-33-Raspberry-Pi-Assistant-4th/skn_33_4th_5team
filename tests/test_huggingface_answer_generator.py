@@ -204,9 +204,15 @@ def test_huggingface_generator_structured_path_rejects_unsafe_token_limit(max_ne
         generator.generate_structured(_messages(), max_new_tokens=max_new_tokens)
 
 
-def test_huggingface_generator_keeps_qa_token_limit_at_512() -> None:
+def test_huggingface_generator_allows_qa_token_limit_up_to_1024() -> None:
+    generator = HuggingFaceAnswerGenerator(model_id="Qwen/test", max_new_tokens=1024)
+
+    assert generator.max_new_tokens == 1024
+
+
+def test_huggingface_generator_rejects_qa_token_limit_above_1024() -> None:
     with pytest.raises(ValueError, match="max_new_tokens"):
-        HuggingFaceAnswerGenerator(model_id="Qwen/test", max_new_tokens=513)
+        HuggingFaceAnswerGenerator(model_id="Qwen/test", max_new_tokens=1025)
 
 
 def test_invalid_generation_retries_once_with_original_evidence_not_failed_claim(monkeypatch):
@@ -220,6 +226,8 @@ def test_invalid_generation_retries_once_with_original_evidence_not_failed_claim
     retry_messages = generate.call_args.args[0]
     assert retry_messages[:-1] == list(_messages())
     assert "위험한 주장" not in str(retry_messages)
+    assert "최대 6개 항목" in retry_messages[-1]["content"]
+    assert "최대 3개의 짧은" not in retry_messages[-1]["content"]
 
 
 def test_repeated_invalid_output_fails_closed_after_two_attempts(monkeypatch):

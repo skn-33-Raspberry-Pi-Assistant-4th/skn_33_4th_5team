@@ -61,26 +61,6 @@ def parse_summary_review(raw_output: str) -> bool:
     return payload["valid"]
 
 
-_COORDINATED_FACETS = re.compile(
-    r"([A-Za-z0-9가-힣+.-]{2,})\s*(?:와|과|이나|또는|및)\s+([A-Za-z0-9가-힣+.-]+)"
-)
-_FACET_SUFFIXES = ("에서는", "에서", "에게", "으로", "에는", "에도", "은", "는", "이", "가", "을", "를", "에", "의", "도")
-
-
-def _explicit_question_facets(question: str) -> set[str]:
-    """Find clearly coordinated terms; require coverage rather than guessing synonyms."""
-
-    facets: set[str] = set()
-    for left, right in _COORDINATED_FACETS.findall(question):
-        for term in (left, right):
-            for suffix in _FACET_SUFFIXES:
-                if len(term) > len(suffix) + 1 and term.endswith(suffix):
-                    term = term[: -len(suffix)]
-                    break
-            facets.add(term.casefold())
-    return facets
-
-
 def _validate_cited_code(value: str, answer: str, raw_output: str) -> None:
     """An inline command must keep the ID of the original answer span containing it."""
 
@@ -164,10 +144,6 @@ def parse_answer_summary(
     _validate_cited_code(value, response.answer, raw_output)
     if question is not None:
         _validate_transcription(value, question, response.answer, raw_output)
-        normalized_summary = re.sub(r"\s+", "", value).casefold()
-        missing = {term for term in _explicit_question_facets(question) if term not in normalized_summary}
-        if missing:
-            raise QaSummaryOutputError("질문의 명시적 항목이 답변 요약에서 누락됐습니다.", raw_output)
     # These terms materially strengthen a claim. An unsupported qualifier is
     # more dangerous than an unavailable summary, so fail closed and let the
     # summary service request one fresh candidate from the original answer.

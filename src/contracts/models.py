@@ -204,8 +204,8 @@ class QaSummaryResult(StrictContract):
                 prose = re.sub(r"\[C[1-9][0-9]*\]", "", value)
                 # A Korean sentence can start immediately after punctuation.
                 # Keep dots inside decimal numbers and ASCII identifiers intact.
-                if len(re.findall(r"[.!?。！？](?![A-Za-z0-9])", prose)) > 2:
-                    raise ValueError("answer_summary must contain at most two sentences")
+                if len(re.findall(r"[.!?。！？](?![A-Za-z0-9])", prose)) > 3:
+                    raise ValueError("answer_summary must contain at most three sentences")
         return self
 
 

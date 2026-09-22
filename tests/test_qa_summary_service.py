@@ -146,7 +146,7 @@ def test_non_answered_response_skips_answer_summary_call(status: str) -> None:
     assert len(generator.calls) == 2
 
 
-def test_answer_summary_rejects_invalid_citation_without_losing_title() -> None:
+def test_answer_summary_uses_validated_fallback_after_two_invalid_citations() -> None:
     generator = SequenceTextGenerator([
         _title(),
         _summary("SSH를 활성화하세요. [C2]"),
@@ -156,8 +156,46 @@ def test_answer_summary_rejects_invalid_citation_without_losing_title() -> None:
     result = QaSummaryService(generator).generate("SSH 설정 방법은?", _response())
 
     assert result.question_title_status == "available"
-    assert result.answer_summary_status == "generation_failed"
+    assert result.answer_summary_status == "available"
+    assert result.answer_summary == "SSH는 기본적으로 비활성화되어 있습니다. [C1]"
     assert len(generator.calls) == 4
+
+
+def test_answer_summary_fallback_reuses_at_most_three_validated_leading_items() -> None:
+    response = _response().model_copy(update={"answer": (
+        "1. SSH는 기본적으로 비활성화되어 있습니다. [C1]\n"
+        "2. Imager에서 SSH를 설정할 수 있습니다. [C1]\n"
+        "3. 원격 접속 설정을 확인하세요. [C1]\n"
+        "4. 추가 설정을 확인하세요. [C1]"
+    )})
+    generator = SequenceTextGenerator([
+        _title(),
+        _summary("잘못된 요약입니다. [C2]"),
+        _summary("다시 잘못된 요약입니다. [C2]"),
+    ])
+
+    result = QaSummaryService(generator).generate("장문 질문", response)
+
+    assert result.answer_summary_status == "available"
+    assert result.answer_summary == (
+        "SSH는 기본적으로 비활성화되어 있습니다. [C1] "
+        "Imager에서 SSH를 설정할 수 있습니다. [C1] "
+        "원격 접속 설정을 확인하세요. [C1]"
+    )
+
+
+def test_review_rejects_facts_outside_answer_before_using_safe_fallback() -> None:
+    unsupported = _summary("SSH는 인터넷 속도를 두 배로 높입니다. [C1]")
+    generator = SequenceTextGenerator(
+        [_title(), unsupported, unsupported],
+        reviews=['{"valid":true}', '{"valid":false}', '{"valid":false}'],
+    )
+
+    result = QaSummaryService(generator).generate("SSH 설정 방법은?", _response())
+
+    assert result.answer_summary_status == "available"
+    assert result.answer_summary == "SSH는 기본적으로 비활성화되어 있습니다. [C1]"
+    assert "인터넷 속도" not in result.answer_summary
 
 
 def test_answer_summary_retries_once_after_missing_citation() -> None:
