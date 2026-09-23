@@ -1,8 +1,5 @@
 from django.urls import path
-
 from . import views
-from pathlib import Path
-from django.http import Http404, HttpResponse, JsonResponse
 
 
 

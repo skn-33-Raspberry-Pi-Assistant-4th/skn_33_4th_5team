@@ -58,6 +58,7 @@ from src.services.command_lab_service import CommandLabError, CommandLabFieldErr
 from pathlib import Path
 
 from django.http import Http404, HttpResponse, JsonResponse
+from django.contrib.admin.views.decorators import staff_member_required
 
 
 STATUS_LABELS = {
@@ -1825,3 +1826,37 @@ def wrong_note_delete(request, pk: int):
     note.delete()
     messages.success(request, "오답노트를 삭제했습니다.")
     return redirect("wrong_note_list")
+
+"""관리자 권한 데코레이터"""
+@staff_member_required
+@require_GET
+def openapi_schema(request):
+    schema_path = (
+        Path(__file__).resolve().parents[2]
+        / "docs"
+        / "openapi"
+        / "web-api.yaml"
+    )
+
+    try:
+        schema_text = schema_path.read_text(encoding="utf-8")
+    except OSError:
+        return JsonResponse(
+            {"error": "OpenAPI 명세 파일을 읽을 수 없습니다."},
+            status=500,
+        )
+
+    return HttpResponse(
+        schema_text,
+        content_type="application/yaml; charset=utf-8",
+    )
+
+
+@staff_member_required
+@require_GET
+def swagger_docs(request):
+    return render(
+        request,
+        "portal/swagger_ui.html",
+        {"schema_url": reverse("openapi_schema")},
+    )
