@@ -192,9 +192,8 @@ PiCare는 공식 문서의 근거와 사용자별 학습 기록을 연결해, �
 
 AWS 웹 계층과 RunPod GPU 추론 계층을 분리하고, RDS에 사용자·학습 기록을 저장합니다. 아래 그림은 서비스 요청, 오프라인 데이터 준비, CI/CD 배포 경로를 함께 보여줍니다.
 
-![PiCare 시스템 아키텍처 — AWS EC2·RDS, RunPod GPU API, 데이터 파이프라인과 CI/CD](image/시스템타키텍쳐.png)
+![시스템타키텍쳐.png](docs/image/%E1%84%89%E1%85%B5%E1%84%89%E1%85%B3%E1%84%90%E1%85%A6%E1%86%B7%E1%84%90%E1%85%A1%E1%84%8F%E1%85%B5%E1%84%90%E1%85%A6%E1%86%A8%E1%84%8E%E1%85%A7.png)
 
-[시스템 아키텍처 원본 확대](image/시스템타키텍쳐.png)
 
 ### 운영 환경
 
@@ -319,15 +318,13 @@ PiCare는 Django ORM과 MySQL을 사용해 사용자 서비스 데이터를 저�
 
 계정·권한, 커뮤니티, 개인 저장·AI 기록을 업무 개념과 관계 중심으로 표현했습니다. 사용자 프로필은 사용자 개념에 통합하고, Q&A 제목·요약 및 AI 작업의 선택적 연결 관계를 반영했습니다.
 
-![PiCare 논리 ERD — 계정·권한, 커뮤니티, 개인 저장·AI 기록의 관계](image/PiCare_논리_ERD_수정본.png)
-
-[논리 ERD 원본 확대](image/PiCare_논리_ERD_수정본.png)
+![PiCare_논리_ERD_수정본.png](docs/image/PiCare_%E1%84%82%E1%85%A9%E1%86%AB%E1%84%85%E1%85%B5_ERD_%E1%84%89%E1%85%AE%E1%84%8C%E1%85%A5%E1%86%BC%E1%84%87%E1%85%A9%E1%86%AB.png)
 
 ### 물리 ERD
 
 Django 모델의 MySQL 매핑을 기준으로 테이블, 컬럼 자료형, NULL 허용 여부, PK·FK·UNIQUE 제약을 정리했습니다. Django 인증 연결 테이블과 세션·관리자 로그·마이그레이션 테이블도 포함합니다.
 
-![PiCare 물리 ERD — Django 모델의 MySQL 테이블·컬럼·제약조건](image/PiCare_물리_ERD_수정본.png)
+![PiCare_물리_ERD_수정본.png](docs/image/PiCare_%E1%84%86%E1%85%AE%E1%86%AF%E1%84%85%E1%85%B5_ERD_%E1%84%89%E1%85%AE%E1%84%8C%E1%85%A5%E1%86%BC%E1%84%87%E1%85%A9%E1%86%AB.png)![PiCare 물리 ERD — Django 모델의 MySQL 테이블·컬럼·제약조건](image/PiCare_물리_ERD_수정본.png)
 
 [물리 ERD 원본 확대](image/PiCare_물리_ERD_수정본.png)
 
