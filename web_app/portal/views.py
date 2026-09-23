@@ -55,6 +55,10 @@ from .services import (
 )
 from src.services.command_lab_service import CommandLabError, CommandLabFieldError, CommandLabService
 
+from pathlib import Path
+
+from django.http import Http404, HttpResponse, JsonResponse
+
 
 STATUS_LABELS = {
     "answered": "근거 확인 완료",
@@ -1280,6 +1284,37 @@ def health(request):
             "ready": readiness.ready,
             "message": readiness.message if readiness.ready else "RAG 실행 환경을 준비하지 못했습니다. 설정을 확인해 주세요.",
         }
+    )
+
+@require_GET
+def openapi_schema(request):
+    schema_path = (
+        Path(__file__).resolve().parents[2]
+        / "docs"
+        / "openapi"
+        / "web-api.yaml"
+    )
+
+    try:
+        schema_text = schema_path.read_text(encoding="utf-8")
+    except OSError:
+        return JsonResponse(
+            {"error": "OpenAPI 명세 파일을 읽을 수 없습니다."},
+            status=500,
+        )
+
+    return HttpResponse(
+        schema_text,
+        content_type="application/yaml; charset=utf-8",
+    )
+@require_GET
+def swagger_docs(request):
+    """OpenAPI 명세를 Swagger UI로 표시합니다."""
+
+    return render(
+        request,
+        "portal/swagger_ui.html",
+        {"schema_url": reverse("openapi_schema")},
     )
 
 

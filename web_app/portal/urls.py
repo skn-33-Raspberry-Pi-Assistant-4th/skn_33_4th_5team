@@ -1,6 +1,9 @@
 from django.urls import path
 
 from . import views
+from pathlib import Path
+from django.http import Http404, HttpResponse, JsonResponse
+
 
 
 urlpatterns = [
@@ -16,7 +19,8 @@ urlpatterns = [
     path("api/qa/mini-challenge", views.mini_challenge_start_api, name="mini_challenge_start_api"),
     path("api/qa/mini-challenge/jobs/<uuid:task_id>", views.mini_challenge_job_api, name="mini_challenge_job_api"),
     path("api/qa/mini-challenge/jobs/<uuid:task_id>/cancel", views.cancelAPI, name="mini_challenge_cancel_api"),
-    path("api/qa/mini-challenge/quizzes/<uuid:quiz_id>/submit", views.mini_challenge_submit_api, name="mini_challenge_submit_api"),
+    path("api/qa/mini-challenge/quizzes/<uuid:quiz_id>/submit", views.mini_challenge_submit_api,
+         name="mini_challenge_submit_api"),
     path("api/lab/templates", views.lab_templates_api, name="lab_templates_api"),
     path("api/lab/analyze", views.lab_analyze_api, name="lab_analyze_api"),
     path("api/lab/compose", views.lab_compose_api, name="lab_compose_api"),
@@ -29,7 +33,8 @@ urlpatterns = [
     path("mypage/questions/", views.mypage_questions, name="mypage_questions"),
     path("mypage/recommendations/", views.mypage_recommendations, name="mypage_recommendations"),
     path("mypage/recommendations/<int:pk>/", views.mypage_recommendation_detail, name="mypage_recommendation_detail"),
-    path("mypage/recommendations/<int:pk>/delete/", views.mypage_recommendation_delete, name="mypage_recommendation_delete"),
+    path("mypage/recommendations/<int:pk>/delete/", views.mypage_recommendation_delete,
+         name="mypage_recommendation_delete"),
     path("mypage/questions/<int:pk>/", views.mypage_question_detail, name="mypage_question_detail"),
     path("mypage/questions/<int:pk>/visibility/", views.mypage_question_visibility, name="mypage_question_visibility"),
     path("mypage/questions/<int:pk>/delete/", views.mypage_question_delete, name="mypage_question_delete"),
@@ -39,8 +44,10 @@ urlpatterns = [
     path("community/posts/<int:pk>/edit/", views.community_post_edit, name="community_post_edit"),
     path("community/posts/<int:pk>/delete/", views.community_post_delete, name="community_post_delete"),
     path("community/posts/<int:pk>/comments/", views.community_comment_create, name="community_comment_create"),
-    path("community/posts/<int:pk>/comments/<int:comment_pk>/edit/", views.community_comment_edit, name="community_comment_edit"),
-    path("community/posts/<int:pk>/comments/<int:comment_pk>/delete/", views.community_comment_delete, name="community_comment_delete"),
+    path("community/posts/<int:pk>/comments/<int:comment_pk>/edit/", views.community_comment_edit,
+         name="community_comment_edit"),
+    path("community/posts/<int:pk>/comments/<int:comment_pk>/delete/", views.community_comment_delete,
+         name="community_comment_delete"),
     path("community/posts/<int:pk>/like/", views.community_post_like, name="community_post_like"),
     path("api/lab/templates/", views.api_lab_templates, name="api_lab_templates"),
     path("api/lab/analyze/", views.api_lab_analyze, name="api_lab_analyze"),
@@ -54,4 +61,7 @@ urlpatterns = [
     path("wrong-notes/", views.wrong_note_list, name="wrong_note_list"),
     path("wrong-notes/<int:pk>/", views.wrong_note_detail, name="wrong_note_detail"),
     path("wrong-notes/<int:pk>/delete/", views.wrong_note_delete, name="wrong_note_delete"),
+    # Swagger API 명세 및 UI
+    path("api/schema/", views.openapi_schema, name="openapi_schema"),
+    path("api/docs/", views.swagger_docs, name="swagger_docs"),
 ]

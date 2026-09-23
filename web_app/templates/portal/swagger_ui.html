@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+  <title>PiCare API 문서</title>
+
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.21.0/swagger-ui.css"
+  >
+
+  <style>
+    html {
+      box-sizing: border-box;
+      overflow-y: scroll;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: inherit;
+    }
+
+    body {
+      margin: 0;
+      background: #fafafa;
+    }
+
+    .topbar {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="swagger-ui"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.21.0/swagger-ui-bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.21.0/swagger-ui-standalone-preset.js"></script>
+
+  <script>
+    function getCookie(name) {
+      const cookieValue = document.cookie
+        .split(";")
+        .map((item) => item.trim())
+        .find((item) => item.startsWith(name + "="));
+
+      if (!cookieValue) {
+        return "";
+      }
+
+      return decodeURIComponent(cookieValue.substring(name.length + 1));
+    }
+
+    window.addEventListener("load", function () {
+      SwaggerUIBundle({
+        url: "{{ schema_url|escapejs }}",
+        dom_id: "#swagger-ui",
+        deepLinking: true,
+        displayRequestDuration: true,
+        persistAuthorization: true,
+        tryItOutEnabled: false,
+
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+
+        plugins: [
+          SwaggerUIBundle.plugins.DownloadUrl
+        ],
+
+        layout: "StandaloneLayout",
+
+        requestInterceptor: function (request) {
+          request.credentials = "same-origin";
+
+          const method = (request.method || "GET").toUpperCase();
+          const safeMethods = ["GET", "HEAD", "OPTIONS", "TRACE"];
+
+          if (!safeMethods.includes(method)) {
+            const csrfToken = getCookie("csrftoken");
+
+            if (csrfToken) {
+              request.headers["X-CSRFToken"] = csrfToken;
+            }
+          }
+
+          return request;
+        }
+      });
+    });
+  </script>
+</body>
+</html>
