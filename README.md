@@ -285,7 +285,7 @@ Docker Compose
 | 검수된 제품 카탈로그 | 5개 |
 | 승인 Command Lab 템플릿 | 100개 |
 
-위 수치는 [2026-09-18 AWS–RunPod 통합 검증](validation/2026-09-18-aws-runpod-integration.md) 기준입니다. 운영 시점의 실제 모델·색인 준비 상태와는 구분해 읽어야 합니다.
+위 수치는 [2026-09-18 AWS–RunPod 통합 검증](./docs/validation/2026-09-18-aws-runpod-integration.md) 기준입니다. 운영 시점의 실제 모델·색인 준비 상태와는 구분해 읽어야 합니다.
 
 공식 문서 원문을 수집·정제한 뒤 의미 단위로 청킹하여 manifest를 생성하고, E5 임베딩과 Chroma를 이용해 검색합니다. 답변 화면에는 검색된 근거와 연결된 공식 이미지·영상만 표시합니다.
 
@@ -323,7 +323,7 @@ PiCare는 Django ORM과 MySQL을 사용해 사용자 서비스 데이터를 저�
 
 Django 모델의 MySQL 매핑을 기준으로 테이블, 컬럼 자료형, NULL 허용 여부, PK·FK·UNIQUE 제약을 정리했습니다. Django 인증 연결 테이블과 세션·관리자 로그·마이그레이션 테이블도 포함합니다.
 
-![PiCare_물리_ERD_수정본.png](./docs/image/PiCare_%E1%84%86%E1%85%AE%E1%86%AF%E1%84%85%E1%85%B5_ERD_%E1%84%89%E1%85%AE%E1%84%8C%E1%85%A5%E1%86%BC%E1%84%87%E1%85%A9%E1%86%AB.png)![PiCare 물리 ERD — Django 모델의 MySQL 테이블·컬럼·제약조건](image/PiCare_물리_ERD_수정본.png)
+![PiCare 물리 ERD — Django 모델의 MySQL 테이블·컬럼·제약조건](./docs/image/PiCare_%E1%84%86%E1%85%AE%E1%86%AF%E1%84%85%E1%85%B5_ERD_%E1%84%89%E1%85%AE%E1%84%8C%E1%85%A5%E1%86%BC%E1%84%87%E1%85%A9%E1%86%AB.png)
 
 두 ERD의 작성 기준일은 **2026-09-23**입니다. 물리 ERD는 모델 기준이며, 운영 DB에 해당 마이그레이션이 적용되었는지는 배포 환경에서 별도로 확인합니다. 이미지의 점선 참조 상자는 같은 엔티티를 다시 표시한 것으로, 별도 테이블을 의미하지 않습니다.
 
@@ -753,7 +753,7 @@ py -3.12 -m venv .venv
 
 자세한 초기 설정은 다음 문서를 참고합니다.
 
-- [Django 실행 가이드](README_django_실행법.md)
+- [Django 실행 가이드](./docs/README_django_실행법.md)
 
 초기 설정 자동화:
 
@@ -816,7 +816,7 @@ python -m src.runpod_api
 curl -fsS http://127.0.0.1:8000/health/ready
 ```
 
-응답 본문의 `ready`와 `message`를 함께 확인합니다. 전체 설치·재시작 절차는 [CI/CD 실행·설정·API 명세서](deployment/CI-CD-실행-설정-API-명세서.md)를 따릅니다.
+응답 본문의 `ready`와 `message`를 함께 확인합니다. 전체 설치·재시작 절차는 [CI/CD 실행·설정·API 명세서](./docs/deployment/CI-CD-실행-설정-API-명세서.md)를 따릅니다.
 
 ---
 
@@ -833,7 +833,7 @@ OpenAPI YAML: http://127.0.0.1:8001/api/schema/
 
 `/api/schema/`는 OpenAPI YAML 원문을 제공하므로 브라우저에 따라 파일로 다운로드될 수 있습니다. 문서 화면은 `/api/docs/`에서 확인합니다. 배포 환경에서는 `127.0.0.1:8001`을 실제 웹 서비스 주소로 바꿉니다.
 
-자세한 내용은 [Swagger 실행·운영 가이드](api/Swagger-실행-가이드.md)를 참고합니다.
+자세한 내용은 [Swagger 실행·운영 가이드](./docs/api/Swagger-실행-가이드.md)를 참고합니다.
 
 ---
 
@@ -897,7 +897,7 @@ OpenAPI YAML: http://127.0.0.1:8001/api/schema/
 
 관련 문서:
 
-- [AWS–RunPod 통합 검증](validation/2026-09-18-aws-runpod-integration.md)
+- [AWS–RunPod 통합 검증](./docs/validation/2026-09-18-aws-runpod-integration.md)
 
 ---
 
@@ -931,7 +931,7 @@ Qwen3-4B 4-bit 환경의 고정 fixture 25건 기준:
 
 관련 문서:
 
-- [Mini Challenge 최종 평가](validation/mini-challenge-final-evaluation.md)
+- [Mini Challenge 최종 평가](./docs/validation/mini-challenge-final-evaluation.md)
 
 ---
 
@@ -956,7 +956,7 @@ Command Lab audit
 
 관련 문서:
 
-- [Command Lab 100개 전체 공개 검증](validation/2026-09-16-command-lab-full-catalog.md)
+- [Command Lab 100개 전체 공개 검증](./docs/validation/2026-09-16-command-lab-full-catalog.md)
 
 ---
 
@@ -1003,9 +1003,9 @@ Base Model / LoRA Adapter revision
 
 관련 문서:
 
-- [A40 최종 재실행 검증](validation/2026-08-31-final-a40-defca71.md)
-- [Fine-tuning 계약](data-contracts/finetuning.md)
-- [Fine-tuning 학습 가이드](guides/finetuning-training.md)
+- [A40 최종 재실행 검증](./docs/validation/2026-08-31-final-a40-defca71.md)
+- [Fine-tuning 계약](./docs/data-contracts/finetuning.md)
+- [Fine-tuning 학습 가이드](./docs/guides/finetuning-training.md)
 
 ---
 
@@ -1099,7 +1099,7 @@ PR 테스트 통과는 운영 배포 완료와 구분합니다. 배포 실행에
 
 이 워크플로의 자동 배포 대상은 AWS 웹 이미지입니다. RunPod 코드와 모델 자산은 Pod에서 별도로 갱신하고 API를 재시작해야 합니다. 모델·색인은 Git pull만으로 준비되지 않으며, 변경된 환경 변수도 서버의 실제 `.env`에 반영해야 합니다.
 
-설정 탭, GitHub Secrets·Variables, IAM·SSM 권한, 수동 배포·롤백 절차는 [CI/CD 실행·설정·API 명세서](deployment/CI-CD-실행-설정-API-명세서.md)에 정리되어 있습니다.
+설정 탭, GitHub Secrets·Variables, IAM·SSM 권한, 수동 배포·롤백 절차는 [CI/CD 실행·설정·API 명세서](./docs/deployment/CI-CD-실행-설정-API-명세서.md)에 정리되어 있습니다.
 
 ---
 
@@ -1176,31 +1176,31 @@ PiCare는 다음 구성 요소를 하나의 검증 가능한 학습 흐름으로
 
 ### Architecture / Deployment
 
-- [CI/CD 실행·설정·API 명세서](deployment/CI-CD-실행-설정-API-명세서.md)
-- [AWS 인프라 스펙](deployment/AWS-인프라-스펙-발표용.md)
-- [RunPod 단일 서버 개발·레거시 구성](runpod-django-setup.md)
-- [Swagger 실행·운영 가이드](api/Swagger-실행-가이드.md)
-- [Web API OpenAPI 명세](openapi/web-api.yaml)
+- [CI/CD 실행·설정·API 명세서](./docs/deployment/CI-CD-실행-설정-API-명세서.md)
+- [AWS 인프라 스펙](./docs/deployment/AWS-인프라-스펙-발표용.md)
+- [RunPod 단일 서버 개발·레거시 구성](./docs/runpod-django-setup.md)
+- [Swagger 실행·운영 가이드](./docs/api/Swagger-실행-가이드.md)
+- [Web API OpenAPI 명세](./docs/openapi/web-api.yaml)
 
 ### Data Contract
 
-- [Django 모델 계약](data-contracts/portal-models.md)
-- [RAG 데이터 계약](data-contracts/rag-corpus.md)
-- [Product Catalog 계약](data-contracts/product-catalog.md)
-- [Command Lab 계약](data-contracts/command-lab.md)
-- [Mini Challenge 계약](data-contracts/mini-challenge-handoff.md)
-- [Fine-tuning 계약](data-contracts/finetuning.md)
+- [Django 모델 계약](./docs/data-contracts/portal-models.md)
+- [RAG 데이터 계약](./docs/data-contracts/rag-corpus.md)
+- [Product Catalog 계약](./docs/data-contracts/product-catalog.md)
+- [Command Lab 계약](./docs/data-contracts/command-lab.md)
+- [Mini Challenge 계약](./docs/data-contracts/mini-challenge-handoff.md)
+- [Fine-tuning 계약](./docs/data-contracts/finetuning.md)
 
 ### Validation
 
-- [AWS–RunPod 통합 검증](validation/2026-09-18-aws-runpod-integration.md)
-- [Command Lab 100개 검증](validation/2026-09-16-command-lab-full-catalog.md)
-- [Mini Challenge 최종 평가](validation/mini-challenge-final-evaluation.md)
-- [A40 Qwen / QLoRA 검증](validation/2026-08-31-final-a40-defca71.md)
+- [AWS–RunPod 통합 검증](./docs/validation/2026-09-18-aws-runpod-integration.md)
+- [Command Lab 100개 검증](./docs/validation/2026-09-16-command-lab-full-catalog.md)
+- [Mini Challenge 최종 평가](./docs/validation/mini-challenge-final-evaluation.md)
+- [A40 Qwen / QLoRA 검증](./docs/validation/2026-08-31-final-a40-defca71.md)
 
 ### Project Notes
 
-- [4차 프로젝트 개인 작업 발표 정리](../4차프로젝트_개인작업_발표정리.md)
+- [최지흠 개인 작업 정리](./%E1%84%8E%E1%85%AC%E1%84%8C%E1%85%B5%E1%84%92%E1%85%B3%E1%86%B7_%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%8B%E1%85%A5%E1%86%B8%E1%84%86%E1%85%AE%E1%86%AF%E1%84%8C%E1%85%A5%E1%86%BC%E1%84%85%E1%85%B5.md)
 
 ---
 
@@ -1212,7 +1212,7 @@ PiCare는 다음 구성 요소를 하나의 검증 가능한 학습 흐름으로
 
 | 팀원 | 회고 | 작업물 |
 | --- | --- | --- |
-| 최지흠 | [내용 입력] | [작업물](../4차프로젝트_개인작업_발표정리.md) |
+| 최지흠 | [내용 입력] | [작업물](./%E1%84%8E%E1%85%AC%E1%84%8C%E1%85%B5%E1%84%92%E1%85%B3%E1%86%B7_%E1%84%8C%E1%85%A1%E1%86%A8%E1%84%8B%E1%85%A5%E1%86%B8%E1%84%86%E1%85%AE%E1%86%AF%E1%84%8C%E1%85%A5%E1%86%BC%E1%84%85%E1%85%B5.md) |
 | 김나은 | [내용 입력] | [작업물 링크 입력] |
 | 이양원 | [내용 입력] | [작업물 링크 입력] |
 | 안정민 | [내용 입력] | [작업물 링크 입력] |
